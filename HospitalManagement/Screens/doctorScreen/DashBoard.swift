@@ -47,19 +47,6 @@ struct DashBoard: View {
                     .padding(.horizontal)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                    // **Quick Actions Grid**
-                    VStack(spacing: 15) {
-                        HStack(spacing: 15) {
-                            QuickActionButton(icon: "calendar", title: "Appointments")
-                            QuickActionButton(icon: "person.2.fill", title: "Patients")
-                        }
-                        HStack(spacing: 15) {
-                            QuickActionButton(icon: "doc.text.fill", title: "Reports")
-                            QuickActionButton(icon: "message.fill", title: "Messages")
-                        }
-                    }
-                    .padding(.top, 10)
-
                     Spacer()
                 }
             }
@@ -68,30 +55,6 @@ struct DashBoard: View {
     }
 }
 
-// **Reusable Quick Action Button**
-struct QuickActionButton: View {
-    let icon: String
-    let title: String
-
-    var body: some View {
-        VStack {
-            Image(systemName: icon)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 40, height: 40)
-                .foregroundColor(.white)
-                .padding()
-                .background(Circle().fill(Color.blue))
-                .shadow(radius: 5)
-
-            Text(title)
-                .font(.footnote)
-                .foregroundColor(.primary)
-        }
-        .frame(width: 100, height: 100)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.white).shadow(radius: 3))
-    }
-}
 
 // **Preview**
 #Preview {
