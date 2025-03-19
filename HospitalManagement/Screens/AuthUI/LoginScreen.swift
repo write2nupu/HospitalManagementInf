@@ -6,14 +6,16 @@ struct LoginScreen: View {
     @State private var isPasswordVisible = false
     @State private var isLoggedIn = false
     @State private var errorMessage: String? = nil
+    @State private var selectedRole = "Patients"
+    
+    var roles: [String] = ["Patients", "Doctor", "Admin", "Super-Admin"]
 
     var body: some View {
-        NavigationStack {  // Changed to NavigationStack
+        NavigationStack {
             ZStack {
-                // To ignore safe Area
                 AppConfig.backgroundColor
                     .ignoresSafeArea()
-                // to show VStack so that it can cantain everything
+
                 VStack {
                     Spacer()
 
@@ -51,10 +53,8 @@ struct LoginScreen: View {
                                 .foregroundColor(.black)
                             if isPasswordVisible {
                                 TextField("Password", text: $password)
-                                    .textFieldStyle(PlainTextFieldStyle())
                             } else {
                                 SecureField("Password", text: $password)
-                                    .textFieldStyle(PlainTextFieldStyle())
                             }
                             Button(action: {
                                 isPasswordVisible.toggle()
@@ -68,7 +68,38 @@ struct LoginScreen: View {
                         .cornerRadius(12)
                         .padding(.horizontal, 40)
 
-                        // Error Message using Clouser
+                        // Role Picker Styled like Other Fields
+                        // Role Picker Styled like Other Fields
+                        HStack {
+                            Image(systemName: "person.fill")
+                                .foregroundColor(.black)
+
+                            Text(selectedRole)
+                                .foregroundColor(.black)
+                                .frame(maxWidth: .infinity, alignment: .leading) // Push text to the left
+
+                            Image(systemName: "chevron.down")
+                                .foregroundColor(.gray)
+                        }
+                        .padding()
+                        .background(AppConfig.primaryColor)
+                        .cornerRadius(12)
+                        .frame(maxWidth: .infinity, maxHeight: 50, alignment: .leading)
+                        .padding(.horizontal, 40)
+                        .overlay(
+                            Menu {
+                                Picker("Select Role", selection: $selectedRole) {
+                                    ForEach(roles, id: \.self) { role in
+                                        Text(role).tag(role)
+                                    }
+                                }
+                            } label: {
+                                Color.clear.frame(width: .infinity, height: 50) // Transparent Button
+                            }
+                        )
+
+
+                        // Error Message
                         if let errorMessage = errorMessage {
                             Text(errorMessage)
                                 .foregroundColor(.red)
@@ -107,27 +138,25 @@ struct LoginScreen: View {
 
                     Spacer()
                 }
-                .navigationDestination(isPresented: $isLoggedIn) { 
+                .navigationDestination(isPresented: $isLoggedIn) {
                     forcePasswordUpdate()  // Ensure this view exists
                 }
             }
         }
     }
 
-    // Function to validate email must be email
+    // Function to validate email
     func isValidEmail(_ email: String) -> Bool {
         let emailRegex = #"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
         return NSPredicate(format: "SELF MATCHES %@", emailRegex).evaluate(with: email)
     }
 
-    // Function to validate password must be aphanumeric and greater or equal to 4
+    // Function to validate password
     func isValidPassword(_ password: String) -> Bool {
         let passwordRegex = #"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{4,}$"#
         return NSPredicate(format: "SELF MATCHES %@", passwordRegex).evaluate(with: password)
     }
 }
-
-
 
 // Preview
 #Preview {
