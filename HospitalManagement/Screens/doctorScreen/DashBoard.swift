@@ -1,10 +1,3 @@
-//
-//  DashBoard.swift
-//  HospitalManagement
-//
-//  Created by Anubhav Dubey on 18/03/25.
-//
-
 import SwiftUI
 
 struct DashBoard: View {
@@ -19,10 +12,7 @@ struct DashBoard: View {
                     // **Top Bar with Profile Button**
                     HStack {
                         Spacer() // Push button to the right
-                        Button(action: {
-                            print("Profile Button Tapped")
-                            // Navigate to Profile Screen
-                        }) {
+                        NavigationLink(destination: DoctorProfileView()) { 
                             Image(systemName: "person.crop.circle.fill")
                                 .resizable()
                                 .frame(width: 40, height: 40)
@@ -55,10 +45,18 @@ struct DashBoard: View {
     }
 }
 
+// **Doctor Profile Screen (Replace with actual implementation)**
+struct DoctorProfile: View {
+    var body: some View {
+        Text("Doctor Profile Screen")
+            .font(.largeTitle)
+            .foregroundColor(.blue)
+    }
+}
 
 // **Preview**
 #Preview {
-    NavigationView {
+    NavigationStack {
         DashBoard()
     }
 }

@@ -45,7 +45,7 @@ struct LoginScreen: View {
                         .padding()
                         .background(AppConfig.primaryColor)
                         .cornerRadius(12)
-                        .padding(.horizontal, 40)
+                        .padding(.horizontal)
 
                         // Password Field
                         HStack {
@@ -66,37 +66,34 @@ struct LoginScreen: View {
                         .padding()
                         .background(AppConfig.primaryColor)
                         .cornerRadius(12)
-                        .padding(.horizontal, 40)
+                        .padding(.horizontal)
 
-                        // Role Picker Styled like Other Fields
-                        // Role Picker Styled like Other Fields
                         HStack {
                             Image(systemName: "person.fill")
                                 .foregroundColor(.black)
 
                             Text(selectedRole)
                                 .foregroundColor(.black)
-                                .frame(maxWidth: .infinity, alignment: .leading) // Push text to the left
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                            Image(systemName: "chevron.down")
-                                .foregroundColor(.gray)
-                        }
-                        .padding()
-                        .background(AppConfig.primaryColor)
-                        .cornerRadius(12)
-                        .frame(maxWidth: .infinity, maxHeight: 50, alignment: .leading)
-                        .padding(.horizontal, 40)
-                        .overlay(
                             Menu {
                                 Picker("Select Role", selection: $selectedRole) {
                                     ForEach(roles, id: \.self) { role in
                                         Text(role).tag(role)
                                     }
                                 }
+                                .pickerStyle(MenuPickerStyle()) // Ensures dropdown-like behavior
                             } label: {
-                                Color.clear.frame(width: .infinity, height: 50) // Transparent Button
+                                Image(systemName: "chevron.down")
+                                    .foregroundColor(.gray)
                             }
-                        )
+                        }
+                        .padding()
+                        .background(AppConfig.primaryColor)
+                        .cornerRadius(12)
+                        .frame(maxWidth: .infinity, maxHeight: 50)
+                        .padding(.horizontal)
+
 
 
                         // Error Message
@@ -132,7 +129,7 @@ struct LoginScreen: View {
                             .background(AppConfig.buttonColor)
                             .cornerRadius(12)
                     }
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal)
                     .disabled(email.isEmpty || password.isEmpty)
                     .opacity(email.isEmpty || password.isEmpty ? 0.6 : 1)
 
