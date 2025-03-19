@@ -9,9 +9,9 @@ import SwiftUI
 
 // MARK: - App Configuration
 struct AppConfig {
-    static let backgroundColor = Color(hex: "#E2F3E2") // BackGroundColor
-    static let primaryColor = Color(hex: "#B2E0B2") // PrimaryColor
-    static let buttonColor = Color(hex: "#5DAA5D") // PrimaryColor
+    static let backgroundColor = Color(.white) // BackGroundColor
+    static let primaryColor = Color(.mint.opacity(0.2)) // PrimaryColor
+    static let buttonColor = Color(.mint) // PrimaryColor
 }
 
 // MARK: - Hex Color Extension 
