@@ -1,7 +1,7 @@
 import SwiftUI
 
 // Doctor Profile Data Model
-struct Doctor {
+struct Doctor: Identifiable {
     let id: UUID = UUID()
     var name: String
     var specialization: String
