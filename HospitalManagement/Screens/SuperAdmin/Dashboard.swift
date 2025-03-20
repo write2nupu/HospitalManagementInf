@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HospitalCard: View {
-    let hospital: hospital
+    let hospital: Hospital
     let viewModel: HospitalViewModel
     
     var body: some View {
