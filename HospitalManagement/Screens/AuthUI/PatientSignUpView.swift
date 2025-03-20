@@ -1,19 +1,29 @@
 import SwiftUI
 
+// MARK: - Patient Signup View
 struct PatientSignupView: View {
     @State private var progress: Double = 0.0
-    @State private var path: [String] = []
+    @State private var showMedicalInfo = false
+    @State private var patientDetails: Patient?
+    @State private var showDashboard = false // State for Dashboard navigation
 
     var body: some View {
-        NavigationStack(path: $path) {
-            PersonalInfoView(progress: $progress, path: $path)
-                .navigationDestination(for: String.self) { destination in
-                    if destination == "MedicalInfo" {
-                        MedicalInfoView(progress: $progress, path: $path)
-                    } else if destination == "HospitalListView" {
-                        HospitalListView()
-                    }
-                }
+        NavigationStack {
+            PersonalInfoView(
+                progress: $progress,
+                showMedicalInfo: $showMedicalInfo,
+                patientDetails: $patientDetails
+            )
+            .navigationDestination(isPresented: $showMedicalInfo) {
+                MedicalInfoView(
+                    progress: $progress,
+                    patientDetails: $patientDetails,
+                    showDashboard: $showDashboard
+                )
+            }
+            .navigationDestination(isPresented: $showDashboard) {
+                PatientDashboard() // Navigate to PatientDashboard
+            }
         }
     }
 }
@@ -21,14 +31,15 @@ struct PatientSignupView: View {
 // MARK: - Personal Info View
 struct PersonalInfoView: View {
     @Binding var progress: Double
-    @Binding var path: [String]
+    @Binding var showMedicalInfo: Bool
+    @Binding var patientDetails: Patient?
 
     @State private var fullName = ""
     @State private var gender = "Select Gender"
     @State private var dateOfBirth = Date()
     @State private var contactNumber = ""
     @State private var email = ""
-    
+
     @State private var showAlert = false
     @State private var alertMessage = ""
 
@@ -44,11 +55,26 @@ struct PersonalInfoView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.mint)
 
-                CustomTextField(placeholder: "Full Name", text: $fullName)
-                genderSelection
-                dobSelection
-                CustomTextField(placeholder: "Contact Number", text: $contactNumber, keyboardType: .phonePad)
-                CustomTextField(placeholder: "Email", text: $email, keyboardType: .emailAddress)
+                TextField("Full Name", text: $fullName)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+
+                Picker("Gender", selection: $gender) {
+                    ForEach(genders, id: \.self) { gender in
+                        Text(gender)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+
+                DatePicker("Date of Birth", selection: $dateOfBirth, displayedComponents: .date)
+                    .datePickerStyle(.compact)
+
+                TextField("Contact Number", text: $contactNumber)
+                    .keyboardType(.phonePad)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+
+                TextField("Email", text: $email)
+                    .keyboardType(.emailAddress)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
 
                 Button(action: validateAndProceed) {
                     Text("Next")
@@ -57,60 +83,22 @@ struct PersonalInfoView: View {
                         .background(Color.mint)
                         .foregroundColor(.white)
                         .cornerRadius(10)
-                        .padding(.top, 15)
                 }
             }
             .padding()
-
-            Spacer()
         }
         .alert(isPresented: $showAlert) {
             Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
         }
     }
 
-    // MARK: - Helper Views
-    private var genderSelection: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text("Gender").font(.headline)
-            Menu {
-                ForEach(genders, id: \.self) { gender in
-                    Button(gender) { self.gender = gender }
-                }
-            } label: {
-                HStack {
-                    Text(gender)
-                        .foregroundColor(gender == "Select Gender" ? .gray : .black)
-                    Spacer()
-                    Image(systemName: "chevron.down").foregroundColor(.gray)
-                }
-                .padding()
-                .background(Color.mint.opacity(0.2))
-                .cornerRadius(10)
-            }
-        }
-    }
-
-    private var dobSelection: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text("Date of Birth").font(.headline)
-            DatePicker("", selection: $dateOfBirth, displayedComponents: .date)
-                .datePickerStyle(.compact)
-                .frame(height: 48)
-                .padding(.horizontal)
-                .background(Color.mint.opacity(0.2))
-                .cornerRadius(10)
-        }
-    }
-
-    // MARK: - Validation Logic
     private func validateAndProceed() {
         if fullName.isEmpty || gender == "Select Gender" || contactNumber.isEmpty || email.isEmpty {
             alertMessage = "Please fill in all required fields."
             showAlert = true
         } else {
             withAnimation { progress = 0.5 }
-            path.append("MedicalInfo")
+            showMedicalInfo = true
         }
     }
 }
@@ -118,14 +106,15 @@ struct PersonalInfoView: View {
 // MARK: - Medical Info View
 struct MedicalInfoView: View {
     @Binding var progress: Double
-    @Binding var path: [String]
+    @Binding var patientDetails: Patient?
+    @Binding var showDashboard: Bool // Bind to trigger Dashboard navigation
 
     @State private var bloodGroup = ""
     @State private var allergies = ""
     @State private var medicalConditions = ""
-    @State private var medications = ""
-    @State private var pastSurgeries = ""
-    @State private var emergencyContact = ""
+
+    @State private var showAlert = false
+    @State private var alertMessage = ""
 
     var body: some View {
         VStack {
@@ -137,62 +126,74 @@ struct MedicalInfoView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.mint)
 
-                CustomTextField(placeholder: "Blood Group", text: $bloodGroup)
-                CustomTextField(placeholder: "Allergies (if any)", text: $allergies)
-                CustomTextField(placeholder: "Existing Medical Conditions", text: $medicalConditions)
-                CustomTextField(placeholder: "Current Medications", text: $medications)
-                CustomTextField(placeholder: "Past Surgeries/Procedures", text: $pastSurgeries)
-                CustomTextField(placeholder: "Emergency Contact", text: $emergencyContact, keyboardType: .phonePad)
+                TextField("Blood Group", text: $bloodGroup)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
 
-                Button(action: {
-                    withAnimation { progress = 1.0 }
-                    path.append("HospitalListView")
-                }) {
+                TextField("Allergies", text: $allergies)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+
+                TextField("Medical Conditions", text: $medicalConditions)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+
+                Button(action: submitDetails) {
                     Text("Submit")
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color.mint)
                         .foregroundColor(.white)
                         .cornerRadius(10)
-                        .padding(.top, 15)
                 }
             }
             .padding()
+        }
+        .alert(isPresented: $showAlert) {
+            Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
+        }
+    }
 
-            Spacer()
+    private func submitDetails() {
+        if bloodGroup.isEmpty || allergies.isEmpty || medicalConditions.isEmpty {
+            alertMessage = "Please fill in all required fields."
+            showAlert = true
+        } else {
+            withAnimation { progress = 1.0 }
+            patientDetails = Patient(
+                fullName: "Full Name Placeholder",
+                gender: "Gender Placeholder",
+                dateOfBirth: Date(),
+                contactNumber: "Contact Placeholder",
+                email: "Email Placeholder",
+                bloodGroup: bloodGroup,
+                allergies: allergies,
+                medicalConditions: medicalConditions,
+                medications: "",
+                pastSurgeries: "",
+                emergencyContact: ""
+            )
+            showDashboard = true // Navigate to Dashboard
         }
     }
 }
 
-// MARK: - Progress Bar
+// MARK: - Progress Bar View
 struct ProgressBarView: View {
     var progress: Double
 
     var body: some View {
-        ProgressView(value: progress, total: 1.0)
-            .progressViewStyle(LinearProgressViewStyle(tint: .mint))
-            .padding(.top, 20)
-            .padding(.horizontal)
-            .animation(.easeInOut(duration: 0.5), value: progress)
-    }
-}
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .frame(width: geometry.size.width, height: 10)
+                    .opacity(0.3)
+                    .foregroundColor(.gray)
 
-// MARK: - Custom Text Field
-struct CustomTextField: View {
-    var placeholder: String
-    @Binding var text: String
-    var keyboardType: UIKeyboardType = .default
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(placeholder).font(.headline)
-            TextField(placeholder, text: $text)
-                .keyboardType(keyboardType)
-                .padding(.vertical, 12)
-                .padding(.horizontal)
-                .background(Color.mint.opacity(0.2))
-                .cornerRadius(10)
+                Rectangle()
+                    .frame(width: geometry.size.width * CGFloat(progress), height: 10)
+                    .foregroundColor(.mint)
+            }
+            .cornerRadius(5)
         }
+        .frame(height: 10)
     }
 }
 
