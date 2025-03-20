@@ -22,11 +22,11 @@ struct UserRoleScreen: View {
                 Spacer()
                 
                 ForEach(roles, id: \.self) { role in
-                    if role == "Patient" {
-                        NavigationLink(destination: LoginScreen()) {
-                            RoleCard(role: role)
+                        if role == "Patient" {
+                            NavigationLink(destination: PatientLoginSignupView()) {
+                                RoleCard(role: role)
+                            }
                         }
-                    }
                     
                     else if role == "Doctor" {
                         NavigationLink(destination: AdminLoginView(message: "Doctor")) {
