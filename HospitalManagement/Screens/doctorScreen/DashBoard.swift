@@ -12,7 +12,7 @@ struct DashBoard: View {
                     // **Top Bar with Profile Button**
                     HStack {
                         Spacer() // Push button to the right
-                        NavigationLink(destination: DoctorProfileView()) { 
+                        NavigationLink(destination: DoctorProfile()) { // ✅ Fixed destination
                             Image(systemName: "person.crop.circle.fill")
                                 .resizable()
                                 .frame(width: 40, height: 40)
@@ -45,7 +45,7 @@ struct DashBoard: View {
     }
 }
 
-// **Doctor Profile Screen (Replace with actual implementation)**
+// **Doctor Profile Screen (✅ Now conforms to View)**
 struct DoctorProfile: View {
     var body: some View {
         Text("Doctor Profile Screen")
