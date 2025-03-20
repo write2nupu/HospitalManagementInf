@@ -13,7 +13,7 @@ struct PatientSignupView: View {
                     MedicalInfoView(patientDetails: $patientDetails, showDashboard: $showDashboard)
                 }
                 .navigationDestination(isPresented: $showDashboard) {
-                    PatientDashboard()
+                    PatientDashboardView()
                 }
         }
     }
@@ -160,6 +160,9 @@ struct MedicalInfoView: View {
                     .background(Color.mint)
                     .foregroundColor(.white)
                     .cornerRadius(10)
+            }
+            .navigationDestination(isPresented: $showDashboard) {
+                PatientDashboardView()
             }
         }
         .padding()

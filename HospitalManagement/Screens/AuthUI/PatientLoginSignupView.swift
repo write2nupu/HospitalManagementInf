@@ -75,7 +75,7 @@ struct PatientLoginSignupView: View {
                 Alert(title: Text("Action Required"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
             .navigationDestination(isPresented: $navigateToDashboard) {
-                PatientDashboard()  // Dashboard after successful Login
+                PatientDashboardView()  // Dashboard after successful Login
             }
             .navigationDestination(isPresented: $navigateToSignUp) {
                 PatientSignupView()  // Navigate to Signup Flow
