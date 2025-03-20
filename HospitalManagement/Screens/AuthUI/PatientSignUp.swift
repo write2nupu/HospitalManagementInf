@@ -95,7 +95,6 @@ struct PersonalInfoView: View {
                 }
 
                 CustomTextField(placeholder: "Contact Number", text: $contactNumber, keyboardType: .phonePad)
-                CustomTextField(placeholder: "Email Address", text: $email, keyboardType: .emailAddress)
 
                 Button(action: {
                     path.append("MedicalInfo")
