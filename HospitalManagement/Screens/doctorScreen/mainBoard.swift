@@ -1,12 +1,25 @@
-
+import SwiftUICore
 import SwiftUI
+
 
 struct mainBoard: View {
     var doctor: Doctor = doctors[0]
     @State private var selectedTab: Tab = .appointments
+    @State private var showProfile = false
 
     enum Tab {
         case appointments, patients, dashBoard
+    }
+    
+    var heading: String {
+        switch selectedTab {
+        case .appointments:
+            return "Appointments"
+        case .patients:
+            return "Patients"
+        case .dashBoard:
+            return "Hi, Doctor"
+        }
     }
     
     var body: some View {
@@ -18,21 +31,23 @@ struct mainBoard: View {
                     // **Top Bar with Profile Button & Welcome Message**
                     HStack {
                         VStack(alignment: .leading) {
-                            Text("Hi, Doctor")
+                            Text(heading) // ✅ Dynamically updates based on selectedTab
                                 .font(.largeTitle)
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
-                            
                         }
                         
                         Spacer()
                         
-                        NavigationLink(destination: DoctorProfileView()) {
+                        Button(action: {
+                            showProfile = true // ✅ Open profile modally
+                        }) {
                             Image(systemName: "person.crop.circle.fill")
                                 .resizable()
                                 .frame(width: 40, height: 40)
                                 .foregroundColor(AppConfig.buttonColor)
                         }
+                        
                     }
                     .padding(.horizontal)
                     .padding(.top, 10)
@@ -55,19 +70,12 @@ struct mainBoard: View {
                         
                     }
                     .ignoresSafeArea(.keyboard, edges: .bottom)
-                    
-//                    TabBarView()
-//                    TabBarView(selectedTab: $selectedTab)
                 }
+            }
+            .sheet(isPresented: $showProfile) { // ✅ Modal presentation
+                DoctorProfileView()
             }
             .navigationBarBackButtonHidden(true)
         }
-    }
-}
-
-// **Preview**
-#Preview {
-    NavigationStack {
-        mainBoard()
     }
 }

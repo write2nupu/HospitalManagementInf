@@ -9,9 +9,8 @@ struct updatePassword: View {
     @State private var errorMessage: String? = nil
 
     var body: some View {
-        NavigationStack{
+        NavigationStack {
             ZStack {
-                
                 VStack(spacing: 20) {
                     // Header
                     Spacer()
@@ -19,12 +18,7 @@ struct updatePassword: View {
                         .font(.title)
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
-                    
-                    Text("For security reasons, you are required to update your password before accessing your account.")
-                        .font(.body)
-                        .fontWeight(.regular)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
+                   
                     
                     // Password Fields
                     VStack(spacing: 15) {
@@ -123,18 +117,17 @@ struct updatePassword: View {
                     Spacer()
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(isPresented: $isUpdated) {
-                mainBoard()  // ✅ Navigate to Dashboard
+            .fullScreenCover(isPresented: $isUpdated) { // ✅ Full-screen navigation
+                mainBoard()
+                    .navigationBarBackButtonHidden(true) // ✅ Removes back button
             }
         }
-       
     }
 }
 
 // Preview
 #Preview {
-    NavigationView {
+    NavigationStack {
         updatePassword()
     }
 }

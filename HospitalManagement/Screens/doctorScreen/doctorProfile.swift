@@ -40,8 +40,6 @@ struct DoctorProfileView: View {
                         slotSetUp(slot: slot, isAvailable: checkAvailability(for: slot))
                     }
                 }
-
-                
                 Section(header: Text("Consultation Fee")) {
                     profileRow(title: "Fee", value: "₹\(String(format: "%.2f", doctor.consultationFee))")
                 }
@@ -60,8 +58,13 @@ struct DoctorProfileView: View {
                 }
                 
                 Section(header: Text("Contact Information")) {
-                    profileRow(title: "Phone", value: doctor.phoneNumber)
-                    profileRow(title: "Email", value: doctor.email)
+                    NavigationLink(destination:  updateFields(fieldName: "Phone", initialValue: doctor.phoneNumber)) {
+                        profileRow(title: "Phone", value: doctor.phoneNumber)
+                    }
+                    
+                    NavigationLink(destination: updateFields(fieldName: "Email", initialValue: doctor.email)) {
+                        profileRow(title: "Email", value: doctor.email)
+                    }
                 }
                 
                 
