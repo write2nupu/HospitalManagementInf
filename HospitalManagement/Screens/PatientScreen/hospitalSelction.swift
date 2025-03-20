@@ -1,11 +1,13 @@
 import SwiftUI
 
 struct HospitalListView: View {
+    @EnvironmentObject private var viewModel: HospitalManagementViewModel
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 15) {
-                    ForEach(hospitals, id: \.name) { hospital in
+                    ForEach(viewModel.hospitals, id: \.name) { hospital in
                         NavigationLink(destination: DepartmentListView(departments: hospital.departments)) {
                             hospitalCard(hospital: hospital)
                         }

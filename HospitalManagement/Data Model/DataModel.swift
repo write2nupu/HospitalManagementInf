@@ -16,14 +16,23 @@ struct SuperAdmin: Identifiable, Codable{
     var password: String
 }
 
-struct Admin: Identifiable,Codable{
+struct Admin: Identifiable, Codable, Hashable {
     var id: UUID
     var email: String
     var fullName: String
-    var phoneNumber:String
+    var phoneNumber: String
     var hospitalId: UUID?
     var isFirstLogin: Bool?
     var initialPassword: String
+    
+    // Add Hashable conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: Admin, rhs: Admin) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
 struct Hospital: Identifiable, Codable {
@@ -58,7 +67,7 @@ struct Doctor : Identifiable, Codable {
     var qualifications : String
     var isActive: Bool
     var isFirstLogin: Bool?
-    var initialPassword: String
+    var initialPassword: String?
     var phoneNumber: String
     var email: String
     var gender : String
@@ -73,7 +82,7 @@ struct Patient: Identifiable, Codable {
     var phoneNumber: String
     var email: String
     var detailId: UUID?
-    var password: String
+    var password: String?
 }
 
 struct PatientDetails: Identifiable, Codable {
@@ -83,5 +92,22 @@ struct PatientDetails: Identifiable, Codable {
     var existingMedicalRecord: String?
     var currentMedication : String?
     var pastSurgeries : String?
-    var emergencyContact : String
+    var emergencyContact : String?
+}
+
+
+
+struct Appointment: Codable {
+    let id: UUID
+    let patientId: UUID
+    let doctorId: UUID
+    let date: Date
+    var status: AppointmentStatus
+    // Add any other needed properties
+}
+
+enum AppointmentStatus: String, Codable {
+    case scheduled
+    case completed
+    case cancelled
 }

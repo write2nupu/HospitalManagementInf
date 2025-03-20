@@ -9,7 +9,9 @@ import SwiftUI
 
 struct HospitalCard: View {
     let hospital: Hospital
-    let viewModel: HospitalViewModel
+    let viewModel: HospitalManagementViewModel
+    @StateObject private var supabaseController = SupabaseController()
+    @State private var adminDetails: Admin?
     
     var body: some View {
         NavigationLink {
@@ -39,7 +41,7 @@ struct HospitalCard: View {
                 HStack(spacing: 8) {
                     Image(systemName: "phone.fill")
                         .foregroundColor(.mint)
-                    Text(hospital.contact)
+                    Text(hospital.mobileNumber)
                         .font(.subheadline)
                         .foregroundColor(.black)
                 }
@@ -48,9 +50,15 @@ struct HospitalCard: View {
                 HStack(spacing: 8) {
                     Image(systemName: "person.fill")
                         .foregroundColor(.mint)
-                    Text("Admin: \(hospital.adminName)")
-                        .font(.subheadline)
-                        .foregroundColor(.black)
+                    if let admin = adminDetails {
+                        Text("Admin: \(admin.fullName)")
+                            .font(.subheadline)
+                            .foregroundColor(.black)
+                    } else {
+                        Text("Admin: Not Assigned")
+                            .font(.subheadline)
+                            .foregroundColor(.black)
+                    }
                 }
             }
             .padding()
@@ -61,6 +69,11 @@ struct HospitalCard: View {
             )
         }
         .buttonStyle(.plain)
+        .task {
+            if let adminId = hospital.assignedAdminId {
+                adminDetails = await supabaseController.fetchAdminByUUID(adminId: adminId)
+            }
+        }
     }
 }
 
@@ -128,7 +141,8 @@ struct SuperAdminProfileView: View {
 
 struct AddHospitalView: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var viewModel: HospitalViewModel
+    @ObservedObject var viewModel: HospitalManagementViewModel
+    @StateObject private var supabaseController = SupabaseController()
     
     @State private var name = ""
     @State private var licenseNumber = ""
@@ -139,6 +153,7 @@ struct AddHospitalView: View {
     @State private var contact = ""
     @State private var email = ""
     @State private var isActive = true
+    @State private var hospitals: [Hospital] = []
     
     // Admin Details
     @State private var adminFullName = ""
@@ -148,6 +163,81 @@ struct AddHospitalView: View {
     // Validation States
     @State private var showingValidationAlert = false
     @State private var validationMessage = ""
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Hospital Details")) {
+                    TextField("Name", text: $name)
+                        .textInputAutocapitalization(.words)
+                    TextField("License Number (XXX-XXX-XXX)", text: $licenseNumber)
+                        .textInputAutocapitalization(.characters)
+                    TextField("Address", text: $address)
+                        .textInputAutocapitalization(.words)
+                    TextField("City", text: $city)
+                        .textInputAutocapitalization(.words)
+                    TextField("State", text: $state)
+                        .textInputAutocapitalization(.words)
+                    TextField("Pincode (6 digits)", text: $pincode)
+                        .keyboardType(.numberPad)
+                    TextField("Contact (10 digits)", text: $contact)
+                        .keyboardType(.phonePad)
+                    TextField("Email", text: $email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                }
+                
+                Section(header: Text("Admin Details")) {
+                    TextField("Full Name", text: $adminFullName)
+                        .textInputAutocapitalization(.words)
+                    TextField("Email", text: $adminEmail)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                    TextField("Phone Number (10 digits)", text: $adminPhone)
+                        .keyboardType(.phonePad)
+                }
+                
+                Section(header: Text("Status")) {
+                    Toggle("Active", isOn: $isActive)
+                        .tint(.mint)
+                }
+            }
+            .navigationTitle("Add Hospital")
+            .navigationBarItems(
+                leading: Button("Cancel") { dismiss() }
+                    .foregroundColor(.mint),
+                trailing: Button("Save") {
+                    if isValidForm {
+                        let hospital = Hospital(
+                            id: UUID(),
+                            name: name,
+                            address: address,
+                            city: city,
+                            state: state,
+                            pincode: pincode,
+                            mobileNumber: contact,
+                            email: email,
+                            licenseNumber: licenseNumber,
+                            isActive: isActive,
+                            assignedAdminId: nil
+                        )
+                        Task {
+                            await supabaseController.addHospital(hospital)
+                            dismiss()
+                        }
+                    } else {
+                        showingValidationAlert = true
+                    }
+                }
+                .foregroundColor(.mint)
+            )
+            .alert("Validation Error", isPresented: $showingValidationAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(validationMessage)
+            }
+        }
+    }
     
     private var isValidForm: Bool {
         // Basic presence check
@@ -197,81 +287,6 @@ struct AddHospitalView: View {
         
         return true
     }
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Hospital Details")) {
-                    TextField("Name", text: $name)
-                        .textInputAutocapitalization(.words)
-                    TextField("License Number (XXX-XXX-XXX)", text: $licenseNumber)
-                        .textInputAutocapitalization(.characters)
-                    TextField("Address", text: $address)
-                        .textInputAutocapitalization(.words)
-                    TextField("City", text: $city)
-                        .textInputAutocapitalization(.words)
-                    TextField("State", text: $state)
-                        .textInputAutocapitalization(.words)
-                    TextField("Pincode (6 digits)", text: $pincode)
-                        .keyboardType(.numberPad)
-                    TextField("Contact (10 digits)", text: $contact)
-                        .keyboardType(.phonePad)
-                    TextField("Email", text: $email)
-                        .keyboardType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                }
-                
-                Section(header: Text("Admin Details")) {
-                    TextField("Full Name", text: $adminFullName)
-                        .textInputAutocapitalization(.words)
-                    TextField("Email", text: $adminEmail)
-                        .keyboardType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                    TextField("Phone Number (10 digits)", text: $adminPhone)
-                        .keyboardType(.phonePad)
-                }
-                
-                Section(header: Text("Status")) {
-                    Toggle("Active", isOn: $isActive)
-                        .tint(.mint)
-                }
-            }
-            .navigationTitle("Add Hospital")
-            .navigationBarItems(
-                leading: Button("Cancel") { dismiss() }
-                    .foregroundColor(.mint),
-                trailing: Button("Save") {
-                    if isValidForm {
-                        let hospital = hospital(
-                            name: name,
-                            address: address,
-                            city: city,
-                            state: state,
-                            pincode: pincode,
-                            contact: contact,
-                            email: email,
-                            isActive: isActive,
-                            password: viewModel.generateRandomPassword(),
-                            adminName: adminFullName,
-                            adminEmail: adminEmail,
-                            adminPhone: adminPhone,
-                            licenseNumber: licenseNumber
-                        )
-                        viewModel.addHospital(hospital)
-                        dismiss()
-                    } else {
-                        showingValidationAlert = true
-                    }
-                }
-                .foregroundColor(.mint)
-            )
-            .alert("Validation Error", isPresented: $showingValidationAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(validationMessage)
-            }
-        }
-    }
 }
 
 struct QuickActionCard: View {
@@ -305,14 +320,16 @@ struct QuickActionCard: View {
 }
 
 struct ContentView: View {
-    @StateObject private var viewModel = HospitalViewModel()
+    @StateObject private var viewModel = HospitalManagementViewModel()
+    @StateObject private var supabaseController = SupabaseController()
     @State private var showingAddHospital = false
     @State private var showingProfile = false
     @State private var searchText = ""
     @State private var showingAllHospitals = false
+    @State private var hospitals: [Hospital] = []
     
-    var filteredHospitals: [hospital] {
-        let sorted = (searchText.isEmpty ? viewModel.hospitals : viewModel.hospitals.filter { hospital in
+    var filteredHospitals: [Hospital] {
+        let sorted = (searchText.isEmpty ? hospitals : hospitals.filter { hospital in
             hospital.name.localizedCaseInsensitiveContains(searchText) ||
             hospital.city.localizedCaseInsensitiveContains(searchText) ||
             hospital.state.localizedCaseInsensitiveContains(searchText)
@@ -391,12 +408,16 @@ struct ContentView: View {
                 SuperAdminProfileView()
             }
         }
+        .task {
+            let fetchedHospitals = await supabaseController.fetchHospitals()
+            hospitals = fetchedHospitals
+        }
     }
 }
 
 struct HospitalList: View {
-    let hospitals: [hospital]
-    let viewModel: HospitalViewModel
+    let hospitals: [Hospital]
+    let viewModel: HospitalManagementViewModel
     
     var body: some View {
         ScrollView {
@@ -415,5 +436,6 @@ struct HospitalList: View {
 
 #Preview {
     ContentView()
+        .environmentObject(HospitalManagementViewModel())
 }
 

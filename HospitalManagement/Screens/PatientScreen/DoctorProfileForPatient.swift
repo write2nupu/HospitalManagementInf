@@ -87,7 +87,4 @@ struct DoctorProfileForPatient: View {
     }
 }
 
-// ✅ Preview
-#Preview {
-    DoctorProfileForPatient(doctor: doctors[0])
-}
+
