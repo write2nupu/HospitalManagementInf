@@ -8,78 +8,84 @@
 import SwiftUI
 
 struct HospitalDetailView: View {
-    @ObservedObject var viewModel: HospitalViewModel
-    @State var hospital: hospital
-    @State private var isActive: Bool
+    @EnvironmentObject private var viewModel: HospitalManagementViewModel
+    @State private var hospital: Hospital
+    @State private var isEditing = false
+    @Environment(\.dismiss) private var dismiss
     
-    init(viewModel: HospitalViewModel, hospital: hospital) {
-        self.viewModel = viewModel
+    init(hospital: Hospital) {
         _hospital = State(initialValue: hospital)
-        _isActive = State(initialValue: hospital.isActive)
     }
     
     var body: some View {
-        List {
-            Section("Hospital Information") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(hospital.name)
-                        .font(.title2)
-                        .bold()
-                    Text(hospital.address)
-                    Text("\(hospital.city), \(hospital.state)")
-                    Text("PIN: \(hospital.pincode)")
-                    Text("Contact: \(hospital.contact)")
-                    Text("Email: \(hospital.email)")
+        Form {
+            Section(header: Text("Hospital Information")) {
+                if isEditing {
+                    TextField("Name", text: $hospital.name)
+                    TextField("Address", text: $hospital.address)
+                    TextField("City", text: $hospital.city)
+                    TextField("State", text: $hospital.state)
+                    TextField("Pincode", text: $hospital.pincode)
+                } else {
+                    LabeledContent("Name", value: hospital.name)
+                    LabeledContent("Address", value: hospital.address)
+                    LabeledContent("City", value: hospital.city)
+                    LabeledContent("State", value: hospital.state)
+                    LabeledContent("Pincode", value: hospital.pincode)
                 }
-                .padding(.vertical, 4)
             }
             
-            Section("Admin Details") {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "person.fill")
-                            .foregroundColor(.purple)
-                        Text(hospital.adminName)
-                    }
-                    HStack {
-                        Image(systemName: "envelope.fill")
-                            .foregroundColor(.orange)
-                        Text(hospital.adminEmail)
-                    }
-                    HStack {
-                        Image(systemName: "phone.fill")
-                            .foregroundColor(.green)
-                        Text(hospital.adminPhone)
-                    }
+            Section(header: Text("Contact Information")) {
+                if isEditing {
+                    TextField("Mobile Number", text: $hospital.mobileNumber)
+                    TextField("Email", text: $hospital.email)
+                    TextField("License Number", text: $hospital.licenseNumber)
+                } else {
+                    LabeledContent("Mobile", value: hospital.mobileNumber)
+                    LabeledContent("Email", value: hospital.email)
+                    LabeledContent("License", value: hospital.licenseNumber)
                 }
-                .padding(.vertical, 4)
             }
             
-            Section("Status") {
-                Toggle("Active", isOn: $isActive)
-                    .tint(isActive ? .green : .red)
-                    .onChange(of: isActive) { oldValue, newValue in
-                        updateHospitalActive(newValue)
+            if let adminId = hospital.assignedAdminId {
+                Section(header: Text("Assigned Admin")) {
+                    if let admin = viewModel.admins.first(where: { $0.id == adminId }) {
+                        LabeledContent("Name", value: admin.fullName)
+                        LabeledContent("Email", value: admin.email)
+                        LabeledContent("Phone", value: admin.phoneNumber)
                     }
-            }
-            
-            Section("Login Credentials") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Username: \(hospital.email)")
-                    Text("Password: \(hospital.password)")
-                        .monospaced()
-                        .textSelection(.enabled)
                 }
-                .padding(.vertical, 4)
             }
         }
         .navigationTitle(hospital.name)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(isEditing ? "Save" : "Edit") {
+                    if isEditing {
+                        saveChanges()
+                    }
+                    isEditing.toggle()
+                }
+            }
+            
+            if isEditing {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        // Reset to original values
+                        hospital = viewModel.hospitals.first(where: { $0.id == hospital.id }) ?? hospital
+                        isEditing = false
+                    }
+                }
+            }
+        }
     }
     
-    private func updateHospitalActive(_ newValue: Bool) {
-        var updatedHospital = hospital
-        updatedHospital.isActive = newValue
-        viewModel.updateHospital(updatedHospital)
-        hospital = updatedHospital
+    private func saveChanges() {
+        do {
+            try viewModel.updateHospital(hospital)
+            isEditing = false
+        } catch {
+            print("Error updating hospital: \(error)")
+        }
     }
 }
