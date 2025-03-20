@@ -9,10 +9,10 @@ import SwiftUI
 
 struct HospitalDetailView: View {
     @ObservedObject var viewModel: HospitalViewModel
-    @State var hospital: hospitals
+    @State var hospital: hospital
     @State private var isActive: Bool
     
-    init(viewModel: HospitalViewModel, hospital: hospitals) {
+    init(viewModel: HospitalViewModel, hospital: hospital) {
         self.viewModel = viewModel
         _hospital = State(initialValue: hospital)
         _isActive = State(initialValue: hospital.isActive)
