@@ -7,6 +7,9 @@ struct LoginScreen: View {
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
     @State private var isPasswordVisible = false
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+    @State private var navigateToSignUp = false  // For navigation logic
 
     var body: some View {
         NavigationStack {
@@ -19,11 +22,10 @@ struct LoginScreen: View {
                     VStack(spacing: 10) {
                         Text("Hospital Management System")
                             .font(.title2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .fontWeight(.bold)
+                            .foregroundColor(.mint)
                         Text("Your Trusted Healthcare Partner")
                             .font(.body)
-                            .fontWeight(.regular)
                             .foregroundColor(.gray)
                     }
                     .padding(.top, 40)
@@ -38,14 +40,11 @@ struct LoginScreen: View {
 
                     // Form Fields
                     VStack(spacing: 20) {
-                        // Email Field
                         customTextField(icon: "envelope.fill", placeholder: "Enter Email", text: $email, keyboardType: .emailAddress)
 
-                        // Password Field
-                        passwordField(icon: "lock.fill", placeholder: "Create Password", text: $password)
+                        passwordField(icon: "lock.fill", placeholder: selectedSegment == 0 ? "Enter Password" : "Create Password", text: $password)
 
                         if selectedSegment == 1 {
-                            // Confirm Password for Signup
                             passwordField(icon: "lock.fill", placeholder: "Confirm Password", text: $confirmPassword)
                         }
                     }
@@ -54,42 +53,55 @@ struct LoginScreen: View {
                     Spacer()
 
                     // Submit Button
-                    NavigationLink(destination: PatientSignUpView(), isActive: Binding(
-                        get: { selectedSegment == 1 },
-                        set: { _ in }
-                    )) {
-                        Button(action: handleSubmit) {
-                            Text(selectedSegment == 0 ? "Login" : "Sign Up")
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(AppConfig.buttonColor)
-                                .cornerRadius(12)
-                        }
-                        .padding(.horizontal)
-                        .padding(.bottom, 30)
+                    Button(action: handleSubmit) {
+                        Text(selectedSegment == 0 ? "Login" : "Sign Up")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.mint)
+                            .cornerRadius(12)
                     }
+                    .padding(.horizontal)
+                    .padding(.bottom, 30)
+
+                    // Navigation Trigger
+                    NavigationLink("", destination: PatientSignUpView(), isActive: $navigateToSignUp)
                 }
+            }
+            .alert(isPresented: $showAlert) {
+                Alert(title: Text("Action Required"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
         }
     }
 
+    // MARK: - Submission Logic
     func handleSubmit() {
-        // Handle login if needed, no navigation logic required as NavigationLink handles signup
+        if email.isEmpty || password.isEmpty || (selectedSegment == 1 && confirmPassword.isEmpty) {
+            alertMessage = "Please fill in all required fields."
+            showAlert = true
+        } else if selectedSegment == 1 && password != confirmPassword {
+            alertMessage = "Passwords do not match."
+            showAlert = true
+        } else if selectedSegment == 1 {
+            navigateToSignUp = true  // Navigate to PatientSignUpView
+        } else {
+            alertMessage = "Login Successful!"
+            showAlert = true
+        }
     }
 
     // MARK: - Helper Views
     func customTextField(icon: String, placeholder: String, text: Binding<String>, keyboardType: UIKeyboardType = .default) -> some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(.black)
+                .foregroundColor(.mint)
             TextField(placeholder, text: text)
                 .autocapitalization(.none)
                 .keyboardType(keyboardType)
         }
         .padding()
-        .background(Color.mint)
+        .background(Color.mint.opacity(0.2))
         .cornerRadius(12)
         .padding(.horizontal)
     }
@@ -97,12 +109,14 @@ struct LoginScreen: View {
     func passwordField(icon: String, placeholder: String, text: Binding<String>) -> some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(.black)
+                .foregroundColor(.mint)
+            
             if isPasswordVisible {
                 TextField(placeholder, text: text)
             } else {
                 SecureField(placeholder, text: text)
             }
+            
             Button(action: {
                 isPasswordVisible.toggle()
             }) {
@@ -111,14 +125,13 @@ struct LoginScreen: View {
             }
         }
         .padding()
-        .background(Color.mint)
+        .background(Color.mint.opacity(0.2))
         .cornerRadius(12)
         .padding(.horizontal)
     }
 }
 
 // MARK: - Preview
-
 struct PatientLoginView_Previews: PreviewProvider {
     static var previews: some View {
         LoginScreen()
