@@ -11,12 +11,6 @@ import SwiftUI  // ✅ Use SwiftUI instead of SwiftUICore
 struct AppointmentView: View {  // ✅ Conform to `View`
     var body: some View {
         VStack {
-            Text("Appointments")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .foregroundColor(.blue)
-                .padding()
-
             Spacer()
 
             Text("No upcoming appointments.")

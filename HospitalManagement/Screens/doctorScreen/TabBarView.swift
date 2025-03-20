@@ -25,7 +25,7 @@ struct TabBarView: View {
                             .frame(width: 34, height: 24)
                             .foregroundColor(selectedTab == .dashBoard ? AppConfig.buttonColor : .gray)
 
-                        Text("Patients") // Dummy data usage
+                        Text("DashBoard") // Dummy data usage
                             .font(.footnote)
                             .foregroundColor(selectedTab == .dashBoard ? AppConfig.buttonColor : .gray)
                     }

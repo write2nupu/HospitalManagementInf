@@ -30,6 +30,8 @@ struct DoctorProfileView: View {
         availableSlots: ["Morning", "Evening"]
     )
     
+    @State private var isLoggedOut = false
+    
     var body: some View {
         NavigationStack {
             Form {
@@ -63,12 +65,28 @@ struct DoctorProfileView: View {
                 }
                 
                 
+                Section {
+                    NavigationLink(destination: updatePassword()) {
+                        Text("Update Password")
+                            .foregroundColor(AppConfig.buttonColor)
+                            .fontWeight(.semibold)
+                    }
+                }
                 
-                
-                
-                
+                Section {
+                    Button(action: handleLogout) {
+                        Text("Logout")
+                            .fontWeight(.bold)
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                }
             }
             .navigationTitle("Doctor Profile")
+            .tint(AppConfig.buttonColor)
+            .fullScreenCover(isPresented: .constant(isLoggedOut)) {
+                UserRoleScreen()
+            }
         }
     }
     
@@ -100,7 +118,10 @@ struct DoctorProfileView: View {
         let availableSlots: [String] = ["Morning"] // Example: Only Morning is available
         return availableSlots.contains(slot)
     }
-
+    
+    private func handleLogout() {
+        isLoggedOut = true
+    }
 
     
     
