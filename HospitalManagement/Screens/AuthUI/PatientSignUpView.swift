@@ -1,33 +1,20 @@
-//
-//  PatientSignUp.swift
-//  HospitalManagement
-//
-//  Created by Nupur on 18/03/25.
-//
-
 import SwiftUI
 
-struct PatientSignUpView: View {
-    @State private var progress: Double = 0.0  // Tracks progress
-    @State private var path: [String] = []  // Navigation path
+struct PatientSignupView: View {
+    @State private var progress: Double = 0.0
+    @State private var path: [String] = []
 
     var body: some View {
         NavigationStack(path: $path) {
             PersonalInfoView(progress: $progress, path: $path)
+                .navigationDestination(for: String.self) { destination in
+                    if destination == "MedicalInfo" {
+                        MedicalInfoView(progress: $progress, path: $path)
+                    } else if destination == "HospitalListView" {
+                        HospitalListView()
+                    }
+                }
         }
-    }
-}
-
-// MARK: - Progress Bar View (Reusable)
-struct ProgressBarView: View {
-    var progress: Double
-
-    var body: some View {
-        ProgressView(value: progress, total: 1.0)
-            .progressViewStyle(LinearProgressViewStyle(tint: .mint))
-            .padding(.top, 20)
-            .padding(.horizontal)
-            .animation(.easeInOut(duration: 0.5), value: progress)
     }
 }
 
@@ -41,18 +28,15 @@ struct PersonalInfoView: View {
     @State private var dateOfBirth = Date()
     @State private var contactNumber = ""
     @State private var email = ""
+    
+    @State private var showAlert = false
+    @State private var alertMessage = ""
 
     let genders = ["Select Gender", "Male", "Female", "Other"]
 
     var body: some View {
         VStack {
             ProgressBarView(progress: progress)
-                .padding(.bottom, 10)
-                .onAppear {
-                    withAnimation {
-                        progress = 0.5
-                    }
-                }
 
             VStack(spacing: 15) {
                 Text("Personal Information")
@@ -61,44 +45,12 @@ struct PersonalInfoView: View {
                     .foregroundColor(.mint)
 
                 CustomTextField(placeholder: "Full Name", text: $fullName)
-
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Gender").font(.headline)
-                    Menu {
-                        ForEach(genders, id: \.self) { gender in
-                            Button(gender) {
-                                self.gender = gender
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text(gender)
-                                .foregroundColor(gender == "Select Gender" ? .gray : .black)
-                            Spacer()
-                            Image(systemName: "chevron.down")
-                                .foregroundColor(.gray)
-                        }
-                        .padding()
-                        .background(Color.mint.opacity(0.2))
-                        .cornerRadius(10)
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Date of Birth").font(.headline)
-                    DatePicker("", selection: $dateOfBirth, displayedComponents: .date)
-                        .datePickerStyle(.compact)
-                        .frame(height: 48)
-                        .padding(.horizontal)
-                        .background(Color.mint.opacity(0.2))
-                        .cornerRadius(10)
-                }
-
+                genderSelection
+                dobSelection
                 CustomTextField(placeholder: "Contact Number", text: $contactNumber, keyboardType: .phonePad)
+                CustomTextField(placeholder: "Email", text: $email, keyboardType: .emailAddress)
 
-                Button(action: {
-                    path.append("MedicalInfo")
-                }) {
+                Button(action: validateAndProceed) {
                     Text("Next")
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -112,13 +64,53 @@ struct PersonalInfoView: View {
 
             Spacer()
         }
-        .frame(maxHeight: .infinity, alignment: .top)
-        .navigationDestination(for: String.self) { destination in
-            if destination == "MedicalInfo" {
-                MedicalInfoView(progress: $progress, path: $path)
-            } else if destination == "Dashboard" {
-                PatientDashboardView()
+        .alert(isPresented: $showAlert) {
+            Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
+        }
+    }
+
+    // MARK: - Helper Views
+    private var genderSelection: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("Gender").font(.headline)
+            Menu {
+                ForEach(genders, id: \.self) { gender in
+                    Button(gender) { self.gender = gender }
+                }
+            } label: {
+                HStack {
+                    Text(gender)
+                        .foregroundColor(gender == "Select Gender" ? .gray : .black)
+                    Spacer()
+                    Image(systemName: "chevron.down").foregroundColor(.gray)
+                }
+                .padding()
+                .background(Color.mint.opacity(0.2))
+                .cornerRadius(10)
             }
+        }
+    }
+
+    private var dobSelection: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("Date of Birth").font(.headline)
+            DatePicker("", selection: $dateOfBirth, displayedComponents: .date)
+                .datePickerStyle(.compact)
+                .frame(height: 48)
+                .padding(.horizontal)
+                .background(Color.mint.opacity(0.2))
+                .cornerRadius(10)
+        }
+    }
+
+    // MARK: - Validation Logic
+    private func validateAndProceed() {
+        if fullName.isEmpty || gender == "Select Gender" || contactNumber.isEmpty || email.isEmpty {
+            alertMessage = "Please fill in all required fields."
+            showAlert = true
+        } else {
+            withAnimation { progress = 0.5 }
+            path.append("MedicalInfo")
         }
     }
 }
@@ -138,13 +130,6 @@ struct MedicalInfoView: View {
     var body: some View {
         VStack {
             ProgressBarView(progress: progress)
-                .onAppear {
-                    withAnimation(.easeInOut(duration: 1.0)) {
-                        progress = 1.0
-                    }
-                }
-
-            Spacer(minLength: 10)
 
             VStack(spacing: 15) {
                 Text("Medical Information")
@@ -160,9 +145,10 @@ struct MedicalInfoView: View {
                 CustomTextField(placeholder: "Emergency Contact", text: $emergencyContact, keyboardType: .phonePad)
 
                 Button(action: {
-                    path.append("Dashboard")
+                    withAnimation { progress = 1.0 }
+                    path.append("HospitalListView")
                 }) {
-                    Text("Complete")
+                    Text("Submit")
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color.mint)
@@ -175,32 +161,23 @@ struct MedicalInfoView: View {
 
             Spacer()
         }
-        .frame(maxHeight: .infinity, alignment: .top)
     }
 }
 
-// Patient Dashboard (Placeholder)
-struct PatientDashboardView: View {
+// MARK: - Progress Bar
+struct ProgressBarView: View {
+    var progress: Double
+
     var body: some View {
-        VStack {
-            Text("Welcome to Your Dashboard!")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .foregroundColor(.mint)
-            Image(systemName: "person.circle.fill")
-                .resizable()
-                .frame(width: 100, height: 100)
-                .foregroundColor(.mint)
-                .padding()
-            Text("You’re all set!")
-                .font(.title2)
-        }
-        .navigationBarBackButtonHidden(true)
-        .padding()
+        ProgressView(value: progress, total: 1.0)
+            .progressViewStyle(LinearProgressViewStyle(tint: .mint))
+            .padding(.top, 20)
+            .padding(.horizontal)
+            .animation(.easeInOut(duration: 0.5), value: progress)
     }
 }
 
-// Custom Text Field
+// MARK: - Custom Text Field
 struct CustomTextField: View {
     var placeholder: String
     @Binding var text: String
@@ -219,9 +196,9 @@ struct CustomTextField: View {
     }
 }
 
-// Preview
-struct PatientSignUpView_Previews: PreviewProvider {
+// MARK: - Preview
+struct PatientSignupView_Previews: PreviewProvider {
     static var previews: some View {
-        PatientSignUpView()
+        PatientSignupView()
     }
 }
