@@ -21,7 +21,7 @@ struct HospitalCard: View {
                     Text(hospital.name)
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundColor(.mint)
+                        .foregroundColor(.black)
                     Spacer()
                     StatusBadge(isActive: hospital.isActive)
                 }
@@ -32,6 +32,7 @@ struct HospitalCard: View {
                         .foregroundColor(.mint)
                     Text("\(hospital.city), \(hospital.state)")
                         .font(.subheadline)
+                        .foregroundColor(.black)
                 }
                 
                 // Contact info
@@ -40,6 +41,7 @@ struct HospitalCard: View {
                         .foregroundColor(.mint)
                     Text(hospital.contact)
                         .font(.subheadline)
+                        .foregroundColor(.black)
                 }
                 
                 // Admin info
@@ -48,6 +50,7 @@ struct HospitalCard: View {
                         .foregroundColor(.mint)
                     Text("Admin: \(hospital.adminName)")
                         .font(.subheadline)
+                        .foregroundColor(.black)
                 }
             }
             .padding()
@@ -56,7 +59,6 @@ struct HospitalCard: View {
                     .fill(Color(.systemBackground))
                     .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
             )
-            .foregroundColor(.primary)
         }
         .buttonStyle(.plain)
     }
@@ -91,7 +93,7 @@ struct SuperAdminProfileButton: View {
         Button(action: { isShowingProfile = true }) {
             Image(systemName: "person.circle.fill")
                 .font(.title2)
-                .foregroundColor(.blue)
+                .foregroundColor(.mint)
         }
     }
 }
@@ -143,17 +145,76 @@ struct AddHospitalView: View {
     @State private var adminEmail = ""
     @State private var adminPhone = ""
     
+    // Validation States
+    @State private var showingValidationAlert = false
+    @State private var validationMessage = ""
+    
+    private var isValidForm: Bool {
+        // Basic presence check
+        guard !name.isEmpty, !licenseNumber.isEmpty, !address.isEmpty,
+              !city.isEmpty, !state.isEmpty, !pincode.isEmpty,
+              !contact.isEmpty, !email.isEmpty,
+              !adminFullName.isEmpty, !adminEmail.isEmpty, !adminPhone.isEmpty else {
+            validationMessage = "All fields are required"
+            return false
+        }
+        
+        // License number validation (assuming format: XXX-XXX-XXX)
+        let licensePattern = "^[A-Z0-9]{3}-[A-Z0-9]{3}-[A-Z0-9]{3}$"
+        if licenseNumber.range(of: licensePattern, options: .regularExpression) == nil {
+            validationMessage = "License number should be in XXX-XXX-XXX format"
+            return false
+        }
+        
+        // Email validation
+        let emailPattern = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+        if email.range(of: emailPattern, options: .regularExpression) == nil {
+            validationMessage = "Please enter a valid email address"
+            return false
+        }
+        if adminEmail.range(of: emailPattern, options: .regularExpression) == nil {
+            validationMessage = "Please enter a valid admin email address"
+            return false
+        }
+        
+        // Phone number validation (10 digits)
+        let phonePattern = "^[0-9]{10}$"
+        if contact.range(of: phonePattern, options: .regularExpression) == nil {
+            validationMessage = "Phone number should be 10 digits"
+            return false
+        }
+        if adminPhone.range(of: phonePattern, options: .regularExpression) == nil {
+            validationMessage = "Admin phone number should be 10 digits"
+            return false
+        }
+        
+        // Pincode validation (6 digits)
+        let pincodePattern = "^[0-9]{6}$"
+        if pincode.range(of: pincodePattern, options: .regularExpression) == nil {
+            validationMessage = "Pincode should be 6 digits"
+            return false
+        }
+        
+        return true
+    }
+    
     var body: some View {
         NavigationView {
             Form {
                 Section(header: Text("Hospital Details")) {
                     TextField("Name", text: $name)
-                    TextField("License Number", text: $licenseNumber)
+                        .textInputAutocapitalization(.words)
+                    TextField("License Number (XXX-XXX-XXX)", text: $licenseNumber)
+                        .textInputAutocapitalization(.characters)
                     TextField("Address", text: $address)
+                        .textInputAutocapitalization(.words)
                     TextField("City", text: $city)
+                        .textInputAutocapitalization(.words)
                     TextField("State", text: $state)
-                    TextField("Pincode", text: $pincode)
-                    TextField("Contact", text: $contact)
+                        .textInputAutocapitalization(.words)
+                    TextField("Pincode (6 digits)", text: $pincode)
+                        .keyboardType(.numberPad)
+                    TextField("Contact (10 digits)", text: $contact)
                         .keyboardType(.phonePad)
                     TextField("Email", text: $email)
                         .keyboardType(.emailAddress)
@@ -162,10 +223,11 @@ struct AddHospitalView: View {
                 
                 Section(header: Text("Admin Details")) {
                     TextField("Full Name", text: $adminFullName)
+                        .textInputAutocapitalization(.words)
                     TextField("Email", text: $adminEmail)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
-                    TextField("Phone Number", text: $adminPhone)
+                    TextField("Phone Number (10 digits)", text: $adminPhone)
                         .keyboardType(.phonePad)
                 }
                 
@@ -179,29 +241,35 @@ struct AddHospitalView: View {
                 leading: Button("Cancel") { dismiss() }
                     .foregroundColor(.mint),
                 trailing: Button("Save") {
-                    let hospital = hospital(
-                        name: name,
-                        address: address,
-                        city: city,
-                        state: state,
-                        pincode: pincode,
-                        contact: contact,
-                        email: email,
-                        isActive: isActive,
-                        password: viewModel.generateRandomPassword(),
-                        adminName: adminFullName,
-                        adminEmail: adminEmail,
-                        adminPhone: adminPhone,
-                        licenseNumber: licenseNumber
-                    )
-                    viewModel.addHospital(hospital)
-                    dismiss()
+                    if isValidForm {
+                        let hospital = hospital(
+                            name: name,
+                            address: address,
+                            city: city,
+                            state: state,
+                            pincode: pincode,
+                            contact: contact,
+                            email: email,
+                            isActive: isActive,
+                            password: viewModel.generateRandomPassword(),
+                            adminName: adminFullName,
+                            adminEmail: adminEmail,
+                            adminPhone: adminPhone,
+                            licenseNumber: licenseNumber
+                        )
+                        viewModel.addHospital(hospital)
+                        dismiss()
+                    } else {
+                        showingValidationAlert = true
+                    }
                 }
-                .disabled(name.isEmpty || licenseNumber.isEmpty || address.isEmpty || city.isEmpty || state.isEmpty ||
-                         pincode.isEmpty || contact.isEmpty || email.isEmpty ||
-                         adminFullName.isEmpty || adminEmail.isEmpty || adminPhone.isEmpty)
                 .foregroundColor(.mint)
             )
+            .alert("Validation Error", isPresented: $showingValidationAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(validationMessage)
+            }
         }
     }
 }
@@ -244,15 +312,17 @@ struct ContentView: View {
     @State private var showingAllHospitals = false
     
     var filteredHospitals: [hospital] {
-        if searchText.isEmpty {
-            return viewModel.hospitals
-        } else {
-            return viewModel.hospitals.filter { hospital in
-                hospital.name.localizedCaseInsensitiveContains(searchText) ||
-                hospital.city.localizedCaseInsensitiveContains(searchText) ||
-                hospital.state.localizedCaseInsensitiveContains(searchText)
+        let sorted = (searchText.isEmpty ? viewModel.hospitals : viewModel.hospitals.filter { hospital in
+            hospital.name.localizedCaseInsensitiveContains(searchText) ||
+            hospital.city.localizedCaseInsensitiveContains(searchText) ||
+            hospital.state.localizedCaseInsensitiveContains(searchText)
+        }).sorted { h1, h2 in
+            if h1.isActive == h2.isActive {
+                return h1.name < h2.name
             }
+            return h1.isActive && !h2.isActive
         }
+        return sorted
     }
     
     var body: some View {
@@ -263,7 +333,7 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Quick Actions")
                             .font(.headline)
-                            .foregroundColor(.mint)
+                            .foregroundColor(.black)
                             .padding(.horizontal)
                         
                         QuickActionCard {
@@ -277,7 +347,7 @@ struct ContentView: View {
                         HStack {
                             Text("Hospitals")
                                 .font(.headline)
-                                .foregroundColor(.mint)
+                                .foregroundColor(.black)
                             Spacer()
                             NavigationLink("See All", destination: HospitalList(hospitals: filteredHospitals, viewModel: viewModel))
                                 .foregroundColor(.mint)

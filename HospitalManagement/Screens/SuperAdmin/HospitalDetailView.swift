@@ -31,7 +31,7 @@ struct HospitalDetailView: View {
                             Text(hospital.name)
                                 .font(.title2)
                                 .bold()
-                                .foregroundColor(.mint)
+                                .foregroundColor(.black)
                             Text("License: \(hospital.licenseNumber)")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
@@ -44,13 +44,9 @@ struct HospitalDetailView: View {
                     
                     // Location Details
                     VStack(alignment: .leading, spacing: 8) {
-                        Label {
-                            Text(hospital.address)
-                                .font(.body)
-                        } icon: {
-                            Image(systemName: "location.fill")
-                                .foregroundColor(.mint)
-                        }
+                        Text(hospital.address)
+                            .font(.body)
+                            .foregroundColor(.black)
                         
                         Text("\(hospital.city), \(hospital.state) \(hospital.pincode)")
                             .font(.subheadline)
@@ -63,58 +59,48 @@ struct HospitalDetailView: View {
             
             // Contact Information
             Section {
-                LabeledContent {
+                LabeledContent("Phone") {
                     Button(hospital.contact) {
                         guard let url = URL(string: "tel:\(hospital.contact)") else { return }
                         UIApplication.shared.open(url)
                     }
                     .foregroundColor(.mint)
-                } label: {
-                    Label("Phone", systemImage: "phone.fill")
                 }
                 
-                LabeledContent {
+                LabeledContent("Email") {
                     Button(hospital.email) {
                         guard let url = URL(string: "mailto:\(hospital.email)") else { return }
                         UIApplication.shared.open(url)
                     }
                     .foregroundColor(.mint)
-                } label: {
-                    Label("Email", systemImage: "envelope.fill")
                 }
             } header: {
                 Text("Contact Information")
+                    .foregroundColor(.black)
             }
             
             // Admin Details
             Section {
-                LabeledContent {
-                    Text(hospital.adminName)
-                } label: {
-                    Label("Name", systemImage: "person.fill")
-                }
+                LabeledContent("Name", value: hospital.adminName)
                 
-                LabeledContent {
+                LabeledContent("Phone") {
                     Button(hospital.adminPhone) {
                         guard let url = URL(string: "tel:\(hospital.adminPhone)") else { return }
                         UIApplication.shared.open(url)
                     }
                     .foregroundColor(.mint)
-                } label: {
-                    Label("Phone", systemImage: "phone.fill")
                 }
                 
-                LabeledContent {
+                LabeledContent("Email") {
                     Button(hospital.adminEmail) {
                         guard let url = URL(string: "mailto:\(hospital.adminEmail)") else { return }
                         UIApplication.shared.open(url)
                     }
                     .foregroundColor(.mint)
-                } label: {
-                    Label("Email", systemImage: "envelope.fill")
                 }
             } header: {
                 Text("Administrator")
+                    .foregroundColor(.black)
             }
             
             // Status
@@ -126,31 +112,34 @@ struct HospitalDetailView: View {
                     }
             } header: {
                 Text("Status")
+                    .foregroundColor(.black)
             } footer: {
                 Text("When inactive, the hospital will not be visible to patients")
                     .font(.caption)
+                    .foregroundColor(.secondary)
             }
             
             // Login Credentials
             Section {
                 LabeledContent("Username", value: hospital.email)
-                LabeledContent {
+                LabeledContent("Password") {
                     HStack {
                         Text(hospital.password)
                             .font(.system(.body, design: .monospaced))
+                            .foregroundColor(.black)
                         Spacer()
                         Image(systemName: "doc.on.doc")
                             .foregroundColor(.mint)
                     }
-                } label: {
-                    Text("Password")
                 }
                 .textSelection(.enabled)
             } header: {
                 Text("Login Credentials")
+                    .foregroundColor(.black)
             } footer: {
                 Text("Tap password to copy")
                     .font(.caption)
+                    .foregroundColor(.secondary)
             }
         }
         .navigationTitle(hospital.name)
