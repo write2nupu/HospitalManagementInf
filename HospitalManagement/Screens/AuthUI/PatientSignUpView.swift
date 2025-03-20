@@ -2,35 +2,25 @@ import SwiftUI
 
 // MARK: - Patient Signup View
 struct PatientSignupView: View {
-    @State private var progress: Double = 0.0
-    @State private var showMedicalInfo = false
     @State private var patientDetails: Patient?
-    @State private var showDashboard = false // State for Dashboard navigation
+    @State private var showMedicalInfo = false
+    @State private var showDashboard = false
 
     var body: some View {
         NavigationStack {
-            PersonalInfoView(
-                progress: $progress,
-                showMedicalInfo: $showMedicalInfo,
-                patientDetails: $patientDetails
-            )
-            .navigationDestination(isPresented: $showMedicalInfo) {
-                MedicalInfoView(
-                    progress: $progress,
-                    patientDetails: $patientDetails,
-                    showDashboard: $showDashboard
-                )
-            }
-            .navigationDestination(isPresented: $showDashboard) {
-                PatientDashboard() // Navigate to PatientDashboard
-            }
+            PersonalInfoView(showMedicalInfo: $showMedicalInfo, patientDetails: $patientDetails)
+                .navigationDestination(isPresented: $showMedicalInfo) {
+                    MedicalInfoView(patientDetails: $patientDetails, showDashboard: $showDashboard)
+                }
+                .navigationDestination(isPresented: $showDashboard) {
+                    PatientDashboard()
+                }
         }
     }
 }
 
 // MARK: - Personal Info View
 struct PersonalInfoView: View {
-    @Binding var progress: Double
     @Binding var showMedicalInfo: Bool
     @Binding var patientDetails: Patient?
 
@@ -46,47 +36,48 @@ struct PersonalInfoView: View {
     let genders = ["Select Gender", "Male", "Female", "Other"]
 
     var body: some View {
-        VStack {
-            ProgressBarView(progress: progress)
+        VStack(spacing: 20) {
+            Text("Personal Information")
+                .font(.title)
+                .fontWeight(.bold)
+                .foregroundColor(.mint)
 
-            VStack(spacing: 15) {
-                Text("Personal Information")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .foregroundColor(.mint)
+            TextField("Full Name", text: $fullName)
+                .padding()
+                .background(Color.mint.opacity(0.2))
+                .cornerRadius(8)
 
-                TextField("Full Name", text: $fullName)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            GenderPickerView(gender: $gender, genders: genders)
 
-                Picker("Gender", selection: $gender) {
-                    ForEach(genders, id: \.self) { gender in
-                        Text(gender)
-                    }
-                }
-                .pickerStyle(MenuPickerStyle())
+            DatePicker("Date of Birth", selection: $dateOfBirth, displayedComponents: .date)
+                .padding()
+                .background(Color.mint.opacity(0.2))
+                .cornerRadius(8)
 
-                DatePicker("Date of Birth", selection: $dateOfBirth, displayedComponents: .date)
-                    .datePickerStyle(.compact)
+            TextField("Contact Number", text: $contactNumber)
+                .keyboardType(.phonePad)
+                .padding()
+                .background(Color.mint.opacity(0.2))
+                .cornerRadius(8)
 
-                TextField("Contact Number", text: $contactNumber)
-                    .keyboardType(.phonePad)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            TextField("Email", text: $email)
+                .keyboardType(.emailAddress)
+                .padding()
+                .background(Color.mint.opacity(0.2))
+                .cornerRadius(8)
 
-                TextField("Email", text: $email)
-                    .keyboardType(.emailAddress)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            Spacer()
 
-                Button(action: validateAndProceed) {
-                    Text("Next")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.mint)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
+            Button(action: validateAndProceed) {
+                Text("Next")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.mint)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
             }
-            .padding()
         }
+        .padding()
         .alert(isPresented: $showAlert) {
             Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
         }
@@ -97,17 +88,39 @@ struct PersonalInfoView: View {
             alertMessage = "Please fill in all required fields."
             showAlert = true
         } else {
-            withAnimation { progress = 0.5 }
             showMedicalInfo = true
         }
     }
 }
 
+// MARK: - Gender Picker View
+struct GenderPickerView: View {
+    @Binding var gender: String
+    let genders: [String]
+
+    var body: some View {
+        HStack {
+            Text("Gender")
+                .foregroundColor(.black)
+            Spacer()
+            Picker("Gender", selection: $gender) {
+                ForEach(genders, id: \ .self) { gender in
+                    Text(gender).foregroundColor(.black)
+                }
+            }
+            .pickerStyle(MenuPickerStyle())
+            .foregroundColor(.black)
+        }
+        .padding()
+        .background(Color.mint.opacity(0.2))
+        .cornerRadius(8)
+    }
+}
+
 // MARK: - Medical Info View
 struct MedicalInfoView: View {
-    @Binding var progress: Double
     @Binding var patientDetails: Patient?
-    @Binding var showDashboard: Bool // Bind to trigger Dashboard navigation
+    @Binding var showDashboard: Bool
 
     @State private var bloodGroup = ""
     @State private var allergies = ""
@@ -117,35 +130,39 @@ struct MedicalInfoView: View {
     @State private var alertMessage = ""
 
     var body: some View {
-        VStack {
-            ProgressBarView(progress: progress)
+        VStack(spacing: 20) {
+            Text("Medical Information")
+                .font(.title)
+                .fontWeight(.bold)
+                .foregroundColor(.mint)
 
-            VStack(spacing: 15) {
-                Text("Medical Information")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .foregroundColor(.mint)
+            TextField("Blood Group", text: $bloodGroup)
+                .padding()
+                .background(Color.mint.opacity(0.2))
+                .cornerRadius(8)
 
-                TextField("Blood Group", text: $bloodGroup)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            TextField("Allergies", text: $allergies)
+                .padding()
+                .background(Color.mint.opacity(0.2))
+                .cornerRadius(8)
 
-                TextField("Allergies", text: $allergies)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            TextField("Medical Conditions", text: $medicalConditions)
+                .padding()
+                .background(Color.mint.opacity(0.2))
+                .cornerRadius(8)
 
-                TextField("Medical Conditions", text: $medicalConditions)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            Spacer()
 
-                Button(action: submitDetails) {
-                    Text("Submit")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.mint)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
+            Button(action: submitDetails) {
+                Text("Submit")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.mint)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
             }
-            .padding()
         }
+        .padding()
         .alert(isPresented: $showAlert) {
             Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
         }
@@ -156,7 +173,6 @@ struct MedicalInfoView: View {
             alertMessage = "Please fill in all required fields."
             showAlert = true
         } else {
-            withAnimation { progress = 1.0 }
             patientDetails = Patient(
                 fullName: "Full Name Placeholder",
                 gender: "Gender Placeholder",
@@ -170,30 +186,8 @@ struct MedicalInfoView: View {
                 pastSurgeries: "",
                 emergencyContact: ""
             )
-            showDashboard = true // Navigate to Dashboard
+            showDashboard = true
         }
-    }
-}
-
-// MARK: - Progress Bar View
-struct ProgressBarView: View {
-    var progress: Double
-
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                Rectangle()
-                    .frame(width: geometry.size.width, height: 10)
-                    .opacity(0.3)
-                    .foregroundColor(.gray)
-
-                Rectangle()
-                    .frame(width: geometry.size.width * CGFloat(progress), height: 10)
-                    .foregroundColor(.mint)
-            }
-            .cornerRadius(5)
-        }
-        .frame(height: 10)
     }
 }
 
