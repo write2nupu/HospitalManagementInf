@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HospitalCard: View {
-    let hospital: hospitals
+    let hospital: hospital
     let viewModel: HospitalViewModel
     
     var body: some View {
@@ -174,7 +174,7 @@ struct AddHospitalView: View {
             .navigationBarItems(
                 leading: Button("Cancel") { dismiss() },
                 trailing: Button("Save") {
-                    let hospital = hospitals(
+                    let hospital = hospital(
                         name: name,
                         address: address,
                         city: city,
@@ -205,7 +205,7 @@ struct ContentView: View {
     @State private var showingProfile = false
     @State private var searchText = ""
     
-    var filteredHospitals: [hospitals] {
+    var filteredHospitals: [hospital] {
         if searchText.isEmpty {
             return viewModel.hospitals
         } else {

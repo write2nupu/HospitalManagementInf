@@ -19,7 +19,7 @@ struct Hospital {
     var departments: [Department]
 }
 
-let hospital: [Hospital] = [
+let hospitals: [Hospital] = [
     Hospital(name: "Apollo Hospital", location: "Delhi", departments: [
         Department(name: "Cardiology", doctors: [
             Doctor(name: "Dr. Anubhav Dubey", specialization: "Cardiologist", qualifications: "MBBS, MD", experience: 10, hospitalAffiliations: ["Apollo"], consultationFee: 500.0, phoneNumber: "9876543210", email: "doctor1@example.com", availableSlots: ["Monday: 10AM - 12PM", "Wednesday: 2PM - 4PM"], languagesSpoken: ["English", "Hindi"]),

@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 @MainActor
 final class HospitalViewModel: ObservableObject {
-    @Published var hospitals: [hospitals] = []
+    @Published var hospitals: [hospital] = []
     
     func generateRandomPassword() -> String {
         let digits = "0123456789"
@@ -18,11 +18,11 @@ final class HospitalViewModel: ObservableObject {
         })
     }
     
-    func addHospital(_ hospital: hospitals) {
+    func addHospital(_ hospital: hospital) {
         hospitals.append(hospital)
     }
     
-    func updateHospital(_ hospital: hospitals) {
+    func updateHospital(_ hospital: hospital) {
         if let index = hospitals.firstIndex(where: { $0.id == hospital.id }) {
             hospitals[index] = hospital
         }

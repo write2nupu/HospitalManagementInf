@@ -7,7 +7,7 @@
 import Foundation
 import SwiftUI
 
-struct hospitals: Identifiable {
+struct hospital: Identifiable {
     let id = UUID()
     var name: String
     var address: String
