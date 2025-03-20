@@ -19,13 +19,13 @@ struct forcePasswordUpdate: View {
                         .font(.title)
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
-
+                    
                     Text("For security reasons, you are required to update your password before accessing your account.")
                         .font(.body)
                         .fontWeight(.regular)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 40)
-
+                    
                     // Password Fields
                     VStack(spacing: 15) {
                         // New Password
@@ -33,17 +33,17 @@ struct forcePasswordUpdate: View {
                             Text("New Password")
                                 .font(.caption)
                                 .foregroundColor(.gray)
-
+                            
                             HStack {
                                 Image(systemName: "lock.fill")
                                     .foregroundColor(.black)
-
+                                
                                 if isPasswordVisible {
                                     TextField("Enter new password", text: $password)
                                 } else {
                                     SecureField("Enter new password", text: $password)
                                 }
-
+                                
                                 Button(action: {
                                     isPasswordVisible.toggle()
                                 }) {
@@ -56,23 +56,23 @@ struct forcePasswordUpdate: View {
                             .cornerRadius(12)
                         }
                         .padding(.horizontal, 40)
-
+                        
                         // Confirm Password
                         VStack(alignment: .leading, spacing: 5) {
                             Text("Confirm Password")
                                 .font(.caption)
                                 .foregroundColor(.gray)
-
+                            
                             HStack {
                                 Image(systemName: "lock.fill")
                                     .foregroundColor(.black)
-
+                                
                                 if isConfirmPasswordVisible {
                                     TextField("Confirm password", text: $confirmPassword)
                                 } else {
                                     SecureField("Confirm password", text: $confirmPassword)
                                 }
-
+                                
                                 Button(action: {
                                     isConfirmPasswordVisible.toggle()
                                 }) {
@@ -86,7 +86,7 @@ struct forcePasswordUpdate: View {
                         }
                         .padding(.horizontal, 40)
                     }
-
+                    
                     // Error Message
                     if let errorMessage = errorMessage {
                         Text(errorMessage)
@@ -94,7 +94,7 @@ struct forcePasswordUpdate: View {
                             .font(.caption)
                             .padding(.top, -10)
                     }
-
+                    
                     // Update Password Button
                     Button(action: {
                         if password.isEmpty || confirmPassword.isEmpty {
@@ -119,17 +119,16 @@ struct forcePasswordUpdate: View {
                     .padding(.horizontal, 40)
                     .disabled(password.isEmpty || confirmPassword.isEmpty)
                     .opacity(password.isEmpty || confirmPassword.isEmpty ? 0.6 : 1)
-
+                    
                     Spacer()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .navigationDestination(isPresented: $isUpdated) {
-                DashBoard()  // ✅ Navigate to Dashboard
+                mainBoard()  // ✅ Navigate to Dashboard
             }
         }
-        
        
     }
 }

@@ -12,7 +12,7 @@ struct Doctor: Identifiable {
     var phoneNumber: String
     var email: String
     var availableSlots: [String]
-    var languagesSpoken: [String]
+    var languagesSpoken: [String]?
     var profileImage: String? // Store image URL or asset name
 }
 
@@ -23,17 +23,27 @@ struct DoctorProfileView: View {
         specialization: "Cardiologist",
         qualifications: "MBBS, MD",
         experience: 10,
-        hospitalAffiliations: ["Apollo", "Fortis"],
+        hospitalAffiliations: ["Apollo"],
         consultationFee: 500.0,
         phoneNumber: "9876543210",
         email: "doctor@example.com",
-        availableSlots: ["Monday: 10AM - 12PM", "Wednesday: 2PM - 4PM"],
-        languagesSpoken: ["English", "Hindi"]
+        availableSlots: ["Morning", "Evening"]
     )
     
     var body: some View {
         NavigationStack {
             Form {
+                Section(header: Text("Available Slots")) {
+                    ForEach(doctor.availableSlots, id: \.self) { slot in
+                        slotSetUp(slot: slot, isAvailable: checkAvailability(for: slot))
+                    }
+                }
+
+                
+                Section(header: Text("Consultation Fee")) {
+                    profileRow(title: "Fee", value: "₹\(String(format: "%.2f", doctor.consultationFee))")
+                }
+                
                 Section(header: Text("Basic Information")) {
                     profileRow(title: "Full Name", value: doctor.name)
                     profileRow(title: "Specialization", value: doctor.specialization)
@@ -52,21 +62,11 @@ struct DoctorProfileView: View {
                     profileRow(title: "Email", value: doctor.email)
                 }
                 
-                Section(header: Text("Consultation Fee")) {
-                    profileRow(title: "Fee", value: "₹\(String(format: "%.2f", doctor.consultationFee))")
-                }
                 
-                Section(header: Text("Available Slots")) {
-                    ForEach(doctor.availableSlots, id: \.self) { slot in
-                        Text(slot)
-                    }
-                }
                 
-                Section(header: Text("Languages Spoken")) {
-                    ForEach(doctor.languagesSpoken, id: \.self) { language in
-                        Text(language)
-                    }
-                }
+                
+                
+                
             }
             .navigationTitle("Doctor Profile")
         }
@@ -80,6 +80,30 @@ struct DoctorProfileView: View {
             Text(value).foregroundColor(.gray)
         }
     }
+    
+    private func slotSetUp(slot: String, isAvailable: Bool) -> some View {
+        HStack {
+            Text(slot) // Display slot name (Morning / Evening)
+                .fontWeight(.regular)
+            
+            Spacer()
+            
+            Text(isAvailable ? "Available" : "Not Available") // Show status
+                .foregroundColor(isAvailable ? .green : .red)
+                .fontWeight(.semibold)
+        }
+        .cornerRadius(8)
+    }
+
+    
+    private func checkAvailability(for slot: String) -> Bool {
+        let availableSlots: [String] = ["Morning"] // Example: Only Morning is available
+        return availableSlots.contains(slot)
+    }
+
+
+    
+    
 }
 
 // ✅ Preview

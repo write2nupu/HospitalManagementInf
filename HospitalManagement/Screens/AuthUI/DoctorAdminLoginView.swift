@@ -33,7 +33,7 @@ struct AdminLoginView: View {
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
-                        .onChange(of: emailOrPhone) { _ in validateInputs() } // ✅ Live validation
+                        .onChange(of: emailOrPhone) { _ in validateInputs() }
                 }
 
                 // Password Input
@@ -43,7 +43,7 @@ struct AdminLoginView: View {
                         .foregroundColor(.gray)
                     SecureField("Enter your password", text: $password)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .onChange(of: password) { _ in validateInputs() } // ✅ Live validation
+                        .onChange(of: password) { _ in validateInputs() }
                 }
 
                 // Login Button
@@ -61,7 +61,7 @@ struct AdminLoginView: View {
                 .padding(.top, 20)
 
                 // Navigation Trigger after Successful Login
-                NavigationLink(destination: DashBoard(), isActive: $isLoggedIn) { EmptyView() }
+                NavigationLink(destination: forcePasswordUpdate(), isActive: $isLoggedIn) { EmptyView() }
 
                 Spacer() // Push content upward
             }
@@ -88,8 +88,8 @@ struct AdminLoginView: View {
     private func validateInputs() {
         if emailOrPhone.isEmpty || password.isEmpty {
             errorMessage = "All fields are required."
-        } else if !isValidEmailOrPhone(emailOrPhone) {
-            errorMessage = "Enter a valid email or phone number."
+        } else if !isValidEmail(emailOrPhone) {
+            errorMessage = "Enter a valid email"
         } else if password.count < 6 {
             errorMessage = "Password must be at least 6 characters."
         } else {
@@ -98,14 +98,12 @@ struct AdminLoginView: View {
     }
 
     private func isValid() -> Bool {
-        return isValidEmailOrPhone(emailOrPhone) && password.count >= 6
+        return isValidEmail(emailOrPhone) && password.count >= 6
     }
 
-    private func isValidEmailOrPhone(_ input: String) -> Bool {
+    private func isValidEmail(_ input: String) -> Bool {
         let emailRegex = #"^\S+@\S+\.\S+$"#
-        let phoneRegex = #"^\d{10}$"#
-        return input.range(of: emailRegex, options: .regularExpression) != nil ||
-               input.range(of: phoneRegex, options: .regularExpression) != nil
+        return input.range(of: emailRegex, options: .regularExpression) != nil
     }
 }
 

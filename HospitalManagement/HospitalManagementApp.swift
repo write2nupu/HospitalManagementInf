@@ -11,7 +11,8 @@ import SwiftUI
 struct HospitalManagementApp: App {
     var body: some Scene {
         WindowGroup {
-            UserRoleScreen()
+//            UserRoleScreen()
+            mainBoard()
         }
     }
 }

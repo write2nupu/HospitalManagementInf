@@ -41,7 +41,7 @@ struct DoctorProfileForPatient: View {
                 // Info Sections (Aligned for Consistency)
                 infoSection(title: "Hospital Affiliations", items: doctor.hospitalAffiliations)
                 infoSection(title: "Available Slots", items: doctor.availableSlots)
-                infoSection(title: "Languages Spoken", items: doctor.languagesSpoken)
+                infoSection(title: "Languages Spoken", items: doctor.languagesSpoken!)
             }
             .padding()
         }
