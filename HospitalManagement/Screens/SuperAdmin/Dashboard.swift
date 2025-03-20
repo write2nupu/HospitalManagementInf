@@ -21,6 +21,7 @@ struct HospitalCard: View {
                     Text(hospital.name)
                         .font(.title3)
                         .fontWeight(.bold)
+                        .foregroundColor(.mint)
                     Spacer()
                     StatusBadge(isActive: hospital.isActive)
                 }
@@ -28,29 +29,24 @@ struct HospitalCard: View {
                 // Location info
                 HStack(spacing: 8) {
                     Image(systemName: "location.fill")
-                        .foregroundColor(.blue)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(hospital.address)
-                            .font(.subheadline)
-                        Text("\(hospital.city), \(hospital.state) - \(hospital.pincode)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                        .foregroundColor(.mint)
+                    Text("\(hospital.city), \(hospital.state)")
+                        .font(.subheadline)
                 }
                 
                 // Contact info
                 HStack(spacing: 8) {
                     Image(systemName: "phone.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(.mint)
                     Text(hospital.contact)
                         .font(.subheadline)
                 }
                 
-                // Email info
+                // Admin info
                 HStack(spacing: 8) {
-                    Image(systemName: "envelope.fill")
-                        .foregroundColor(.orange)
-                    Text(hospital.email)
+                    Image(systemName: "person.fill")
+                        .foregroundColor(.mint)
+                    Text("Admin: \(hospital.adminName)")
                         .font(.subheadline)
                 }
             }
@@ -133,6 +129,7 @@ struct AddHospitalView: View {
     @ObservedObject var viewModel: HospitalViewModel
     
     @State private var name = ""
+    @State private var licenseNumber = ""
     @State private var address = ""
     @State private var city = ""
     @State private var state = ""
@@ -151,28 +148,36 @@ struct AddHospitalView: View {
             Form {
                 Section(header: Text("Hospital Details")) {
                     TextField("Name", text: $name)
+                    TextField("License Number", text: $licenseNumber)
                     TextField("Address", text: $address)
                     TextField("City", text: $city)
                     TextField("State", text: $state)
                     TextField("Pincode", text: $pincode)
                     TextField("Contact", text: $contact)
+                        .keyboardType(.phonePad)
                     TextField("Email", text: $email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
                 }
                 
                 Section(header: Text("Admin Details")) {
                     TextField("Full Name", text: $adminFullName)
                     TextField("Email", text: $adminEmail)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
                     TextField("Phone Number", text: $adminPhone)
+                        .keyboardType(.phonePad)
                 }
                 
                 Section(header: Text("Status")) {
                     Toggle("Active", isOn: $isActive)
-                        .tint(isActive ? .green : .red)
+                        .tint(.mint)
                 }
             }
             .navigationTitle("Add Hospital")
             .navigationBarItems(
-                leading: Button("Cancel") { dismiss() },
+                leading: Button("Cancel") { dismiss() }
+                    .foregroundColor(.mint),
                 trailing: Button("Save") {
                     let hospital = hospital(
                         name: name,
@@ -186,16 +191,48 @@ struct AddHospitalView: View {
                         password: viewModel.generateRandomPassword(),
                         adminName: adminFullName,
                         adminEmail: adminEmail,
-                        adminPhone: adminPhone
+                        adminPhone: adminPhone,
+                        licenseNumber: licenseNumber
                     )
                     viewModel.addHospital(hospital)
                     dismiss()
                 }
-                .disabled(name.isEmpty || address.isEmpty || city.isEmpty || state.isEmpty ||
+                .disabled(name.isEmpty || licenseNumber.isEmpty || address.isEmpty || city.isEmpty || state.isEmpty ||
                          pincode.isEmpty || contact.isEmpty || email.isEmpty ||
                          adminFullName.isEmpty || adminEmail.isEmpty || adminPhone.isEmpty)
+                .foregroundColor(.mint)
             )
         }
+    }
+}
+
+struct QuickActionCard: View {
+    var action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 12) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 40))
+                    .foregroundColor(.mint)
+                
+                Text("Add Hospital")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                
+                Text("Create a new hospital profile")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 15)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -204,6 +241,7 @@ struct ContentView: View {
     @State private var showingAddHospital = false
     @State private var showingProfile = false
     @State private var searchText = ""
+    @State private var showingAllHospitals = false
     
     var filteredHospitals: [hospital] {
         if searchText.isEmpty {
@@ -220,28 +258,57 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 0) {
-                    // Section Header
-                    HStack {
-                        Text("Hospitals")
+                VStack(spacing: 24) {
+                    // Quick Actions Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Quick Actions")
                             .font(.headline)
-                        Spacer()
-                        Button(action: { showingAddHospital = true }) {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.blue)
+                            .foregroundColor(.mint)
+                            .padding(.horizontal)
+                        
+                        QuickActionCard {
+                            showingAddHospital = true
                         }
+                        .padding(.horizontal)
                     }
-                    .padding()
                     
-                    // Hospital Cards
-                    LazyVStack(spacing: 16) {
-                        ForEach(filteredHospitals) { hospital in
-                            HospitalCard(hospital: hospital, viewModel: viewModel)
+                    // Hospitals Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Text("Hospitals")
+                                .font(.headline)
+                                .foregroundColor(.mint)
+                            Spacer()
+                            NavigationLink("See All", destination: HospitalList(hospitals: filteredHospitals, viewModel: viewModel))
+                                .foregroundColor(.mint)
+                        }
+                        .padding(.horizontal)
+                        
+                        if viewModel.hospitals.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "building.2")
+                                    .font(.system(size: 50))
+                                    .foregroundColor(.mint)
+                                Text("No hospitals yet")
+                                    .font(.title3)
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                        } else {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                LazyHStack(spacing: 16) {
+                                    ForEach(filteredHospitals) { hospital in
+                                        HospitalCard(hospital: hospital, viewModel: viewModel)
+                                            .frame(width: 300)
+                                    }
+                                }
                                 .padding(.horizontal)
+                            }
                         }
                     }
-                    .padding(.vertical)
                 }
+                .padding(.vertical)
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Dashboard")
@@ -254,6 +321,25 @@ struct ContentView: View {
                 SuperAdminProfileView()
             }
         }
+    }
+}
+
+struct HospitalList: View {
+    let hospitals: [hospital]
+    let viewModel: HospitalViewModel
+    
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(hospitals) { hospital in
+                    HospitalCard(hospital: hospital, viewModel: viewModel)
+                        .padding(.horizontal)
+                }
+            }
+            .padding(.vertical)
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("All Hospitals")
     }
 }
 

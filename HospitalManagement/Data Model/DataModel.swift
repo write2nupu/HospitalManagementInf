@@ -21,4 +21,5 @@ struct hospital: Identifiable {
     var adminName: String
     var adminEmail: String
     var adminPhone: String
+    var licenseNumber: String
 }

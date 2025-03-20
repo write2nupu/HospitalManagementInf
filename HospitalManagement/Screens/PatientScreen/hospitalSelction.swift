@@ -38,9 +38,4 @@ struct HospitalListView: View {
     }
 }
 
-// ✅ Preview
-struct HospitalListView_Previews: PreviewProvider {
-    static var previews: some View {
-        HospitalListView()
-    }
-}
+
