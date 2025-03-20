@@ -2,23 +2,25 @@ import SwiftUI
 
 // MARK: - Patient Model
 struct Patient {
-    var name: String
-    var dob: Date
+    var fullName: String
+    var gender: String
+    var dateOfBirth: Date
     var contactNumber: String
     var email: String
-    var bloodGroup: String?
-    var allergies: String?
-    var medicalConditions: String?
-    var medications: String?
-    var pastSurgeries: String?
+    var bloodGroup: String
+    var allergies: String
+    var medicalConditions: String
+    var medications: String
+    var pastSurgeries: String
     var emergencyContact: String
 }
 
 // MARK: - Patient Dashboard View
 struct PatientDashboard: View {
     @State private var patient = Patient(
-        name: "Shivani Verma",
-        dob: Calendar.current.date(byAdding: .year, value: -22, to: Date()) ?? Date(),
+        fullName: "Shivani Verma",
+        gender: "Female",
+        dateOfBirth: Calendar.current.date(byAdding: .year, value: -22, to: Date()) ?? Date(),
         contactNumber: "+91 9876543210",
         email: "shivani.verma@example.com",
         bloodGroup: "O+",
@@ -31,11 +33,13 @@ struct PatientDashboard: View {
     
     @State private var isEditing = false
     @State private var updatedPatient: Patient
-    
+
     init() {
-        let defaultPatient = Patient(
-            name: "Shivani Verma",
-            dob: Calendar.current.date(byAdding: .year, value: -22, to: Date()) ?? Date(),
+        // Use the initial value of `patient` to initialize `updatedPatient`.
+        _updatedPatient = State(initialValue: Patient(
+            fullName: "Shivani Verma",
+            gender: "Female",
+            dateOfBirth: Calendar.current.date(byAdding: .year, value: -22, to: Date()) ?? Date(),
             contactNumber: "+91 9876543210",
             email: "shivani.verma@example.com",
             bloodGroup: "O+",
@@ -44,61 +48,38 @@ struct PatientDashboard: View {
             medications: "Inhaler",
             pastSurgeries: "Appendix Surgery (2018)",
             emergencyContact: "Ravi Verma - +91 9876543211"
-        )
-        _updatedPatient = State(initialValue: defaultPatient)
+        ))
     }
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
+                    
                     // MARK: - Personal Details Section
-                    EditableSection(
-                        title: "👤 Personal Details",
-                        isEditing: $isEditing
-                    ) {
-                        EditableInfoRow(title: "Name", value: $updatedPatient.name)
-                        
-                        HStack {
-                            Text("DOB:")
-                                .fontWeight(.semibold)
-                                .foregroundColor(.mint)
-                            Spacer()
-                            if isEditing {
-                                DatePicker("", selection: $updatedPatient.dob, displayedComponents: .date)
-                                    .datePickerStyle(.compact)
-                                    .labelsHidden()
-                            } else {
-                                Text(updatedPatient.dob.formatted(date: .long, time: .omitted))
-                            }
-                        }
-                        .padding(.vertical, 2)
-
-                        EditableInfoRow(title: "Age", value: .constant("\(calculateAge(from: updatedPatient.dob)) years"))
+                    EditableSection(title: "👤 Personal Details", isEditing: $isEditing) {
+                        EditableInfoRow(title: "Name", value: $updatedPatient.fullName)
+                        EditableInfoRow(title: "Gender", value: $updatedPatient.gender)
+                        DatePickerRow(title: "DOB", date: $updatedPatient.dateOfBirth, isEditing: $isEditing)
+                        EditableInfoRow(title: "Age", value: .constant("\(calculateAge(from: updatedPatient.dateOfBirth)) years"))
                         EditableInfoRow(title: "Contact", value: $updatedPatient.contactNumber)
                         EditableInfoRow(title: "Email", value: $updatedPatient.email)
                     }
                     
                     // MARK: - Medical Information Section
-                    EditableSection(
-                        title: "🩺 Medical Information",
-                        isEditing: $isEditing
-                    ) {
-                        EditableInfoRow(title: "Blood Group", value: .constant(patient.bloodGroup ?? "N/A"))
-                        EditableInfoRow(title: "Allergies", value: .constant(patient.allergies ?? "None"))
-                        EditableInfoRow(title: "Medical Conditions", value: .constant(patient.medicalConditions ?? "None"))
-                        EditableInfoRow(title: "Medications", value: .constant(patient.medications ?? "None"))
-                        EditableInfoRow(title: "Past Surgeries", value: .constant(patient.pastSurgeries ?? "None"))
+                    EditableSection(title: "🩺 Medical Information", isEditing: $isEditing) {
+                        EditableInfoRow(title: "Blood Group", value: $updatedPatient.bloodGroup)
+                        EditableInfoRow(title: "Allergies", value: $updatedPatient.allergies)
+                        EditableInfoRow(title: "Medical Conditions", value: $updatedPatient.medicalConditions)
+                        EditableInfoRow(title: "Medications", value: $updatedPatient.medications)
+                        EditableInfoRow(title: "Past Surgeries", value: $updatedPatient.pastSurgeries)
                     }
 
                     // MARK: - Emergency Contact Section
-                    EditableSection(
-                        title: "🚨 Emergency Contact",
-                        isEditing: $isEditing
-                    ) {
+                    EditableSection(title: "🚨 Emergency Contact", isEditing: $isEditing) {
                         EditableInfoRow(title: "Contact", value: $updatedPatient.emergencyContact)
                     }
-
+                    
                     // MARK: - Save/Cancel Buttons
                     if isEditing {
                         HStack {
@@ -132,10 +113,35 @@ struct PatientDashboard: View {
     }
 
     // MARK: - Age Calculation
-    func calculateAge(from dob: Date) -> Int {
+    private func calculateAge(from dob: Date) -> Int {
         let calendar = Calendar.current
-        let ageComponents = calendar.dateComponents([.year], from: dob, to: Date())
+        let today = Date()
+        let ageComponents = calendar.dateComponents([.year], from: dob, to: today)
         return ageComponents.year ?? 0
+    }
+}
+
+// MARK: - Date Picker Row Component
+struct DatePickerRow: View {
+    let title: String
+    @Binding var date: Date
+    @Binding var isEditing: Bool
+
+    var body: some View {
+        HStack {
+            Text("\(title):")
+                .fontWeight(.semibold)
+                .foregroundColor(.mint)
+            Spacer()
+            if isEditing {
+                DatePicker("", selection: $date, displayedComponents: .date)
+                    .datePickerStyle(.compact)
+                    .labelsHidden()
+            } else {
+                Text(date.formatted(date: .long, time: .omitted))
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 
@@ -166,7 +172,7 @@ struct EditableSection<Content: View>: View {
     }
 }
 
-// MARK: - Editable Info Row
+// MARK: - Editable Info Row Component
 struct EditableInfoRow: View {
     let title: String
     @Binding var value: String
@@ -179,7 +185,7 @@ struct EditableInfoRow: View {
             Spacer()
             TextField(title, text: $value)
                 .multilineTextAlignment(.trailing)
-                .disabled(false)
+                .disabled(!title.contains("Contact") && !title.contains("Email") && !title.contains("Name"))
         }
         .padding(.vertical, 4)
     }
