@@ -19,6 +19,7 @@ struct Patient {
 struct PatientDashboardView: View {
     @State private var showHospitalList = false
     @State private var showProfile = false
+    var patientName: String = "John Doe"
     
     var body: some View {
         NavigationView {
@@ -32,9 +33,15 @@ struct PatientDashboardView: View {
                     
                     VStack(spacing: 20) {
                         HStack {
-                            Text("Dashboard")
-                                .font(.largeTitle).bold()
-                                .foregroundColor(.mint)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Hi \(patientName)!")
+                                    .font(.largeTitle)
+                                    .bold()
+                                    .foregroundColor(.black)
+                                Text("Caring for your health,one step at a time")
+                                    .font(.headline)
+                                    .foregroundColor(.mint)
+                            }
                             Spacer()
                             Button(action: {
                                 showProfile = true
@@ -48,22 +55,6 @@ struct PatientDashboardView: View {
                         .sheet(isPresented: $showProfile) {
                             ProfileViewControllerWrapper()
                         }
-                        
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("John Doe")
-                                .font(.title).bold()
-                            Text("Age: 30")
-                            Text("Condition: Stable")
-                            Text("Blood Group: O+")
-                            Text("Contact: +1234567890")
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, minHeight: 200, alignment: .leading)
-                        .background(Color.white.opacity(0.5))
-                        .cornerRadius(15)
-                        .shadow(radius: 5)
-                        .padding(.horizontal)
-                        .padding(.top, 10)
                     }
                     .padding(.top, 50)
                 }

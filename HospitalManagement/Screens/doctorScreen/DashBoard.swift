@@ -55,8 +55,8 @@ struct DoctorProfile: View {
 }
 
 // **Preview**
-#Preview {
-    NavigationStack {
+struct DashBoard_Previews: PreviewProvider {
+    static var previews: some View {
         DashBoard()
     }
 }

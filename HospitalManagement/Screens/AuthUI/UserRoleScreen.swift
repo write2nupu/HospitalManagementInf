@@ -5,6 +5,13 @@
 //  Created by Nupur on 19/03/25.
 //
 
+//
+//  RoleSelectionView.swift
+//  HospitalManagement
+//
+//  Created by Nupur on 19/03/25.
+//
+
 import SwiftUI
 
 struct UserRoleScreen: View {
@@ -22,28 +29,23 @@ struct UserRoleScreen: View {
                 Spacer()
                 
                 ForEach(roles, id: \.self) { role in
-                        if role == "Patient" {
-                            NavigationLink(destination: PatientLoginSignupView()) {
-                                RoleCard(role: role)
-                            }
-                        }
-                    
-                    else if role == "Doctor" {
-                        NavigationLink(destination: AdminLoginView(message: "Doctor")) {
+                    if role == "Patient" {
+                        NavigationLink(destination: PatientLoginSignupView()) {
                             RoleCard(role: role)
                         }
-                    }
-                    else if role == "Admin" {
+                    } else if role == "Doctor" {
+                        NavigationLink(destination: DoctorLoginView()) {
+                            RoleCard(role: role)
+                        }
+                    } else if role == "Admin" {
                         NavigationLink(destination: AdminLoginView(message: "Admin")) {
                             RoleCard(role: role)
                         }
-                    }
-                    else if role == "Super-Admin" {
+                    } else if role == "Super-Admin" {
                         NavigationLink(destination: AdminLoginView(message: "Super admin")) {
                             RoleCard(role: role)
                         }
                     }
-    
                 }
                 
                 Spacer()
@@ -77,7 +79,6 @@ struct RoleCard: View {
         .shadow(color: .mint.opacity(0.3), radius: 5, x: 0, y: 3)
     }
 }
-
 
 // MARK: - Preview
 struct RoleSelectionView_Previews: PreviewProvider {
