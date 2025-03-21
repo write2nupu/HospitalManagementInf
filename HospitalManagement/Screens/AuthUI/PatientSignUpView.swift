@@ -10,7 +10,7 @@ struct PatientSignupView: View {
         NavigationStack {
             PersonalInfoView(showMedicalInfo: $showMedicalInfo, patientDetails: $patientDetails)
                 .navigationDestination(isPresented: $showMedicalInfo) {
-                    MedicalInfoView(patientDetails: $patientDetails, showDashboard: $showDashboard)
+                    MedicalInfoView(patientDetails: $patientDetails, showDashboard: showDashboard)
                 }
                 .navigationDestination(isPresented: $showDashboard) {
                     PatientDashboardView()
@@ -118,9 +118,11 @@ struct GenderPickerView: View {
 }
 
 // MARK: - Medical Info View
+import SwiftUI
+
 struct MedicalInfoView: View {
     @Binding var patientDetails: Patient?
-    @Binding var showDashboard: Bool
+    @State var showDashboard: Bool = false
 
     @State private var bloodGroup = ""
     @State private var allergies = ""
@@ -130,44 +132,51 @@ struct MedicalInfoView: View {
     @State private var alertMessage = ""
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Medical Information")
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundColor(.mint)
-
-            TextField("Blood Group", text: $bloodGroup)
-                .padding()
-                .background(Color.mint.opacity(0.2))
-                .cornerRadius(8)
-
-            TextField("Allergies", text: $allergies)
-                .padding()
-                .background(Color.mint.opacity(0.2))
-                .cornerRadius(8)
-
-            TextField("Medical Conditions", text: $medicalConditions)
-                .padding()
-                .background(Color.mint.opacity(0.2))
-                .cornerRadius(8)
-
-            Spacer()
-
-            Button(action: submitDetails) {
-                Text("Submit")
-                    .frame(maxWidth: .infinity)
+        NavigationView {
+            VStack(spacing: 20) {
+                Text("Medical Information")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(.mint)
+                
+                TextField("Blood Group", text: $bloodGroup)
                     .padding()
-                    .background(Color.mint)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(8)
+                
+                TextField("Allergies", text: $allergies)
+                    .padding()
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(8)
+                
+                TextField("Medical Conditions", text: $medicalConditions)
+                    .padding()
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(8)
+                
+                Spacer()
+                
+                Button(action: { submitDetails() }) {
+                    Text("Submit")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.mint)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+
+                // Navigation trigger
+                NavigationLink(
+                    destination: PatientDashboardView(),
+                    isActive: $showDashboard
+                ) {
+                    EmptyView()
+                }
             }
-            .navigationDestination(isPresented: $showDashboard) {
-                PatientDashboardView()
+            .padding()
+            .alert(isPresented: $showAlert) {
+                Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
-        }
-        .padding()
-        .alert(isPresented: $showAlert) {
-            Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
         }
     }
 
@@ -193,6 +202,7 @@ struct MedicalInfoView: View {
         }
     }
 }
+
 
 // MARK: - Preview
 struct PatientSignupView_Previews: PreviewProvider {
