@@ -29,17 +29,20 @@ struct UserRoleScreen: View {
                         }
                     
                     else if role == "Doctor" {
-                        NavigationLink(destination: AdminLoginView(message: "Doctor")) {
+                        NavigationLink(destination: DoctorLoginView(message: "Doctor")) {
                             RoleCard(role: role)
                         }
                     }
                     else if role == "Admin" {
-                        NavigationLink(destination: AdminLoginView(message: "Admin")) {
+
+                        NavigationLink(destination: AdminLoginViewS(message: "Admin")) {
                             RoleCard(role: role)
                         }
                     }
                     else if role == "Super-Admin" {
-                        NavigationLink(destination: AdminLoginView(message: "Super admin")) {
+
+                        NavigationLink(destination: SuperAdminLoginView(message: "Super admin")) {
+
                             RoleCard(role: role)
                         }
                     }
