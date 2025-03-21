@@ -8,78 +8,242 @@
 import SwiftUI
 
 struct HospitalDetailView: View {
-    @ObservedObject var viewModel: HospitalViewModel
-    @State var hospital: hospital
+    @ObservedObject var viewModel: HospitalManagementViewModel
+    @State var hospital: Hospital
     @State private var isActive: Bool
+    @State private var isEditing = false
+    @State private var editedHospital: Hospital
+    @StateObject private var supabaseController = SupabaseController()
+    @State private var showError = false
+    @State private var errorMessage = ""
+    @State private var adminDetails: Admin?
     
-    init(viewModel: HospitalViewModel, hospital: hospital) {
+    init(viewModel: HospitalManagementViewModel, hospital: Hospital) {
         self.viewModel = viewModel
         _hospital = State(initialValue: hospital)
         _isActive = State(initialValue: hospital.isActive)
+        _editedHospital = State(initialValue: hospital)
     }
     
     var body: some View {
         List {
-            Section("Hospital Information") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(hospital.name)
-                        .font(.title2)
-                        .bold()
-                    Text(hospital.address)
-                    Text("\(hospital.city), \(hospital.state)")
-                    Text("PIN: \(hospital.pincode)")
-                    Text("Contact: \(hospital.contact)")
-                    Text("Email: \(hospital.email)")
-                }
-                .padding(.vertical, 4)
-            }
-            
-            Section("Admin Details") {
-                VStack(alignment: .leading, spacing: 8) {
+            // Hospital Header
+            Section {
+                VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Image(systemName: "person.fill")
-                            .foregroundColor(.purple)
-                        Text(hospital.adminName)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(hospital.name)
+                                .font(.title2)
+                                .bold()
+                                .foregroundColor(.black)
+                            Text("License: \(hospital.licenseNumber)")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        StatusBadge(isActive: hospital.isActive)
                     }
-                    HStack {
-                        Image(systemName: "envelope.fill")
-                            .foregroundColor(.orange)
-                        Text(hospital.adminEmail)
-                    }
-                    HStack {
-                        Image(systemName: "phone.fill")
-                            .foregroundColor(.green)
-                        Text(hospital.adminPhone)
+                    
+                    Divider()
+                    
+                    // Location Details
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(hospital.address)
+                            .font(.body)
+                            .foregroundColor(.black)
+                        
+                        Text("\(hospital.city), \(hospital.state) \(hospital.pincode)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
                 }
-                .padding(.vertical, 4)
+                .listRowInsets(EdgeInsets())
+                .padding(.vertical, 8)
             }
             
-            Section("Status") {
-                Toggle("Active", isOn: $isActive)
-                    .tint(isActive ? .green : .red)
-                    .onChange(of: isActive) { oldValue, newValue in
-                        updateHospitalActive(newValue)
+            // Contact Information
+            Section {
+                LabeledContent("Phone") {
+                    Button(hospital.mobileNumber) {
+                        guard let url = URL(string: "tel:\(hospital.mobileNumber)") else { return }
+                        UIApplication.shared.open(url)
                     }
+                    .foregroundColor(.mint)
+                }
+                
+                LabeledContent("Email") {
+                    Button(hospital.email) {
+                        guard let url = URL(string: "mailto:\(hospital.email)") else { return }
+                        UIApplication.shared.open(url)
+                    }
+                    .foregroundColor(.mint)
+                }
+            } header: {
+                Text("Contact Information")
+                    .foregroundColor(.black)
             }
             
-            Section("Login Credentials") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Username: \(hospital.email)")
-                    Text("Password: \(hospital.password)")
-                        .monospaced()
-                        .textSelection(.enabled)
+            // Admin Details
+            Section {
+                if let admin = adminDetails {
+                    Text("Name: \(admin.fullName)")
+                    
+                    LabeledContent("Phone") {
+                        Button(admin.phoneNumber) {
+                            guard let url = URL(string: "tel:\(admin.phoneNumber)") else { return }
+                            UIApplication.shared.open(url)
+                        }
+                        .foregroundColor(.mint)
+                    }
+                    
+                    LabeledContent("Email") {
+                        Button(admin.email) {
+                            guard let url = URL(string: "mailto:\(admin.email)") else { return }
+                            UIApplication.shared.open(url)
+                        }
+                        .foregroundColor(.mint)
+                    }
+                } else {
+                    Text("Admin not assigned")
                 }
-                .padding(.vertical, 4)
+            } header: {
+                Text("Admin Details")
+                    .foregroundColor(.black)
+            }
+            
+            // Actions
+            Section {
+                Toggle("Active Status", isOn: Binding(
+                    get: { hospital.isActive },
+                    set: { newValue in
+                        Task {
+                            await updateHospitalActive(newValue)
+                        }
+                    }
+                ))
+                .tint(.mint)
+                
+                Button {
+                    editedHospital = hospital
+                    isEditing = true
+                } label: {
+                    Text("Edit")
+                        .foregroundColor(.mint)
+                }
             }
         }
-        .navigationTitle(hospital.name)
+        .sheet(isPresented: $isEditing) {
+            NavigationView {
+                EditHospitalView(hospital: $editedHospital, isPresented: $isEditing) { updatedHospital in
+                    Task {
+                        await updateHospital(updatedHospital)
+                    }
+                }
+            }
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK") {
+                showError = false
+            }
+        } message: {
+            Text(errorMessage)
+        }
+        .task {
+            if let adminId = hospital.assignedAdminId {
+                adminDetails = await supabaseController.fetchAdminByUUID(adminId: adminId)
+            }
+        }
     }
     
-    private func updateHospitalActive(_ newValue: Bool) {
+    private func updateHospitalActive(_ newValue: Bool) async {
         var updatedHospital = hospital
         updatedHospital.isActive = newValue
-        viewModel.updateHospital(updatedHospital)
-        hospital = updatedHospital
+        await updateHospital(updatedHospital)
+    }
+    
+    private func updateHospital(_ updatedHospital: Hospital) async {
+        do {
+            try await supabaseController.client
+                
+                .from("Hospitals")
+                .update(updatedHospital)
+                .eq("id", value: updatedHospital.id)
+                .execute()
+            
+            hospital = updatedHospital
+        } catch {
+            showError = true
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+struct EditHospitalView: View {
+    @Binding var hospital: Hospital
+    @Binding var isPresented: Bool
+    @StateObject private var supabaseController = SupabaseController()
+    @State private var selectedAdmin: Admin?
+    @State private var availableAdmins: [Admin] = []
+    let onSave: (Hospital) -> Void
+    
+    var body: some View {
+        Form {
+            Section("Hospital Information") {
+                TextField("Name", text: $hospital.name)
+                TextField("License Number", text: $hospital.licenseNumber)
+                TextField("Address", text: $hospital.address)
+                TextField("City", text: $hospital.city)
+                TextField("State", text: $hospital.state)
+                TextField("Pincode", text: $hospital.pincode)
+            }
+            
+            Section("Contact Information") {
+                TextField("Phone", text: $hospital.mobileNumber)
+                    .keyboardType(.phonePad)
+                TextField("Email", text: $hospital.email)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+            }
+            
+            Section("Admin Assignment") {
+                if !availableAdmins.isEmpty {
+                    Picker("Select Admin", selection: $selectedAdmin) {
+                        Text("None").tag(Optional<Admin>.none)
+                        ForEach(availableAdmins) { admin in
+                            Text(admin.fullName).tag(Optional(admin))
+                        }
+                    }
+                } else {
+                    Text("No available admins")
+                }
+            }
+        }
+        .navigationTitle("Edit Hospital")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarItems(
+            leading: Button("Cancel") {
+                isPresented = false
+            },
+            trailing: Button("Save") {
+                hospital.assignedAdminId = selectedAdmin?.id
+                onSave(hospital)
+                isPresented = false
+            }
+        )
+        .task {
+            do {
+                let admins: [Admin] = try await supabaseController.client
+                    .from("Admins")
+                    .select()
+                    .execute()
+                    .value
+                availableAdmins = admins
+                if let adminId = hospital.assignedAdminId {
+                    selectedAdmin = admins.first { $0.id == adminId }
+                }
+            } catch {
+                print("Error fetching admins: \(error)")
+            }
+        }
     }
 }
