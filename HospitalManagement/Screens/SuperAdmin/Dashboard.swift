@@ -25,7 +25,7 @@ struct HospitalCard: View {
                         .fontWeight(.bold)
                         .foregroundColor(.black)
                     Spacer()
-                    StatusBadge(isActive: hospital.isActive)
+                    StatusBadge(isActive: hospital.is_active)
                 }
                 
                 // Location info
@@ -41,7 +41,7 @@ struct HospitalCard: View {
                 HStack(spacing: 8) {
                     Image(systemName: "phone.fill")
                         .foregroundColor(.mint)
-                    Text(hospital.mobileNumber)
+                    Text(hospital.mobile_number)
                         .font(.subheadline)
                         .foregroundColor(.black)
                 }
@@ -70,7 +70,7 @@ struct HospitalCard: View {
         }
         .buttonStyle(.plain)
         .task {
-            if let adminId = hospital.assignedAdminId {
+            if let adminId = hospital.assigned_admin_id {
                 adminDetails = await supabaseController.fetchAdminByUUID(adminId: adminId)
             }
         }
@@ -244,10 +244,10 @@ struct AddHospitalView: View {
                 id: adminId,
                 email: adminEmail,
                 fullName: adminFullName,
-                phoneNumber: adminPhone,
+                phone_number: adminPhone,
                 hospitalId: nil,
-                isFirstLogin: true,
-                initialPassword: generateRandomPassword()
+                is_first_login: true,
+                initial_password: generateRandomPassword()
             )
             
             // Create the hospital
@@ -258,11 +258,11 @@ struct AddHospitalView: View {
                 city: city,
                 state: state,
                 pincode: pincode,
-                mobileNumber: contact,
+                mobile_number: contact,
                 email: email,
-                licenseNumber: licenseNumber,
-                isActive: isActive,
-                assignedAdminId: adminId
+                license_number: licenseNumber,
+                is_active: isActive,
+                assigned_admin_id: adminId
             )
             
             // Add admin to Supabase
@@ -280,6 +280,7 @@ struct AddHospitalView: View {
             dismiss()
         } catch {
             validationMessage = "Error saving hospital: \(error.localizedDescription)"
+            print("Error saving hospital: \(error.localizedDescription)")
             showingValidationAlert = true
         }
     }
@@ -384,10 +385,10 @@ struct ContentView: View {
             hospital.city.localizedCaseInsensitiveContains(searchText) ||
             hospital.state.localizedCaseInsensitiveContains(searchText)
         }).sorted { h1, h2 in
-            if h1.isActive == h2.isActive {
+            if h1.is_active == h2.is_active {
                 return h1.name < h2.name
             }
-            return h1.isActive && !h2.isActive
+            return h1.is_active && !h2.is_active
         }
         return sorted
     }

@@ -21,7 +21,7 @@ struct HospitalDetailView: View {
     init(viewModel: HospitalManagementViewModel, hospital: Hospital) {
         self.viewModel = viewModel
         _hospital = State(initialValue: hospital)
-        _isActive = State(initialValue: hospital.isActive)
+        _isActive = State(initialValue: hospital.is_active)
         _editedHospital = State(initialValue: hospital)
     }
     
@@ -36,12 +36,12 @@ struct HospitalDetailView: View {
                                 .font(.title2)
                                 .bold()
                                 .foregroundColor(.black)
-                            Text("License: \(hospital.licenseNumber)")
+                            Text("License: \(hospital.license_number)")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
                         Spacer()
-                        StatusBadge(isActive: hospital.isActive)
+                        StatusBadge(isActive: hospital.is_active)
                     }
                     
                     Divider()
@@ -64,8 +64,8 @@ struct HospitalDetailView: View {
             // Contact Information
             Section {
                 LabeledContent("Phone") {
-                    Button(hospital.mobileNumber) {
-                        guard let url = URL(string: "tel:\(hospital.mobileNumber)") else { return }
+                    Button(hospital.mobile_number) {
+                        guard let url = URL(string: "tel:\(hospital.mobile_number)") else { return }
                         UIApplication.shared.open(url)
                     }
                     .foregroundColor(.mint)
@@ -89,8 +89,8 @@ struct HospitalDetailView: View {
                     Text("Name: \(admin.fullName)")
                     
                     LabeledContent("Phone") {
-                        Button(admin.phoneNumber) {
-                            guard let url = URL(string: "tel:\(admin.phoneNumber)") else { return }
+                        Button(admin.phone_number) {
+                            guard let url = URL(string: "tel:\(admin.phone_number)") else { return }
                             UIApplication.shared.open(url)
                         }
                         .foregroundColor(.mint)
@@ -114,7 +114,7 @@ struct HospitalDetailView: View {
             // Actions
             Section {
                 Toggle("Active Status", isOn: Binding(
-                    get: { hospital.isActive },
+                    get: { hospital.is_active },
                     set: { newValue in
                         Task {
                             await updateHospitalActive(newValue)
@@ -149,7 +149,7 @@ struct HospitalDetailView: View {
             Text(errorMessage)
         }
         .task {
-            if let adminId = hospital.assignedAdminId {
+            if let adminId = hospital.assigned_admin_id {
                 adminDetails = await supabaseController.fetchAdminByUUID(adminId: adminId)
             }
         }
@@ -157,7 +157,7 @@ struct HospitalDetailView: View {
     
     private func updateHospitalActive(_ newValue: Bool) async {
         var updatedHospital = hospital
-        updatedHospital.isActive = newValue
+        updatedHospital.is_active = newValue
         await updateHospital(updatedHospital)
     }
     
@@ -190,7 +190,7 @@ struct EditHospitalView: View {
         Form {
             Section("Hospital Information") {
                 TextField("Name", text: $hospital.name)
-                TextField("License Number", text: $hospital.licenseNumber)
+                TextField("License Number", text: $hospital.license_number)
                 TextField("Address", text: $hospital.address)
                 TextField("City", text: $hospital.city)
                 TextField("State", text: $hospital.state)
@@ -198,7 +198,7 @@ struct EditHospitalView: View {
             }
             
             Section("Contact Information") {
-                TextField("Phone", text: $hospital.mobileNumber)
+                TextField("Phone", text: $hospital.mobile_number)
                     .keyboardType(.phonePad)
                 TextField("Email", text: $hospital.email)
                     .keyboardType(.emailAddress)
@@ -225,7 +225,7 @@ struct EditHospitalView: View {
                 isPresented = false
             },
             trailing: Button("Save") {
-                hospital.assignedAdminId = selectedAdmin?.id
+                hospital.assigned_admin_id = selectedAdmin?.id
                 onSave(hospital)
                 isPresented = false
             }
@@ -238,7 +238,7 @@ struct EditHospitalView: View {
                     .execute()
                     .value
                 availableAdmins = admins
-                if let adminId = hospital.assignedAdminId {
+                if let adminId = hospital.assigned_admin_id {
                     selectedAdmin = admins.first { $0.id == adminId }
                 }
             } catch {

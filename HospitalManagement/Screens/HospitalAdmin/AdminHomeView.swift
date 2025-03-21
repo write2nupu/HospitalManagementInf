@@ -200,14 +200,14 @@ struct DoctorRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text(doctor.fullName)
+                Text(doctor.full_name)
                     .font(.headline)
                 Text(doctor.qualifications)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
             Spacer()
-            if doctor.isActive {
+            if doctor.is_active {
                 Text("Active")
                     .foregroundColor(.green)
             } else {

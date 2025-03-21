@@ -40,7 +40,7 @@ struct EditContactSheet: View {
         self.admin = admin
         self.onSave = onSave
         _email = State(initialValue: admin.email)
-        _phone = State(initialValue: admin.phoneNumber)
+        _phone = State(initialValue: admin.phone_number)
     }
     
     var body: some View {
@@ -92,7 +92,7 @@ struct EditContactSheet: View {
         
         var updatedAdmin = admin
         updatedAdmin.email = email
-        updatedAdmin.phoneNumber = phone
+        updatedAdmin.phone_number = phone
         
         onSave(updatedAdmin)
         alertMessage = "Profile updated successfully"
@@ -246,7 +246,7 @@ struct AdminProfileView: View {
                         HStack {
                             Text("Phone")
                             Spacer()
-                            Text(admin.phoneNumber)
+                            Text(admin.phone_number)
                                 .foregroundColor(.secondary)
                         }
                     }

@@ -40,7 +40,7 @@ struct HospitalListView: View {
     private func loadHospitals() async {
         isLoading = true
         let fetchedHospitals = await supabaseController.fetchHospitals()
-        hospitals = fetchedHospitals.filter { $0.isActive }
+        hospitals = fetchedHospitals.filter { $0.is_active }
         isLoading = false
     }
 

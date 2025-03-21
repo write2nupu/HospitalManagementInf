@@ -27,8 +27,8 @@ struct AllDepartmentsView: View {
                         NavigationLink(destination: DepartmentDetailView(department: department)) {
                             DepartmentCard(
                                 department: department,
-                                doctorCount: doctors.filter { $0.departmentId == department.id }.count,
-                                activeDoctorCount: doctors.filter { $0.departmentId == department.id && $0.isActive }.count
+                                doctorCount: doctors.filter { $0.department_id == department.id }.count,
+                                activeDoctorCount: doctors.filter { $0.department_id == department.id && $0.is_active }.count
                             )
                         }
                     }

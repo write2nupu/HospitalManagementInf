@@ -5,7 +5,7 @@ struct PatientSignupView: View {
     @State private var patientDetails: Patient?
     @State private var showMedicalInfo = false
     @State private var showDashboard = false
-    var patient: Patient = Patient(id: UUID(), fullName: "Ram", gender: "male", dateOfBirth: Date(), phoneNumber: "1234567890", email: "ram@mail.com")
+    var patient: Patient = Patient(id: UUID(), fullName: "Ram", gender: "male", dateOfBirth: Date(), contactNo: "1234567890", email: "ram@mail.com")
 
     var body: some View {
         NavigationStack {
@@ -132,7 +132,7 @@ struct MedicalInfoView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     
-    var patient: Patient = Patient(id: UUID(), fullName: "Ram", gender: "male", dateOfBirth: Date(), phoneNumber: "1234567890", email: "ram@mail.com")
+    var patient: Patient = Patient(id: UUID(), fullName: "Ram", gender: "male", dateOfBirth: Date(), contactNo: "1234567890", email: "ram@mail.com")
 
 
     var body: some View {
@@ -189,7 +189,7 @@ struct MedicalInfoView: View {
             alertMessage = "Please fill in all required fields."
             showAlert = true
         } else {
-            patientDetails = Patient(id: UUID(), fullName: "Your name", gender: "Not Defined", dateOfBirth: Date(), phoneNumber: "", email: "")
+            patientDetails = Patient(id: UUID(), fullName: "Your name", gender: "Not Defined", dateOfBirth: Date(), contactNo: "", email: "")
             showDashboard = true
         }
     }

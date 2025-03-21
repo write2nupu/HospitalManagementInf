@@ -128,8 +128,8 @@ struct forcePasswordUpdate: View {
             .navigationDestination(isPresented: $isUpdated) {
 //                if
 //                DashBoard()  // ✅ Navigate to doctor
-                AdminHomeView()
-//                ContentView()
+//                AdminHomeView()
+                ContentView()
             }
         }
         

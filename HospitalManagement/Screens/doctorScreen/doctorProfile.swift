@@ -14,19 +14,19 @@ struct DoctorProfileView: View {
         NavigationStack {
             Form {
                 Section(header: Text("Basic Information")) {
-                    profileRow(title: "Full Name", value: doctor.fullName)
+                    profileRow(title: "Full Name", value: doctor.full_name)
                     if let department = departmentDetails {
                         profileRow(title: "Department", value: department.name)
                     }
                     profileRow(title: "Qualifications", value: doctor.qualifications)
                     profileRow(title: "Experience", value: "\(doctor.experience) years")
-                    profileRow(title: "License Number", value: doctor.licenseNumber)
+                    profileRow(title: "License Number", value: doctor.license_num)
                     profileRow(title: "Gender", value: doctor.gender)
                 }
                 
                 Section(header: Text("Contact Information")) {
-                    profileRow(title: "Phone", value: doctor.phoneNumber)
-                    profileRow(title: "Email", value: doctor.email)
+                    profileRow(title: "Phone", value: doctor.phone_num)
+                    profileRow(title: "Email", value: doctor.email_address)
                 }
                 
                 if let department = departmentDetails {
@@ -38,7 +38,7 @@ struct DoctorProfileView: View {
             .navigationTitle("Doctor Profile")
             .task {
                 // Fetch doctor details
-                if let departmentId = doctor.departmentId {
+                if let departmentId = doctor.department_id {
                     departmentDetails = await supabaseController.fetchDepartmentDetails(departmentId: departmentId)
                 }
             }

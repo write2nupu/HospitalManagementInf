@@ -59,9 +59,9 @@ struct PatientDashboard: View {
         var body: some View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Patient ID: \(patient.id)")
-                Text("Phone: \(patient.phoneNumber)")
+                Text("Phone: \(patient.contactNo)")
                 Text("Email: \(patient.email)")
-                if let details = patient.detailId {
+                if let details = patient.detail_id {
                     Text("Blood Group: \(details)")
                 }
             }

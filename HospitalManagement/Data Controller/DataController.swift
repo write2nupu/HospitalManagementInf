@@ -62,12 +62,12 @@ final class HospitalManagementViewModel: ObservableObject {
             throw DataError.recordNotFound
         }
         
-        guard hospitals[index].isActive else {
+        guard hospitals[index].is_active else {
             throw DataError.alreadyInactive
         }
         
         var updatedHospital = hospitals[index]
-        updatedHospital.isActive = false
+        updatedHospital.is_active = false
         hospitals[index] = updatedHospital
         
         try saveHospitals()
@@ -78,12 +78,12 @@ final class HospitalManagementViewModel: ObservableObject {
             throw DataError.recordNotFound
         }
         
-        guard !hospitals[index].isActive else {
+        guard !hospitals[index].is_active else {
             throw DataError.alreadyActive
         }
         
         var updatedHospital = hospitals[index]
-        updatedHospital.isActive = true
+        updatedHospital.is_active = true
         hospitals[index] = updatedHospital
         
         try saveHospitals()
@@ -92,7 +92,7 @@ final class HospitalManagementViewModel: ObservableObject {
     // MARK: - Doctor Management
     
     func addDoctor(_ doctor: Doctor) throws {
-        guard !doctor.fullName.isEmpty else { throw DataError.invalidData }
+        guard !doctor.full_name.isEmpty else { throw DataError.invalidData }
         doctors.append(doctor)
         try saveDoctors()
     }
@@ -110,12 +110,12 @@ final class HospitalManagementViewModel: ObservableObject {
             throw DataError.recordNotFound
         }
         
-        guard doctors[index].isActive else {
+        guard doctors[index].is_active else {
             throw DataError.alreadyInactive
         }
         
         var updatedDoctor = doctors[index]
-        updatedDoctor.isActive = false
+        updatedDoctor.is_active = false
         doctors[index] = updatedDoctor
         
         try saveDoctors()
@@ -161,11 +161,11 @@ final class HospitalManagementViewModel: ObservableObject {
     }
     
     func getDoctorsByHospital(hospitalId: UUID) -> [Doctor] {
-        return doctors.filter { $0.hospitalId == hospitalId && $0.isActive }
+        return doctors.filter { $0.hospital_id == hospitalId && $0.is_active }
     }
     
     func getDepartmentsByHospital(hospitalId: UUID) -> [Department] {
-        return departments.filter { $0.hospitalId == hospitalId }
+        return departments.filter { $0.hospital_id == hospitalId }
     }
     
     // MARK: - Data Persistence

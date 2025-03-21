@@ -10,13 +10,128 @@ import Supabase
 
 class SupabaseController: ObservableObject {
     let client: SupabaseClient
-    
+    private let encoder: JSONEncoder
+    private let decoder: JSONDecoder
     init() {
         self.client = SupabaseClient(
             supabaseURL: URL(string: "https://ktbjqlbmbhberbebtbyx.supabase.co")!,
             supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0YmpxbGJtYmhiZXJiZWJ0Ynl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzMTk0MjMsImV4cCI6MjA1Nzg5NTQyM30._wdosJBARTE6y4t80snhslM3lOH2PHMmV6y-ErUdBPY"
         )
+        self.encoder = JSONEncoder()
+                self.encoder.keyEncodingStrategy = .convertToSnakeCase
+                
+                self.decoder = JSONDecoder()
+                self.decoder.keyDecodingStrategy = .convertFromSnakeCase
     }
+    func signUp(email: String, password: String, userData: [String: Any]) async throws -> User {
+            print("Attempting to sign up with email:", email)
+            
+            // Convert userData to [String: AnyJSON]
+            let signUpData: [String: AnyJSON] = userData.mapValues { value in
+                if let string = value as? String {
+                    return .string(string)
+                } else if let number = value as? Int {
+                    return .double(Double(number))
+                } else if let number = value as? Double {
+                    return .double(number)
+                } else if let bool = value as? Bool {
+                    return .bool(bool)
+                } else {
+                    return .string(String(describing: value))
+                }
+            }
+            
+            // Create the auth user
+            let authResponse = try await client.auth.signUp(
+                email: email,
+                password: password,
+                data: signUpData
+            )
+            
+            print("Auth Response:", authResponse)
+            
+            // Sign in to get a valid session
+            return try await signIn(email: email, password: password)
+        }
+        
+        func signIn(email: String, password: String) async throws -> User {
+            print("Attempting to sign in with email:", email)
+            
+            let authResponse = try await client.auth.signIn(
+                email: email,
+                password: password
+            )
+            print("Auth Response:", authResponse)
+            
+            let userId = authResponse.user.id
+            let userMetadata = authResponse.user.userMetadata
+            let currentDate = ISO8601DateFormatter().string(from: Date())
+            
+            print("Raw userMetadata:", userMetadata)
+            
+            // Extract values from userMetadata, converting numbers to strings if needed
+            let fullName = userMetadata["full_name"] as? String ?? ""
+            let phoneNumber: String
+            if let phoneNum = userMetadata["phone_number"] {
+                if let numStr = phoneNum as? String {
+                    phoneNumber = numStr
+                } else if let num = phoneNum as? Int {
+                    phoneNumber = String(num)
+                } else if let num = phoneNum as? Double {
+                    phoneNumber = String(Int(num))
+                } else {
+                    phoneNumber = ""
+                }
+            } else {
+                phoneNumber = ""
+            }
+            let role = userMetadata["role"] as? String ?? "patient"
+            
+            print("Extracted metadata - fullName: \(fullName), phoneNumber: \(phoneNumber), role: \(role)")
+            
+            // Try to fetch existing user first
+            do {
+                let existingUser = try await client.database
+                    .from("Users")
+                    .select()
+                    .eq("id", value: userId.uuidString)
+                    .single()
+                    .execute()
+                
+                // If user exists, return the existing user
+                if let userData = try? decoder.decode(User.self, from: existingUser.data) {
+                    print("Found existing user with role:", userData.role)
+                    return userData
+                }
+            } catch {
+                print("No existing user found, creating new user")
+            }
+            
+            // Create user dictionary for new user
+            let userDict: [String: AnyJSON] = [
+                "id": .string(userId.uuidString),
+                "email": .string(authResponse.user.email ?? email),
+                "full_name": .string(fullName),
+                "phone_number": .string(phoneNumber),
+                "role": .string(role),
+                "is_first_login": .bool(true),
+                "is_active": .bool(true),
+                "created_at": .string(currentDate),
+                "updated_at": .string(currentDate)
+            ]
+            
+            print("Creating new user with data:", userDict)
+            
+            // Insert new user
+            let insertResponse = try await client.database
+                .from("Users")
+                .insert(userDict)
+                .select()
+                .single()
+                .execute()
+            
+            return try decoder.decode(User.self, from: insertResponse.data)
+        }
     
     // MARK: - Fetch Patients
     func fetchPatients() async -> [Patient] {

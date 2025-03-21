@@ -51,7 +51,7 @@ struct AddDepartmentView: View {
             id: UUID(),
             name: departmentName,
             description: description.isEmpty ? nil : description,
-            hospitalId: getCurrentHospitalId(),
+            hospital_id: getCurrentHospitalId(),
             fees: fees
         )
         

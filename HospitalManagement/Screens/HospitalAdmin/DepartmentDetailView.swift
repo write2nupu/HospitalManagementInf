@@ -26,8 +26,8 @@ struct DepartmentDetailView: View {
         let statusFiltered = doctors.filter { doctor in
             switch statusFilter {
             case .all: return true
-            case .active: return doctor.isActive
-            case .inactive: return !doctor.isActive
+            case .active: return doctor.is_active
+            case .inactive: return !doctor.is_active
             }
         }
         
@@ -36,9 +36,9 @@ struct DepartmentDetailView: View {
             return statusFiltered
         } else {
             return statusFiltered.filter { doctor in
-                doctor.fullName.localizedCaseInsensitiveContains(searchText) ||
-                doctor.phoneNumber.localizedCaseInsensitiveContains(searchText) ||
-                doctor.email.localizedCaseInsensitiveContains(searchText)
+                doctor.full_name.localizedCaseInsensitiveContains(searchText) ||
+                doctor.phone_num.localizedCaseInsensitiveContains(searchText) ||
+                doctor.email_address.localizedCaseInsensitiveContains(searchText)
             }
         }
     }
@@ -127,7 +127,7 @@ struct DepartmentDetailView: View {
         .task {
             if let hospitalId = getCurrentHospitalId() {
                 doctors = await supabaseController.getDoctorsByHospital(hospitalId: hospitalId)
-                doctors = doctors.filter { $0.departmentId == department.id }
+                doctors = doctors.filter { $0.department_id == department.id }
             }
         }
     }
@@ -151,16 +151,16 @@ struct DoctorRowView: View {
             VStack(alignment: .leading, spacing: 12) {
                 // Top row with name and status
                 HStack {
-                    Text(doctor.fullName)
+                    Text(doctor.full_name)
                         .font(.headline)
                     Spacer()
-                    StatusBadge1(isActive: doctor.isActive)
+                    StatusBadge1(isActive: doctor.is_active)
                 }
                 
                 // Contact Info
                 VStack(alignment: .leading, spacing: 8) {
                     Label {
-                        Text(doctor.phoneNumber)
+                        Text(doctor.phone_num)
                     } icon: {
                         Image(systemName: "phone.fill")
                             .foregroundColor(.green)
@@ -183,35 +183,35 @@ struct DoctorRowView: View {
             Button {
                 showStatusConfirmation = true
             } label: {
-                Label(doctor.isActive ? "Deactivate" : "Activate",
-                      systemImage: doctor.isActive ? "person.fill.xmark" : "person.fill.checkmark")
+                Label(doctor.is_active ? "Deactivate" : "Activate",
+                      systemImage: doctor.is_active ? "person.fill.xmark" : "person.fill.checkmark")
             }
-            .tint(doctor.isActive ? .red : .green)
+            .tint(doctor.is_active ? .red : .green)
         }
-        .alert(doctor.isActive ? "Confirm Deactivation" : "Confirm Activation", 
+        .alert(doctor.is_active ? "Confirm Deactivation" : "Confirm Activation", 
                isPresented: $showStatusConfirmation) {
             Button("Cancel", role: .cancel) { }
-            Button(doctor.isActive ? "Deactivate" : "Activate", 
-                  role: doctor.isActive ? .destructive : .none) {
+            Button(doctor.is_active ? "Deactivate" : "Activate", 
+                  role: doctor.is_active ? .destructive : .none) {
                 Task {
                     await toggleDoctorStatus()
                 }
             }
         } message: {
-            Text(doctor.isActive ? 
-                "Are you sure you want to deactivate Dr. \(doctor.fullName)?" :
-                "Do you want to activate Dr. \(doctor.fullName)?")
+            Text(doctor.is_active ? 
+                "Are you sure you want to deactivate Dr. \(doctor.full_name)?" :
+                "Do you want to activate Dr. \(doctor.full_name)?")
         }
         .alert("Status Updated", isPresented: $showStatusChangeAlert) {
             Button("OK", role: .cancel) { }
         } message: {
-            Text("\(doctor.fullName) has been \(doctor.isActive ? "deactivated" : "activated")")
+            Text("\(doctor.full_name) has been \(doctor.is_active ? "deactivated" : "activated")")
         }
     }
     
     private func toggleDoctorStatus() async {
         var updatedDoctor = doctor
-        updatedDoctor.isActive.toggle()
+        updatedDoctor.is_active.toggle()
         
         do {
             try await supabaseController.client

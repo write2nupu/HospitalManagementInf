@@ -188,18 +188,18 @@ struct AddDoctorView: View {
         
         let newDoctor = Doctor(
             id: UUID(),
-            fullName: fullName,
-            departmentId: department.id,
-            hospitalId: getCurrentHospitalId(),
+            full_name: fullName,
+            department_id: department.id,
+            hospital_id: getCurrentHospitalId(),
             experience: Int(experience) ?? 0,
             qualifications: qualifications,
-            isActive: true,
-            isFirstLogin: true,
-            initialPassword: initialPassword,
-            phoneNumber: phoneNumber,
-            email: email,
+            is_active: true,
+            is_first_login: true,
+            initial_password: initialPassword,
+            phone_num: phoneNumber,
+            email_address: email,
             gender: gender,
-            licenseNumber: licenseNumber
+            license_num: licenseNumber
         )
         
         do {
