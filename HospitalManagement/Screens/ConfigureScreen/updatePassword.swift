@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct updatePassword: View {
+    var doctor: Doctor
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
     @State private var isPasswordVisible = false
@@ -117,17 +118,12 @@ struct updatePassword: View {
                     Spacer()
                 }
             }
-            .fullScreenCover(isPresented: $isUpdated) { // ✅ Full-screen navigation
-                mainBoard()
-                    .navigationBarBackButtonHidden(true) // ✅ Removes back button
+            .fullScreenCover(isPresented: $isUpdated) { // Full-screen navigation
+                mainBoard(doctor: doctor)
+                    .navigationBarBackButtonHidden(true) // Removes back button
             }
         }
     }
 }
 
-// Preview
-#Preview {
-    NavigationStack {
-        updatePassword()
-    }
-}
+

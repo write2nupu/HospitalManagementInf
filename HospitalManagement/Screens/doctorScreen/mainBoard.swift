@@ -3,8 +3,11 @@ import SwiftUI
 
 
 struct mainBoard: View {
-    var doctor: Doctor = doctors[0]
-    @State private var selectedTab: Tab = .appointments
+//    var docID: UUID
+//    accept id form force update screen and fect user by that ID and stre that doctor in this variable
+    
+    var doctor: Doctor = Doctor(id: UUID(), fullName: "Anubhav Dubey", experience: 10, qualifications: "MBS", isActive: true, phoneNumber: "091234857", email: "anubhav@mail.com", gender: "male", licenseNumber: "123-123-123")
+    @State private var selectedTab: Tab = .dashBoard
     @State private var showProfile = false
 
     enum Tab {
@@ -73,7 +76,7 @@ struct mainBoard: View {
                 }
             }
             .sheet(isPresented: $showProfile) { // ✅ Modal presentation
-                DoctorProfileView()
+                DoctorProfileView(doctor: doctor)
             }
             .navigationBarBackButtonHidden(true)
         }

@@ -8,6 +8,11 @@ struct DoctorLoginView: View {
     @State private var errorMessage = ""
     @State private var isLoggedIn = false // ✅ State for Navigation
     @State private var isPasswordVisible = false // ✅ Toggle password visibility
+    
+    var docUser: AuthData = AuthData(role: "doctor")
+    
+//    doctor to be deleted when Superbase function get integrated
+    
 
     var body: some View {
         NavigationStack {
@@ -51,7 +56,8 @@ struct DoctorLoginView: View {
                 .padding(.top, 20)
 
                 // **Navigation Trigger after Successful Login**
-                NavigationLink(destination: forcePasswordUpdate(), isActive: $isLoggedIn) { EmptyView() }
+                NavigationLink(destination: forcePasswordUpdate(user: docUser), isActive: $isLoggedIn) { EmptyView() }
+
 
                 Spacer() // Push content upward
             }
@@ -67,7 +73,10 @@ struct DoctorLoginView: View {
     private func handleLogin() {
         if isValid() {
             isLoggedIn = true
-            print("Logged in successfully.")
+            
+//            Save token to Mobile Storage and update UUID to user.id
+            
+            print("Doctor Logged in successfully.")
         } else {
             showAlert = true
             errorMessage = "Invalid credentials. Please check your input."
@@ -124,7 +133,3 @@ struct DoctorLoginView: View {
     }
 }
 
-// ✅ Preview
-#Preview {
-    DoctorLoginView(message: "Admin")
-}

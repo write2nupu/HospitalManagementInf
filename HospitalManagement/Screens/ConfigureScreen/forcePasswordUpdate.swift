@@ -1,17 +1,19 @@
 import SwiftUI
 
 struct forcePasswordUpdate: View {
+    
+    var user: AuthData  // Accept User Data
+    
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
     @State private var isPasswordVisible = false
     @State private var isConfirmPasswordVisible = false
     @State private var isUpdated = false
     @State private var errorMessage: String? = nil
-
+    
     var body: some View {
-        NavigationStack{
+        NavigationStack {
             ZStack {
-                
                 VStack(spacing: 20) {
                     // Header
                     Spacer()
@@ -20,71 +22,15 @@ struct forcePasswordUpdate: View {
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
                     
-                    Text("For security reasons, you are required to update your password before accessing your account.")
+                    Text("For security reasons, update your password before accessing your account.")
                         .font(.body)
-                        .fontWeight(.regular)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 40)
                     
                     // Password Fields
                     VStack(spacing: 15) {
-                        // New Password
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("New Password")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            
-                            HStack {
-                                Image(systemName: "lock.fill")
-                                    .foregroundColor(.black)
-                                
-                                if isPasswordVisible {
-                                    TextField("Enter new password", text: $password)
-                                } else {
-                                    SecureField("Enter new password", text: $password)
-                                }
-                                
-                                Button(action: {
-                                    isPasswordVisible.toggle()
-                                }) {
-                                    Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
-                                        .foregroundColor(.gray)
-                                }
-                            }
-                            .padding()
-                            .background(AppConfig.primaryColor)
-                            .cornerRadius(12)
-                        }
-                        .padding(.horizontal, 40)
-                        
-                        // Confirm Password
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Confirm Password")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            
-                            HStack {
-                                Image(systemName: "lock.fill")
-                                    .foregroundColor(.black)
-                                
-                                if isConfirmPasswordVisible {
-                                    TextField("Confirm password", text: $confirmPassword)
-                                } else {
-                                    SecureField("Confirm password", text: $confirmPassword)
-                                }
-                                
-                                Button(action: {
-                                    isConfirmPasswordVisible.toggle()
-                                }) {
-                                    Image(systemName: isConfirmPasswordVisible ? "eye.slash.fill" : "eye.fill")
-                                        .foregroundColor(.gray)
-                                }
-                            }
-                            .padding()
-                            .background(AppConfig.primaryColor)
-                            .cornerRadius(12)
-                        }
-                        .padding(.horizontal, 40)
+                        PasswordField(title: "New Password", text: $password, isVisible: $isPasswordVisible)
+                        PasswordField(title: "Confirm Password", text: $confirmPassword, isVisible: $isConfirmPasswordVisible)
                     }
                     
                     // Error Message
@@ -97,16 +43,7 @@ struct forcePasswordUpdate: View {
                     
                     // Update Password Button
                     Button(action: {
-                        if password.isEmpty || confirmPassword.isEmpty {
-                            errorMessage = "Please fill in both fields"
-                        } else if password.count < 6 {
-                            errorMessage = "Password must be at least 6 characters"
-                        } else if password != confirmPassword {
-                            errorMessage = "Passwords do not match"
-                        } else {
-                            errorMessage = nil
-                            isUpdated = true
-                        }
+                        validateAndUpdatePassword()
                     }) {
                         Text("Update Password")
                             .fontWeight(.semibold)
@@ -125,20 +62,87 @@ struct forcePasswordUpdate: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
+            // ✅ Corrected Navigation
             .navigationDestination(isPresented: $isUpdated) {
-                mainBoard()  // ✅ Navigate to Dashboard
-//                AdminHomeView()
-//                ContentView()
-
+                getDashboardView()
             }
         }
-       
+    }
+    
+    // ✅ Function to Validate Password
+    private func validateAndUpdatePassword() {
+        if password.isEmpty || confirmPassword.isEmpty {
+            errorMessage = "Please fill in both fields"
+        } else if password.count < 6 {
+            errorMessage = "Password must be at least 6 characters"
+        } else if password != confirmPassword {
+            errorMessage = "Passwords do not match"
+        } else {
+            errorMessage = nil
+            isUpdated = true // ✅ Trigger Navigation
+        }
+    }
+    
+    // ✅ Function to Determine Dashboard
+    @ViewBuilder
+    private func getDashboardView() -> some View {
+//        switch user.role.lowercased() {
+//        case "admin":
+//            AdminHomeView()
+//        case "superadmin":
+//            ContentView()
+//        case "doctor":
+//            mainBoard()
+//        default:
+//            Text("Role not recognized").foregroundColor(.red)
+//        }
+        
+        if user.role.lowercased() == "admin" {
+            AdminHomeView()
+        } else if user.role.lowercased() == "superadmin" {
+            ContentView()
+        } else if user.role.lowercased() == "doctor"{
+            mainBoard()
+        }
     }
 }
 
-// Preview
-#Preview {
-    NavigationView {
-        forcePasswordUpdate()
+// ✅ Reusable Password Field Component
+struct PasswordField: View {
+    var title: String
+    @Binding var text: String
+    @Binding var isVisible: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.gray)
+            
+            HStack {
+                Image(systemName: "lock.fill")
+                    .foregroundColor(.black)
+                
+                if isVisible {
+                    TextField(title, text: $text)
+                } else {
+                    SecureField(title, text: $text)
+                }
+                
+                Button(action: { isVisible.toggle() }) {
+                    Image(systemName: isVisible ? "eye.slash.fill" : "eye.fill")
+                        .foregroundColor(.gray)
+                }
+            }
+            .padding()
+            .background(AppConfig.primaryColor)
+            .cornerRadius(12)
+        }
+        .padding(.horizontal, 40)
     }
+}
+
+// ✅ Preview
+#Preview {
+    forcePasswordUpdate(user: AuthData(role: "admin"))
 }

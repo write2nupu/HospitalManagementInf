@@ -8,6 +8,10 @@
 import SwiftUI
 
 struct AdminHomeView: View {
+    
+//    var AdminID: UUID
+//    accept id form force update screen and fect user by that ID and stre that doctor in this variable
+    
     @StateObject private var supabaseController = SupabaseController()
     @State private var doctors: [Doctor] = []
     @State private var departments: [Department] = []
@@ -165,7 +169,9 @@ struct DoctorsSection: View {
                     DoctorRow(doctor: doctor)
                 }
             }
+               
         }
+        .navigationBarBackButtonHidden(true)
     }
 }
 

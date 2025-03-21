@@ -1,18 +1,20 @@
 import SwiftUI
 
 struct updateFields: View {
+    var doctor: Doctor
     @State private var email: String
     @State private var phone: String
     @State private var updatedEmail: String = ""
     @State private var updatePhone: String = ""
-    @State private var isEditing = false // ✅ Single Edit Mode Toggle
+    @State private var isEditing = false
     @State private var errorMessageEmail: String? = nil
     @State private var errorMessagePhone: String? = nil
     @State private var isSaved = false
     
-    init(initialEmail: String, initialPhone: String) {
-        _email = State(initialValue: initialEmail)
-        _phone = State(initialValue: initialPhone)
+    init(doctor: Doctor) {
+        self.doctor = doctor  // ✅ Initialize doctor
+        _email = State(initialValue: doctor.email)
+        _phone = State(initialValue: doctor.phoneNumber)
     }
 
     var body: some View {
@@ -96,7 +98,7 @@ struct updateFields: View {
                     .foregroundColor(.blue)
             })
             .navigationDestination(isPresented: $isSaved) {
-                DoctorProfileView()
+                DoctorProfileView(doctor: doctor)
                     .navigationBarBackButtonHidden(true)
             }
         }
@@ -151,9 +153,4 @@ struct updateFields: View {
     }
 }
 
-// ✅ Preview
-#Preview {
-    NavigationStack {
-        updateFields(initialEmail: "doctor@example.com", initialPhone: "9876543210")
-    }
-}
+
