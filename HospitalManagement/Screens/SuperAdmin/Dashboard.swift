@@ -153,7 +153,6 @@ struct AddHospitalView: View {
     @State private var contact = ""
     @State private var email = ""
     @State private var isActive = true
-    @State private var hospitals: [Hospital] = []
     
     // Admin Details
     @State private var adminFullName = ""
@@ -163,6 +162,7 @@ struct AddHospitalView: View {
     // Validation States
     @State private var showingValidationAlert = false
     @State private var validationMessage = ""
+    @State private var isSubmitting = false
     
     var body: some View {
         NavigationView {
@@ -208,35 +208,85 @@ struct AddHospitalView: View {
                     .foregroundColor(.mint),
                 trailing: Button("Save") {
                     if isValidForm {
-                        let hospital = Hospital(
-                            id: UUID(),
-                            name: name,
-                            address: address,
-                            city: city,
-                            state: state,
-                            pincode: pincode,
-                            mobileNumber: contact,
-                            email: email,
-                            licenseNumber: licenseNumber,
-                            isActive: isActive,
-                            assignedAdminId: nil
-                        )
                         Task {
-                            await supabaseController.addHospital(hospital)
-                            dismiss()
+                            await saveHospital()
                         }
                     } else {
                         showingValidationAlert = true
                     }
                 }
                 .foregroundColor(.mint)
+                .disabled(isSubmitting)
             )
+            .overlay {
+                if isSubmitting {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black.opacity(0.2))
+                }
+            }
             .alert("Validation Error", isPresented: $showingValidationAlert) {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(validationMessage)
             }
         }
+    }
+    
+    private func saveHospital() async {
+        isSubmitting = true
+        defer { isSubmitting = false }
+        
+        do {
+            // First create the admin
+            let adminId = UUID()
+            let admin = Admin(
+                id: adminId,
+                email: adminEmail,
+                fullName: adminFullName,
+                phoneNumber: adminPhone,
+                hospitalId: nil,
+                isFirstLogin: true,
+                initialPassword: generateRandomPassword()
+            )
+            
+            // Create the hospital
+            let hospital = Hospital(
+                id: UUID(),
+                name: name,
+                address: address,
+                city: city,
+                state: state,
+                pincode: pincode,
+                mobileNumber: contact,
+                email: email,
+                licenseNumber: licenseNumber,
+                isActive: isActive,
+                assignedAdminId: adminId
+            )
+            
+            // Add admin to Supabase
+            try await supabaseController.client
+                .from("Admins")
+                .insert(admin)
+                .execute()
+            
+            // Add hospital to Supabase
+            try await supabaseController.client
+                .from("Hospitals")
+                .insert(hospital)
+                .execute()
+            
+            dismiss()
+        } catch {
+            validationMessage = "Error saving hospital: \(error.localizedDescription)"
+            showingValidationAlert = true
+        }
+    }
+    
+    private func generateRandomPassword() -> String {
+        let digits = "0123456789"
+        return String((0..<6).map { _ in digits.randomElement()! })
     }
     
     private var isValidForm: Bool {

@@ -149,7 +149,7 @@ class SupabaseController: ObservableObject {
                 .from("Doctors")
                 .select("""
                     id,
-                    fullName,
+                    full_Name,
                     departmentId,
                     hospitalId,
                     experience,
@@ -284,4 +284,84 @@ class SupabaseController: ObservableObject {
     //        }
     //    }
     //}
+    
+    // MARK: - Fetch Hospital Departments
+    func fetchHospitalDepartments(hospitalId: UUID) async -> [Department] {
+        do {
+            let departments: [Department] = try await client
+                .from("Departments")
+                .select()
+                .eq("hospitalId", value: hospitalId)
+                .execute()
+                .value
+            return departments
+        } catch {
+            print("Error fetching hospital departments: \(error)")
+            return []
+        }
+    }
+    
+    // MARK: - Fetch Patient Details
+    func fetchPatientDetails(patientId: UUID) async -> Patient? {
+        do {
+            let patients: [Patient] = try await client
+                .from("Patients")
+                .select()
+                .eq("id", value: patientId)
+                .execute()
+                .value
+            return patients.first
+        } catch {
+            print("Error fetching patient: \(error)")
+            return nil
+        }
+    }
+    
+    // MARK: - Update Patient Details
+    func updatePatient(_ patient: Patient) async {
+        do {
+            try await client
+                .from("Patients")
+                .update(patient)
+                .eq("id", value: patient.id)
+                .execute()
+            print("Patient updated successfully!")
+        } catch {
+            print("Error updating patient: \(error)")
+        }
+    }
+    
+    // MARK: - Get Doctors by Hospital
+    func getDoctorsByHospital(hospitalId: UUID) async -> [Doctor] {
+        do {
+            let doctors: [Doctor] = try await client
+                .from("Doctors")
+                .select("""
+                    id,
+                    full_name,
+                    departmentId,
+                    hospitalId,
+                    experience,
+                    qualifications,
+                    isActive,
+                    isFirstLogin,
+                    initialPassword,
+                    phoneNumber,
+                    email,
+                    gender,
+                    licenseNumber,
+                    Departments (
+                        name,
+                        fees
+                    )
+                """)
+                .eq("hospitalId", value: hospitalId)
+                .execute()
+                .value
+            return doctors
+        } catch {
+            print("Error fetching doctors by hospital: \(error)")
+            return []
+        }
+    }
 }

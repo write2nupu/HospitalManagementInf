@@ -50,12 +50,21 @@ struct Hospital: Identifiable, Codable {
     
 }
 
-struct Department: Identifiable, Codable {
+struct Department: Identifiable, Codable, Hashable {
     var id : UUID
     var name: String
     var description: String?
     var hospitalId: UUID?
     var fees: Double
+    
+    // Add Hashable conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: Department, rhs: Department) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
 struct Doctor : Identifiable, Codable {
