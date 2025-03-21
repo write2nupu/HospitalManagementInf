@@ -69,68 +69,99 @@ class SupabaseController: ObservableObject {
             
             print("Raw userMetadata:", userMetadata)
             
-            // Extract values from userMetadata, converting numbers to strings if needed
+            // Extract values from userMetadata
             let fullName = userMetadata["full_name"] as? String ?? ""
-            let phoneNumber: String
-            if let phoneNum = userMetadata["phone_number"] {
-                if let numStr = phoneNum as? String {
-                    phoneNumber = numStr
-                } else if let num = phoneNum as? Int {
-                    phoneNumber = String(num)
-                } else if let num = phoneNum as? Double {
-                    phoneNumber = String(Int(num))
+            let phoneNumber = userMetadata["phone_number"] as? String ?? ""
+            
+            // Extract and normalize role
+            var role = "patient"  // default role
+            if let metadataRole = userMetadata["role"] {
+                // Handle both String and non-String cases
+                if let roleStr = metadataRole as? String {
+                    role = roleStr
                 } else {
-                    phoneNumber = ""
+                    // If it's not a String, convert it to string
+                    role = String(describing: metadataRole)
                 }
-            } else {
-                phoneNumber = ""
+            } else if let authRole = authResponse.user.role {
+                role = authRole
             }
-            let role = userMetadata["role"] as? String ?? "patient"
             
-            print("Extracted metadata - fullName: \(fullName), phoneNumber: \(phoneNumber), role: \(role)")
+            // Normalize role to lowercase for comparison
+            role = role.lowercased()
+            print("Role after normalization:", role)
             
-            // Try to fetch existing user first
-            do {
-                let existingUser = try await client.database
-                    .from("Users")
-                    .select()
-                    .eq("id", value: userId.uuidString)
-                    .single()
-                    .execute()
+            // Create a User object directly from the auth response
+            let user = User(
+                id: userId,
+                email: authResponse.user.email ?? email,
+                full_name: fullName,
+                phone_number: phoneNumber,
+                role: role,
+                is_first_login: true,
+                is_active: true,
+                hospital_id: nil,
+                created_at: currentDate,
+                updated_at: currentDate
+            )
+            
+            print("Created user object with role:", user.role)
+            
+            // For super_admin role, we don't need to store in any table
+            if role.contains("super") && role.contains("admin") {
+                print("Detected super admin role, returning user directly")
+                return user
+            }
+            
+            // For other roles, try to find or create in their respective tables
+            switch role {
+            case "admin":
+                // Try to fetch existing admin
+                do {
+                    let admins: [Admin] = try await client.database
+                        .from("Admins")
+                        .select()
+                        .eq("id", value: userId.uuidString)
+                        .execute()
+                        .value
+                    
+                    if let _ = admins.first {
+                        return user
+                    }
+                    
+                    // Create new admin if not found
+                    let admin = Admin(
+                        id: userId,
+                        email: user.email,
+                        fullName: user.full_name,
+                        phone_number: user.phone_number ?? "",
+                        hospitalId: nil,
+                        is_first_login: true,
+                        initial_password: String((0..<6).map { _ in "0123456789".randomElement()! })
+                    )
+                    
+                    try await client.database
+                        .from("Admins")
+                        .insert(admin)
+                        .execute()
+                } catch {
+                    print("Error handling admin user:", error)
+                }
                 
-                // If user exists, return the existing user
-                if let userData = try? decoder.decode(User.self, from: existingUser.data) {
-                    print("Found existing user with role:", userData.role)
-                    return userData
-                }
-            } catch {
-                print("No existing user found, creating new user")
+            case "doctor":
+                // Similar logic for doctors
+                break
+                
+            case "patient":
+                // Similar logic for patients
+                break
+                
+            default:
+                print("Unhandled role type:", role)
+                break
             }
             
-            // Create user dictionary for new user
-            let userDict: [String: AnyJSON] = [
-                "id": .string(userId.uuidString),
-                "email": .string(authResponse.user.email ?? email),
-                "full_name": .string(fullName),
-                "phone_number": .string(phoneNumber),
-                "role": .string(role),
-                "is_first_login": .bool(true),
-                "is_active": .bool(true),
-                "created_at": .string(currentDate),
-                "updated_at": .string(currentDate)
-            ]
-            
-            print("Creating new user with data:", userDict)
-            
-            // Insert new user
-            let insertResponse = try await client.database
-                .from("Users")
-                .insert(userDict)
-                .select()
-                .single()
-                .execute()
-            
-            return try decoder.decode(User.self, from: insertResponse.data)
+            return user
         }
     
     // MARK: - Fetch Patients

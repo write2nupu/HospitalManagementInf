@@ -10,14 +10,16 @@ import SwiftUI
 
 struct SuperAdminLoginView: View {
     var message: String
-    @State private var emailOrPhone = ""
+    @State private var email = ""
     @State private var password = ""
     @State private var showAlert = false
     @State private var errorMessage = ""
     @State private var isLoggedIn = false
     @State private var isPasswordVisible = false
-    @StateObject private var supabaseController = SupabaseController()
     @State private var isLoading = false
+    @StateObject private var supabaseController = SupabaseController()
+    @AppStorage("currentUserId") private var currentUserId: String = ""
+    @AppStorage("isLoggedIn") private var isUserLoggedIn = false
 
     var body: some View {
         NavigationStack {
@@ -35,9 +37,9 @@ struct SuperAdminLoginView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.mint)
 
-                // Email/Phone Input
+                // Email Input
                 VStack(alignment: .leading, spacing: 5) {
-                    customTextField(icon: "envelope.fill", placeholder: "Enter Email", text: $emailOrPhone, keyboardType: .emailAddress)
+                    customTextField(icon: "envelope.fill", placeholder: "Enter Email", text: $email, keyboardType: .emailAddress)
                 }
 
                 // Password Input
@@ -62,15 +64,15 @@ struct SuperAdminLoginView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.mint)
+                .background(isValid() ? Color.mint : Color.gray)
                 .cornerRadius(12)
                 .shadow(color: .mint.opacity(0.3), radius: 4, x: 0, y: 2)
-                .disabled(isLoading)
+                .disabled(!isValid() || isLoading)
                 .padding(.horizontal)
                 .padding(.top, 20)
 
-                // Navigation Trigger after Successful Login
-                NavigationLink(destination: forcePasswordUpdate(), isActive: $isLoggedIn) { EmptyView() }
+                // Navigation after successful login
+                NavigationLink(destination: ContentView(), isActive: $isLoggedIn) { EmptyView() }
 
                 Spacer() // Push content upward
             }
@@ -83,42 +85,46 @@ struct SuperAdminLoginView: View {
     }
 
     // MARK: - Login Logic
-    
-    
-    
-    
-    
     private func handleLogin() async {
-        guard !emailOrPhone.isEmpty && !password.isEmpty else {
-            errorMessage = "Please enter both email and password"
+        guard isValid() else {
+            errorMessage = "Please enter valid email and password"
             showAlert = true
             return
         }
-        
+
         isLoading = true
         do {
-            let user = try await supabaseController.signIn(email: emailOrPhone, password: password)
-            // Check if user has super admin role
-            if user.role.rawValue == "super_admin" {
+            let user = try await supabaseController.signIn(email: email, password: password)
+            
+            // Check if user is a super admin
+            if user.role.lowercased().contains("super") && user.role.lowercased().contains("admin") {
+                // Store user info
+                currentUserId = user.id.uuidString
+                isUserLoggedIn = true
                 isLoggedIn = true
-                print("Logged in successfully as Super Admin")
-                // Store the user ID for future use
-                UserDefaults.standard.set(user.id.uuidString, forKey: "currentUserId")
-                UserDefaults.standard.set(true, forKey: "isLoggedIn")
+                print("Successfully logged in as Super Admin")
             } else {
                 errorMessage = "Access denied. You must be a Super Admin to login."
                 showAlert = true
             }
         } catch {
-            errorMessage = "Invalid credentials or network error. Please try again."
+            errorMessage = "Invalid credentials. Please try again."
             showAlert = true
             print("Login error: \(error.localizedDescription)")
         }
         isLoading = false
     }
-    
-    
-    
+
+    // MARK: - Input Validation
+    private func isValid() -> Bool {
+        return isValidEmail(email) && password.count >= 6
+    }
+
+    private func isValidEmail(_ email: String) -> Bool {
+        let emailRegex = #"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
+        return NSPredicate(format: "SELF MATCHES %@", emailRegex).evaluate(with: email)
+    }
+
     // MARK: - Helper Views
     func customTextField(icon: String, placeholder: String, text: Binding<String>, keyboardType: UIKeyboardType = .default) -> some View {
         HStack {
@@ -159,7 +165,7 @@ struct SuperAdminLoginView: View {
     }
 }
 
-// Preview
+// MARK: - Preview
 #Preview {
     SuperAdminLoginView(message: "Super Admin")
 }

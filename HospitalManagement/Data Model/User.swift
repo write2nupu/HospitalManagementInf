@@ -12,20 +12,5 @@ struct User: Codable {
     let created_at: String
     let updated_at: String
     
-
+    // No need for CodingKeys since our property names match the database exactly
 } 
-enum UserRole: String, Codable, CaseIterable {
-    case superAdmin = "super_admin"
-    case admin = "admin"
-    case doctor = "doctor"
-    case patient = "patient"
-    
-    var displayName: String {
-        switch self {
-        case .superAdmin: return "Super Admin"
-        case .admin: return "Admin"
-        case .doctor: return "Doctor"
-        case .patient: return "Patient"
-        }
-    }
-}
