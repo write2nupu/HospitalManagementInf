@@ -1,20 +1,47 @@
 import SwiftUI
 
 struct HospitalListView: View {
+    @State private var searchText = ""
+    
+    var filteredHospitals: [Hospital] {
+        if searchText.isEmpty {
+            return hospitals
+        } else {
+            return hospitals.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+    }
+    
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 15) {
-                    ForEach(hospitals, id: \.name) { hospital in
-                        NavigationLink(destination: DepartmentListView(departments: hospital.departments)) {
-                            hospitalCard(hospital: hospital)
+            VStack {
+                // Search Bar
+                TextField("Search hospitals...", text: $searchText)
+                    .padding(10)
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                    .padding(.top, 10)
+                
+                ScrollView {
+                    VStack(spacing: 15) {
+                        ForEach(filteredHospitals, id: \.name) { hospital in
+                            NavigationLink(destination: DepartmentListView(departments: hospital.departments)) {
+                                hospitalCard(hospital: hospital)
+                            }
+                        }
+                        
+                        // Show "No results" if search has no matches
+                        if filteredHospitals.isEmpty {
+                            Text("No hospitals found")
+                                .foregroundColor(.gray)
+                                .padding(.top, 20)
                         }
                     }
+                    .padding()
                 }
-                .padding()
             }
             .navigationTitle("Select Hospital")
-            .background(Color.mint.opacity(0.05)) // Soft mint background
+            .background(Color.mint.opacity(0.05))
         }
     }
 
@@ -30,7 +57,7 @@ struct HospitalListView: View {
                 .font(.body)
                 .foregroundColor(.gray)
         }
-        .frame(maxWidth: .infinity, minHeight: 80) // Consistent size for all cards
+        .frame(maxWidth: .infinity, minHeight: 80)
         .padding()
         .background(Color.white)
         .cornerRadius(12)
