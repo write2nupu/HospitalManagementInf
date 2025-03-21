@@ -58,15 +58,18 @@ struct DoctorProfileView: View {
                 }
                 
                 Section(header: Text("Contact Information")) {
-                    NavigationLink(destination:  updateFields(fieldName: "Phone", initialValue: doctor.phoneNumber)) {
-                        profileRow(title: "Phone", value: doctor.phoneNumber)
-                    }
-                    
-                    NavigationLink(destination: updateFields(fieldName: "Email", initialValue: doctor.email)) {
-                        profileRow(title: "Email", value: doctor.email)
-                    }
+                    profileRow(title: "Phone", value: doctor.phoneNumber)
+                    profileRow(title: "Email", value: doctor.email)
                 }
                 
+                
+                Section {
+                    NavigationLink(destination: updateFields(initialEmail: doctor.email, initialPhone: doctor.phoneNumber)) {
+                        Text("Edit Phone and Email")
+                            .foregroundColor(AppConfig.buttonColor)
+                            .fontWeight(.semibold)
+                    }
+                }
                 
                 Section {
                     NavigationLink(destination: updatePassword()) {

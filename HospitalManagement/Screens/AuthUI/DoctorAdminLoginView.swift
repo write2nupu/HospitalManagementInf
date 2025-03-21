@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct AdminLoginView: View {
+struct DoctorLoginView: View {
     var message: String
     @State private var emailOrPhone = ""
     @State private var password = ""
@@ -126,5 +126,5 @@ struct AdminLoginView: View {
 
 // ✅ Preview
 #Preview {
-    AdminLoginView(message: "Admin")
+    DoctorLoginView(message: "Admin")
 }
