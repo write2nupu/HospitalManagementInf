@@ -60,25 +60,25 @@ struct DepartmentDetailView: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Department Info Card
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .center) {
+                        HStack(spacing: 8) {
                             Text("Department ID")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             Text("#\(department.id.uuidString.prefix(8))")
-                                .font(.caption)
+                                .font(.subheadline)
                                 .foregroundColor(.mint)
                         }
                         
                         Spacer()
                         
-                        VStack(alignment: .trailing, spacing: 4) {
+                        HStack(spacing: 8) {
                             Text("Total Doctors")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             Text("\(departmentDoctors.count)")
-                                .font(.title2)
+                                .font(.title3)
                                 .fontWeight(.bold)
                                 .foregroundColor(.mint)
                         }
@@ -94,7 +94,8 @@ struct DepartmentDetailView: View {
                         .font(.subheadline)
                         .foregroundColor(.mint)
                 }
-                .padding()
+                .padding(.vertical, 12)
+                .padding(.horizontal)
                 .background(
                     RoundedRectangle(cornerRadius: 15)
                         .fill(Color(.systemBackground))
