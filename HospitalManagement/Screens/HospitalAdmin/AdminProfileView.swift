@@ -188,10 +188,12 @@ struct ContactInfoSheet: View {
 
 struct AdminProfileView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var viewModel: HospitalManagementViewModel
     @State private var profile = AdminProfile()
     @State private var showingContactSheet = false
     @State private var showingLogoutAlert = false
     @AppStorage("isLoggedIn") private var isLoggedIn = true
+    @AppStorage("userRole") private var userRole: String?
     
     var body: some View {
         NavigationView {
@@ -283,9 +285,14 @@ struct AdminProfileView: View {
     }
     
     private func logout() {
-        // Clear user data
+        // Clear all user data
         UserDefaults.standard.removeObject(forKey: "adminProfile")
+        userRole = nil  // Clear the user role
         isLoggedIn = false
+        
+        // Post notification to trigger app-level navigation
+        NotificationCenter.default.post(name: .init("LogoutNotification"), object: nil)
+        
         dismiss()
     }
 }
