@@ -1,19 +1,5 @@
 import SwiftUI
 
-// MARK: - Patient Model
-//struct Patient {
-//    var name: String
-//    var dob: Date
-//    var contactNumber: String
-//    var email: String
-//    var bloodGroup: String?
-//    var allergies: String?
-//    var medicalConditions: String?
-//    var medications: String?
-//    var pastSurgeries: String?
-//    var emergencyContact: String
-//}
-
 // MARK: - Patient Dashboard View
 struct PatientDashboard: View {
     @EnvironmentObject private var viewModel: HospitalManagementViewModel
@@ -147,6 +133,7 @@ struct PatientDashboard: View {
             }
             .padding(.vertical, 4)
         }
+
     }
     
     

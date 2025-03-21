@@ -140,33 +140,10 @@ struct PatientLoginSignupView: View {
     }
 }
 
-// MARK: - Patient Dashboard (Updated)
-struct PatientDashboardView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "heart.fill")
-                .resizable()
-                .frame(width: 100, height: 100)
-                .foregroundColor(.mint)
-                .padding(.bottom, 20)
-            
-            Text("Welcome to Your Dashboard!")
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundColor(.mint)
-
-            Text("Your healthcare journey starts here.")
-                .font(.body)
-                .foregroundColor(.gray)
-        }
-        .navigationBarBackButtonHidden(true)
-        .padding()
-    }
-}
-
 // MARK: - Preview
 struct PatientLoginSignupView_Previews: PreviewProvider {
     static var previews: some View {
         PatientLoginSignupView()
     }
 }
+
