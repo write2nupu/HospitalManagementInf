@@ -9,7 +9,7 @@ struct DoctorProfileView: View {
     @State private var departmentDetails: Department?
     
     @State private var isLoggedOut = false
-    
+    @State private var showLogoutAlert = false
     var body: some View {
         NavigationStack {
             Form {
@@ -56,11 +56,23 @@ struct DoctorProfileView: View {
                 }
                 
                 Section {
-                    Button(action: handleLogout) {
+                    Button(action: {
+                        showLogoutAlert = true
+                    }) {
                         Text("Logout")
                             .fontWeight(.bold)
                             .foregroundColor(.red)
                             .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    .alert(isPresented: $showLogoutAlert) {
+                        Alert(
+                            title: Text("Logout"),
+                            message: Text("Are you sure you want to logout?"),
+                            primaryButton: .destructive(Text("Logout")) {
+                                handleLogout()
+                            },
+                            secondaryButton: .cancel()
+                        )
                     }
                 }
                 
