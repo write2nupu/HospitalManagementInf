@@ -69,7 +69,7 @@ struct mainBoard: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                         // **Custom Tab Bar**
-                        TabBarView(selectedTab: $selectedTab)
+//                        TabBarView(selectedTab: $selectedTab)
                         
                     }
                     .ignoresSafeArea(.keyboard, edges: .bottom)
