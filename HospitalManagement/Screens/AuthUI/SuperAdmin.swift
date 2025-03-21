@@ -1,21 +1,16 @@
-//
-//  SuperAdmin.swift
-//  HospitalManagement
-//
-//  Created by Mariyo on 21/03/25.
-//
-
-import Foundation
 import SwiftUI
 
 struct SuperAdminLoginView: View {
     var message: String
+    
     @State private var emailOrPhone = ""
     @State private var password = ""
     @State private var showAlert = false
     @State private var errorMessage = ""
-    @State private var isLoggedIn = false // ✅ State for Navigation
-    @State private var isPasswordVisible = false // ✅ Toggle password visibility
+    @State private var isLoggedIn = false
+    @State private var isPasswordVisible = false
+    
+    @State private var superAdminUser: AuthData? // ✅ Dynamically store user data
 
     var body: some View {
         NavigationStack {
@@ -50,23 +45,26 @@ struct SuperAdminLoginView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(isValid() ? Color.mint : Color.gray) // ✅ Disable if invalid
+                        .background(isValid() ? Color.mint : Color.gray)
                         .cornerRadius(12)
                         .shadow(color: .mint.opacity(0.3), radius: 4, x: 0, y: 2)
                 }
-                .disabled(!isValid()) // ✅ Disable button when inputs are invalid
+                .disabled(!isValid())
                 .padding(.horizontal)
                 .padding(.top, 20)
 
-                // **Navigation Trigger after Successful Login**
-                NavigationLink(destination: forcePasswordUpdate(), isActive: $isLoggedIn) { EmptyView() }
-
-                Spacer() // Push content upward
+                Spacer()
             }
             .padding()
             .background(Color.mint.opacity(0.05))
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Login Failed"), message: Text(errorMessage), dismissButton: .default(Text("OK")))
+            }
+            // ✅ Navigation only triggers when isLoggedIn becomes true
+            .navigationDestination(isPresented: $isLoggedIn) {
+                if let user = superAdminUser {
+                    forcePasswordUpdate(user: user)
+                }
             }
         }
     }
@@ -74,8 +72,9 @@ struct SuperAdminLoginView: View {
     // MARK: - **Login Logic**
     private func handleLogin() {
         if isValid() {
+            superAdminUser = AuthData(role: "SuperAdmin") // ✅ Store actual user data
             isLoggedIn = true
-            print("Logged in successfully.")
+            print("Super Admin Logged in successfully.")
         } else {
             showAlert = true
             errorMessage = "Invalid credentials. Please check your input."
@@ -134,5 +133,5 @@ struct SuperAdminLoginView: View {
 
 // ✅ Preview
 #Preview {
-    SuperAdminLoginView(message: "Admin")
+    SuperAdminLoginView(message: "Super Admin")
 }

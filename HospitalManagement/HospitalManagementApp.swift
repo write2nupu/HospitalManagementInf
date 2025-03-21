@@ -13,6 +13,7 @@ struct HospitalManagementApp: App {
     
     var body: some Scene {
         WindowGroup {
+
             UserRoleScreen()
                 .environmentObject(viewModel)
         }

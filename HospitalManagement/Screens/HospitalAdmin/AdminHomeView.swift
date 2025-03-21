@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct AdminHomeView: View {
+
     @EnvironmentObject private var viewModel: HospitalManagementViewModel
     @State private var showAddDoctor = false
     @State private var showAdminProfile = false
@@ -171,6 +172,7 @@ struct AdminHomeView: View {
                 .padding(.vertical)
             }
             .navigationTitle("Hospital Staff")
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -199,10 +201,124 @@ struct AdminHomeView: View {
     }
 }
 
-// MARK: - Preview
-struct AdminHomeView_Previews: PreviewProvider {
-    static var previews: some View {
-        AdminHomeView()
-            .environmentObject(HospitalManagementViewModel())
+struct QuickActionButton: View {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack {
+                Image(systemName: systemImage)
+                    .font(.title2)
+                Text(title)
+                    .font(.caption)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.mint.opacity(0.1))
+            .foregroundColor(.mint)
+            .cornerRadius(10)
+        }
+    }
+}
+
+struct DepartmentsSection: View {
+    let departments: [Department]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Departments")
+                .font(.headline)
+            
+            if departments.isEmpty {
+                Text("No departments added yet")
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            } else {
+                ForEach(departments) { department in
+                    DepartmentRow(department: department)
+                }
+            }
+        }
+    }
+}
+
+struct DoctorsSection: View {
+    let doctors: [Doctor]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Doctors")
+                .font(.headline)
+            
+            if doctors.isEmpty {
+                Text("No doctors added yet")
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            } else {
+                ForEach(doctors) { doctor in
+                    DoctorRow(doctor: doctor)
+                }
+            }
+               
+        }
+        .navigationBarBackButtonHidden(true)
+    }
+}
+
+struct DepartmentRow: View {
+    let department: Department
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(department.name)
+                    .font(.headline)
+                if let description = department.description {
+                    Text(description)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            Spacer()
+            Text("₹\(String(format: "%.2f", department.fees))")
+                .foregroundColor(.mint)
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(10)
+        .shadow(color: Color.gray.opacity(0.2), radius: 5)
+    }
+}
+
+struct DoctorRow: View {
+    let doctor: Doctor
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(doctor.fullName)
+                    .font(.headline)
+                Text(doctor.qualifications)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            if doctor.isActive {
+                Text("Active")
+                    .foregroundColor(.green)
+            } else {
+                Text("Inactive")
+                    .foregroundColor(.red)
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(10)
+        .shadow(color: Color.gray.opacity(0.2), radius: 5)
+        
     }
 }
