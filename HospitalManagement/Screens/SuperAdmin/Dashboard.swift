@@ -240,7 +240,7 @@ struct AddHospitalView: View {
         do {
             // First create the hospital without admin
             let hospitalId = UUID()
-            let hospital = Hospital(
+            var hospital = Hospital(
                 id: hospitalId,
                 name: name,
                 address: address,
@@ -253,18 +253,7 @@ struct AddHospitalView: View {
                 is_active: isActive,
                 assigned_admin_id: nil  // Initially no admin
             )
-            
-            print("Creating hospital with ID: \(hospitalId)")
-            
-            // Add hospital to Supabase first
-            try await supabaseController.client
-                .from("Hospitals")
-                .insert(hospital)
-                .single()
-                .execute()
-            
-            print("Hospital created successfully")
-            
+
             // Then create the admin
             let adminId = UUID()
             let initialPassword = generateRandomPassword()
@@ -279,30 +268,42 @@ struct AddHospitalView: View {
                 initial_password: initialPassword
             )
             
+            hospital.assigned_admin_id = admin.id
+            
             print("Creating admin with ID: \(adminId) for hospital: \(hospitalId)")
             
-            // Add admin to Supabase
-            try await supabaseController.client
-                .from("Admin")
-                .insert(admin)
-                .single()
-                .execute()
             
-            print("Admin created successfully")
+                try await supabaseController.client
+                    .from("Admin")
+                    .insert(admin)
+                    .execute()
+                
+                print("Admin created successfully")
+                
+                print("Creating hospital with ID: \(hospitalId)")
+
+                // Add hospital to Supabase first
+                try! await supabaseController.client
+                    .from("Hospitals")
+                    .insert(hospital)
+                    .execute()
+            
+            
+            print("Hospital created successfully")
             
             // Update hospital with assigned_admin_id
-            var updatedHospital = hospital
-            updatedHospital.assigned_admin_id = adminId
+//            var updatedHospital = hospital
+//            updatedHospital.assigned_admin_id = adminId
            // updatedHospital.updated_at = Date()
             
-            try await supabaseController.client
-                .from("Hospitals")
-                .update(updatedHospital)
-                .eq("id", value: hospitalId)
-                .execute()
-            
-            print("Hospital updated with admin ID")
-            
+//            try await supabaseController.client
+//                .from("Hospitals")
+//                .update(updatedHospital)
+//                .eq("id", value: hospitalId)
+//                .execute()
+//            
+//            print("Hospital updated with admin ID")
+//            
             // Refresh the hospitals list
             if let parentViewModel = viewModel as? HospitalManagementViewModel {
                 parentViewModel.hospitals = await supabaseController.fetchHospitals()
