@@ -27,6 +27,7 @@ final class HospitalManagementViewModel: ObservableObject {
     @Published var doctors: [Doctor] = []
     @Published var patients: [Patient] = []
     @Published var patientDetails: [PatientDetails] = []
+    @Published var showUserProfile = false
     
     // MARK: - Save Keys
     private let superAdminsKey = "SavedSuperAdmins"
