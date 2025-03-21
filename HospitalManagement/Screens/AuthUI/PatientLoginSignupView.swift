@@ -17,6 +17,8 @@ struct PatientLoginSignupView: View {
     @State private var alertMessage = ""
     @State private var navigateToDashboard = false
     @State private var navigateToSignUp = false   // Added for Signup Navigation
+    
+    var patent: Patient = Patient(id: UUID(), fullName: "temp", gender: "male", dateOfBirth: Date(), phoneNumber: "", email: "")
 
     var body: some View {
         NavigationStack {
@@ -75,7 +77,7 @@ struct PatientLoginSignupView: View {
                 Alert(title: Text("Action Required"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
             .navigationDestination(isPresented: $navigateToDashboard) {
-                PatientDashboardView()  // Dashboard after successful Login
+                PatientDashboard(patient: patent )  // Dashboard after successful Login
             }
             .navigationDestination(isPresented: $navigateToSignUp) {
                 PatientSignupView()  // Navigate to Signup Flow
