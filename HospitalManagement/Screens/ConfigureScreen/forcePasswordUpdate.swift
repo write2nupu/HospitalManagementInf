@@ -126,7 +126,10 @@ struct forcePasswordUpdate: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .navigationDestination(isPresented: $isUpdated) {
-                DashBoard()  // ✅ Navigate to Dashboard
+//                if
+//                DashBoard()  // ✅ Navigate to doctor
+//                AdminHomeView()
+                ContentView()
             }
         }
         

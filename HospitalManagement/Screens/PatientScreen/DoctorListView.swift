@@ -3,13 +3,15 @@ import SwiftUI
 struct DoctorListView: View {
     let doctors: [Doctor]
     @State private var selectedDoctor: Doctor?  // For modal presentation
-
+    @StateObject private var supabaseController = SupabaseController()
+    @State private var departmentDetails: [UUID: Department] = [:]
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 15) {
                 ForEach(doctors) { doctor in
                     Button(action: {
-                        selectedDoctor = doctor  // ✅ Open profile in modal
+                        selectedDoctor = doctor
                     }) {
                         doctorCard(doctor: doctor)
                     }
@@ -24,6 +26,16 @@ struct DoctorListView: View {
         .sheet(item: $selectedDoctor) { doctor in
             DoctorProfileForPatient(doctor: doctor)
         }
+        .task {
+            // Fetch department details for each doctor
+            for doctor in doctors {
+                if let departmentId = doctor.departmentId {
+                    if let department = await supabaseController.fetchDepartmentDetails(departmentId: departmentId) {
+                        departmentDetails[departmentId] = department
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Doctor Card UI
@@ -37,18 +49,25 @@ struct DoctorListView: View {
                 .clipShape(Circle())
 
             VStack(alignment: .leading, spacing: 5) {
-                Text(doctor.name)
+                Text(doctor.fullName)
                     .font(.title3)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
 
-                Text(doctor.specialization)
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
+                if let departmentId = doctor.departmentId,
+                   let department = departmentDetails[departmentId] {
+                    Text(department.name)
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
 
-                Text("₹\(Int(doctor.consultationFee))")
-                    .font(.body)
-                    .foregroundColor(.mint)
+                    Text("₹\(Int(department.fees))")
+                        .font(.body)
+                        .foregroundColor(.mint)
+                } else {
+                    Text("Department not assigned")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
             }
             Spacer()
         }
