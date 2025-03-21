@@ -12,7 +12,7 @@ struct HospitalCard: View {
     let viewModel: HospitalManagementViewModel
     @StateObject private var supabaseController = SupabaseController()
     @State private var adminDetails: Admin?
-    
+  
     var body: some View {
         NavigationLink {
             HospitalDetailView(viewModel: viewModel, hospital: hospital)
@@ -112,33 +112,7 @@ struct SuperAdminProfileButton: View {
     }
 }
 
-struct SuperAdminProfileView: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section("Super Admin Information") {
-                    HStack {
-                        Text("Name:")
-                        Spacer()
-                        Text("Super Admin")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Email:")
-                        Spacer()
-                        Text("admin@example.com")
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            .navigationTitle("Profile")
-            .navigationBarItems(trailing: Button("Done") { dismiss() })
-        }
-    }
-}
+
 
 struct AddHospitalView: View {
     @Environment(\.dismiss) private var dismiss
