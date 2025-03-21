@@ -19,9 +19,9 @@ struct SuperAdmin: Identifiable, Codable{
 struct Admin: Identifiable, Codable, Hashable {
     var id: UUID
     var email: String
-    var fullName: String
+    var full_name: String
     var phone_number: String
-    var hospitalId: UUID?
+    var hospital_id: UUID?
     var is_first_login: Bool?
     var initial_password: String
     
@@ -36,7 +36,7 @@ struct Admin: Identifiable, Codable, Hashable {
 }
 
 struct Hospital: Identifiable, Codable {
-    var id : UUID
+    var id: UUID
     var name: String
     var address: String
     var city: String
@@ -44,10 +44,9 @@ struct Hospital: Identifiable, Codable {
     var pincode: String
     var mobile_number: String
     var email: String
-    var license_number : String
+    var license_number: String
     var is_active: Bool
     var assigned_admin_id: UUID?
-    
 }
 
 struct Department: Identifiable, Codable, Hashable {

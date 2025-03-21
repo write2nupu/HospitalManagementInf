@@ -124,7 +124,7 @@ final class HospitalManagementViewModel: ObservableObject {
     // MARK: - Admin Management
     
     func addAdmin(_ admin: Admin) throws {
-        guard !admin.fullName.isEmpty else { throw DataError.invalidData }
+        guard !admin.full_name.isEmpty else { throw DataError.invalidData }
         admins.append(admin)
         try saveAdmins()
     }

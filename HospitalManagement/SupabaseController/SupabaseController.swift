@@ -119,7 +119,7 @@ class SupabaseController: ObservableObject {
                 // Try to fetch existing admin
                 do {
                     let admins: [Admin] = try await client.database
-                        .from("Admins")
+                        .from("Admin")
                         .select()
                         .eq("id", value: userId.uuidString)
                         .execute()
@@ -133,15 +133,15 @@ class SupabaseController: ObservableObject {
                     let admin = Admin(
                         id: userId,
                         email: user.email,
-                        fullName: user.full_name,
+                        full_name: user.full_name,
                         phone_number: user.phone_number ?? "",
-                        hospitalId: nil,
+                        hospital_id: nil,
                         is_first_login: true,
                         initial_password: String((0..<6).map { _ in "0123456789".randomElement()! })
                     )
                     
                     try await client.database
-                        .from("Admins")
+                        .from("Admin")
                         .insert(admin)
                         .execute()
                 } catch {
@@ -214,9 +214,9 @@ class SupabaseController: ObservableObject {
     func fetchHospitals() async -> [Hospital] {
         do {
             let hospitals: [Hospital] = try await client
-            
-                .from("Hospitals")
+                .from("Hospitals")  // Capital H to match schema
                 .select()
+                .order("name")
                 .execute()
                 .value
             return hospitals
@@ -260,7 +260,7 @@ class SupabaseController: ObservableObject {
     func fetchAdminByUUID(adminId: UUID) async -> Admin? {
         do {
             let admins: [Admin] = try await client
-                .from("Admins")
+                .from("Admin")
                 .select()
                 .eq("id", value: adminId)
                 .execute()
@@ -322,15 +322,17 @@ class SupabaseController: ObservableObject {
     }
     
     // MARK: - Add Hospital
-    func addHospital(_ hospital: Hospital) async {
+    func addHospital(_ hospital: Hospital) async throws {
         do {
             try await client
-                .from("Hospitals")
+                .from("Hospitals")  // Capital H to match schema
                 .insert(hospital)
+                .single()  // expect a single row
                 .execute()
             print("Hospital added successfully!")
         } catch {
             print("Error adding hospital: \(error)")
+            throw error  // propagate the error
         }
     }
     

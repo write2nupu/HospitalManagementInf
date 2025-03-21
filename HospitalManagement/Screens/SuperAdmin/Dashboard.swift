@@ -51,7 +51,7 @@ struct HospitalCard: View {
                     Image(systemName: "person.fill")
                         .foregroundColor(.mint)
                     if let admin = adminDetails {
-                        Text("Admin: \(admin.fullName)")
+                        Text("Admin: \(admin.full_name)")
                             .font(.subheadline)
                             .foregroundColor(.black)
                     } else {
@@ -238,21 +238,10 @@ struct AddHospitalView: View {
         defer { isSubmitting = false }
         
         do {
-            // First create the admin
-            let adminId = UUID()
-            let admin = Admin(
-                id: adminId,
-                email: adminEmail,
-                fullName: adminFullName,
-                phone_number: adminPhone,
-                hospitalId: nil,
-                is_first_login: true,
-                initial_password: generateRandomPassword()
-            )
-            
-            // Create the hospital
+            // First create the hospital without admin
+            let hospitalId = UUID()
             let hospital = Hospital(
-                id: UUID(),
+                id: hospitalId,
                 name: name,
                 address: address,
                 city: city,
@@ -262,25 +251,67 @@ struct AddHospitalView: View {
                 email: email,
                 license_number: licenseNumber,
                 is_active: isActive,
-                assigned_admin_id: adminId
+                assigned_admin_id: nil  // Initially no admin
             )
             
-            // Add admin to Supabase
-            try await supabaseController.client
-                .from("Admins")
-                .insert(admin)
-                .execute()
+            print("Creating hospital with ID: \(hospitalId)")
             
-            // Add hospital to Supabase
+            // Add hospital to Supabase first
             try await supabaseController.client
                 .from("Hospitals")
                 .insert(hospital)
+                .single()
                 .execute()
+            
+            print("Hospital created successfully")
+            
+            // Then create the admin
+            let adminId = UUID()
+            let initialPassword = generateRandomPassword()
+            
+            let admin = Admin(
+                id: adminId,
+                email: adminEmail,
+                full_name: adminFullName,
+                phone_number: adminPhone,
+                hospital_id: hospitalId,  // Link to hospital
+                is_first_login: true,
+                initial_password: initialPassword
+            )
+            
+            print("Creating admin with ID: \(adminId) for hospital: \(hospitalId)")
+            
+            // Add admin to Supabase
+            try await supabaseController.client
+                .from("Admin")
+                .insert(admin)
+                .single()
+                .execute()
+            
+            print("Admin created successfully")
+            
+            // Update hospital with assigned_admin_id
+            var updatedHospital = hospital
+            updatedHospital.assigned_admin_id = adminId
+           // updatedHospital.updated_at = Date()
+            
+            try await supabaseController.client
+                .from("Hospitals")
+                .update(updatedHospital)
+                .eq("id", value: hospitalId)
+                .execute()
+            
+            print("Hospital updated with admin ID")
+            
+            // Refresh the hospitals list
+            if let parentViewModel = viewModel as? HospitalManagementViewModel {
+                parentViewModel.hospitals = await supabaseController.fetchHospitals()
+            }
             
             dismiss()
         } catch {
             validationMessage = "Error saving hospital: \(error.localizedDescription)"
-            print("Error saving hospital: \(error.localizedDescription)")
+            print("Error saving hospital: \(error)")
             showingValidationAlert = true
         }
     }
@@ -376,11 +407,11 @@ struct ContentView: View {
     @State private var showingAddHospital = false
     @State private var showingProfile = false
     @State private var searchText = ""
-    @State private var showingAllHospitals = false
-    @State private var hospitals: [Hospital] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
     
     var filteredHospitals: [Hospital] {
-        let sorted = (searchText.isEmpty ? hospitals : hospitals.filter { hospital in
+        let sorted = (searchText.isEmpty ? viewModel.hospitals : viewModel.hospitals.filter { hospital in
             hospital.name.localizedCaseInsensitiveContains(searchText) ||
             hospital.city.localizedCaseInsensitiveContains(searchText) ||
             hospital.state.localizedCaseInsensitiveContains(searchText)
@@ -396,57 +427,62 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    // Quick Actions Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Quick Actions")
-                            .font(.headline)
-                            .foregroundColor(.black)
-                            .padding(.horizontal)
-                        
-                        QuickActionCard {
-                            showingAddHospital = true
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    // Hospitals Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("Hospitals")
+                if isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    VStack(spacing: 24) {
+                        // Quick Actions Section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Quick Actions")
                                 .font(.headline)
                                 .foregroundColor(.black)
-                            Spacer()
-                            NavigationLink("See All", destination: HospitalList(hospitals: filteredHospitals, viewModel: viewModel))
-                                .foregroundColor(.mint)
-                        }
-                        .padding(.horizontal)
-                        
-                        if viewModel.hospitals.isEmpty {
-                            VStack(spacing: 12) {
-                                Image(systemName: "building.2")
-                                    .font(.system(size: 50))
-                                    .foregroundColor(.mint)
-                                Text("No hospitals yet")
-                                    .font(.title3)
-                                    .foregroundColor(.secondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
-                        } else {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                LazyHStack(spacing: 16) {
-                                    ForEach(filteredHospitals) { hospital in
-                                        HospitalCard(hospital: hospital, viewModel: viewModel)
-                                            .frame(width: 300)
-                                    }
-                                }
                                 .padding(.horizontal)
+                            
+                            QuickActionCard {
+                                showingAddHospital = true
+                            }
+                            .padding(.horizontal)
+                        }
+                        
+                        // Hospitals Section
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                Text("Hospitals")
+                                    .font(.headline)
+                                    .foregroundColor(.black)
+                                Spacer()
+                                NavigationLink("See All", destination: HospitalList(hospitals: filteredHospitals, viewModel: viewModel))
+                                    .foregroundColor(.mint)
+                            }
+                            .padding(.horizontal)
+                            
+                            if viewModel.hospitals.isEmpty {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "building.2")
+                                        .font(.system(size: 50))
+                                        .foregroundColor(.mint)
+                                    Text("No hospitals yet")
+                                        .font(.title3)
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 40)
+                            } else {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    LazyHStack(spacing: 16) {
+                                        ForEach(filteredHospitals) { hospital in
+                                            HospitalCard(hospital: hospital, viewModel: viewModel)
+                                                .frame(width: 300)
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
                             }
                         }
                     }
+                    .padding(.vertical)
                 }
-                .padding(.vertical)
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Dashboard")
@@ -458,11 +494,33 @@ struct ContentView: View {
             .sheet(isPresented: $showingProfile) {
                 SuperAdminProfileView()
             }
+            .refreshable {
+                await loadHospitals()
+            }
+            .alert("Error", isPresented: .constant(errorMessage != nil)) {
+                Button("OK") {
+                    errorMessage = nil
+                }
+            } message: {
+                if let error = errorMessage {
+                    Text(error)
+                }
+            }
         }
         .task {
-            let fetchedHospitals = await supabaseController.fetchHospitals()
-            hospitals = fetchedHospitals
+            await loadHospitals()
         }
+    }
+    
+    private func loadHospitals() async {
+        isLoading = true
+        do {
+            let fetchedHospitals = await supabaseController.fetchHospitals()
+            viewModel.hospitals = fetchedHospitals
+        } catch {
+            errorMessage = "Failed to load hospitals: \(error.localizedDescription)"
+        }
+        isLoading = false
     }
 }
 

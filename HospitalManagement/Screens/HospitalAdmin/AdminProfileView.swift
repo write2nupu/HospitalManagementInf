@@ -223,7 +223,7 @@ struct AdminProfileView: View {
                         HStack {
                             Text("Name")
                             Spacer()
-                            Text(admin.fullName)
+                            Text(admin.full_name)
                                 .foregroundColor(.secondary)
                         }
                         
