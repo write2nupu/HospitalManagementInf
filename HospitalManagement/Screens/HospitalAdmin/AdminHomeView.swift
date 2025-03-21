@@ -172,6 +172,7 @@ struct AdminHomeView: View {
                 .padding(.vertical)
             }
             .navigationTitle("Hospital Staff")
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
