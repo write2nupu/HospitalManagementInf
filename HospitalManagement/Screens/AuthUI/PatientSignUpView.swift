@@ -5,6 +5,7 @@ struct PatientSignupView: View {
     @State private var patientDetails: Patient?
     @State private var showMedicalInfo = false
     @State private var showDashboard = false
+    var patient: Patient = Patient(id: UUID(), fullName: "Ram", gender: "male", dateOfBirth: Date(), phoneNumber: "1234567890", email: "ram@mail.com")
 
     var body: some View {
         NavigationStack {
@@ -13,7 +14,7 @@ struct PatientSignupView: View {
                     MedicalInfoView(patientDetails: $patientDetails, showDashboard: showDashboard)
                 }
                 .navigationDestination(isPresented: $showDashboard) {
-                    PatientDashboardView()
+                    PatientDashboard(patient: patient )
                 }
         }
     }
@@ -130,6 +131,9 @@ struct MedicalInfoView: View {
 
     @State private var showAlert = false
     @State private var alertMessage = ""
+    
+    var patient: Patient = Patient(id: UUID(), fullName: "Ram", gender: "male", dateOfBirth: Date(), phoneNumber: "1234567890", email: "ram@mail.com")
+
 
     var body: some View {
         NavigationView {
@@ -167,7 +171,7 @@ struct MedicalInfoView: View {
 
                 // Navigation trigger
                 NavigationLink(
-                    destination: PatientDashboardView(),
+                    destination: PatientDashboard(patient: patient ),
                     isActive: $showDashboard
                 ) {
                     EmptyView()
@@ -185,19 +189,7 @@ struct MedicalInfoView: View {
             alertMessage = "Please fill in all required fields."
             showAlert = true
         } else {
-            patientDetails = Patient(
-                fullName: "Full Name Placeholder",
-                gender: "Gender Placeholder",
-                dateOfBirth: Date(),
-                contactNumber: "Contact Placeholder",
-                email: "Email Placeholder",
-                bloodGroup: bloodGroup,
-                allergies: allergies,
-                medicalConditions: medicalConditions,
-                medications: "",
-                pastSurgeries: "",
-                emergencyContact: ""
-            )
+            patientDetails = Patient(id: UUID(), fullName: "Your name", gender: "Not Defined", dateOfBirth: Date(), phoneNumber: "", email: "")
             showDashboard = true
         }
     }
