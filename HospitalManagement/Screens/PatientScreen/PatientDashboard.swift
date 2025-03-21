@@ -67,6 +67,7 @@ struct PatientDashboard: View {
                 }
                 Spacer()
             }
+            .navigationBarBackButtonHidden(true)
         }
     }
 }
