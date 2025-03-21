@@ -1,67 +1,43 @@
 import SwiftUI
 
-// Doctor Profile Data Model
-struct Doctor: Identifiable {
-    let id: UUID = UUID()
-    var name: String
-    var specialization: String
-    var qualifications: String
-    var experience: Int
-    var hospitalAffiliations: [String]
-    var consultationFee: Double
-    var phoneNumber: String
-    var email: String
-    var availableSlots: [String]
-    var languagesSpoken: [String]?
-    var profileImage: String? // Store image URL or asset name
-}
-
-
 struct DoctorProfileView: View {
-    @State var doctor: Doctor = Doctor(
-        name: "Dr. Anubhav Dubey",
-        specialization: "Cardiologist",
-        qualifications: "MBBS, MD",
-        experience: 10,
-        hospitalAffiliations: ["Apollo"],
-        consultationFee: 500.0,
-        phoneNumber: "9876543210",
-        email: "doctor@example.com",
-        availableSlots: ["Morning", "Evening"]
-    )
+    @EnvironmentObject private var viewModel: HospitalManagementViewModel
+    @StateObject private var supabaseController = SupabaseController()
+    let doctor: Doctor
+    
+    @State private var doctorDetails: Doctor?
+    @State private var departmentDetails: Department?
     
     @State private var isLoggedOut = false
     
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Available Slots")) {
-                    ForEach(doctor.availableSlots, id: \.self) { slot in
-                        slotSetUp(slot: slot, isAvailable: checkAvailability(for: slot))
-                    }
-                }
-                Section(header: Text("Consultation Fee")) {
-                    profileRow(title: "Fee", value: "₹\(String(format: "%.2f", doctor.consultationFee))")
-                }
+//                Section(header: Text("Available Slots")) {
+//                    ForEach(doctor.availableSlots, id: \.self) { slot in
+//                        slotSetUp(slot: slot, isAvailable: checkAvailability(for: slot))
+//                    }
+//                }
+                
+//                Section(header: Text("Consultation Fee")) {
+//                    profileRow(title: "Fee", value: "₹\(String(format: "%.2f", doctor.consultationFee))")
+//                }
                 
                 Section(header: Text("Basic Information")) {
-                    profileRow(title: "Full Name", value: doctor.name)
-                    profileRow(title: "Specialization", value: doctor.specialization)
+                    profileRow(title: "Full Name", value: doctor.fullName)
+                    if let department = departmentDetails {
+                        profileRow(title: "Department", value: department.name)
+                    }
                     profileRow(title: "Qualifications", value: doctor.qualifications)
                     profileRow(title: "Experience", value: "\(doctor.experience) years")
-                }
-                
-                Section(header: Text("Hospital Affiliations")) {
-                    ForEach(doctor.hospitalAffiliations, id: \.self) { affiliation in
-                        Text(affiliation)
-                    }
+                    profileRow(title: "License Number", value: doctor.licenseNumber)
+                    profileRow(title: "Gender", value: doctor.gender)
                 }
                 
                 Section(header: Text("Contact Information")) {
                     profileRow(title: "Phone", value: doctor.phoneNumber)
                     profileRow(title: "Email", value: doctor.email)
                 }
-                
                 
                 Section {
                     NavigationLink(destination: updateFields(initialEmail: doctor.email, initialPhone: doctor.phoneNumber)) {
@@ -87,16 +63,27 @@ struct DoctorProfileView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
+                
+                if let department = departmentDetails {
+                    Section(header: Text("Consultation Fee")) {
+                        profileRow(title: "Fee", value: "₹\(String(format: "%.2f", department.fees))")
+                    }
+                }
             }
             .navigationTitle("Doctor Profile")
             .tint(AppConfig.buttonColor)
             .fullScreenCover(isPresented: .constant(isLoggedOut)) {
                 UserRoleScreen()
             }
+            .task {
+                if let departmentId = doctor.departmentId {
+                    departmentDetails = await supabaseController.fetchDepartmentDetails(departmentId: departmentId)
+                }
+            }
         }
     }
     
-    // ✅ Reusable Profile Row Component
+    // ✅ Move these functions OUTSIDE the body
     private func profileRow(title: String, value: String) -> some View {
         HStack {
             Text(title).fontWeight(.none)
@@ -118,22 +105,17 @@ struct DoctorProfileView: View {
         }
         .cornerRadius(8)
     }
-
     
     private func checkAvailability(for slot: String) -> Bool {
-        let availableSlots: [String] = ["Morning"] // Example: Only Morning is available
-        return availableSlots.contains(slot)
+        return true
     }
     
     private func handleLogout() {
         isLoggedOut = true
     }
-
-    
-    
 }
 
 // ✅ Preview
 #Preview {
-    DoctorProfileView()
+    DoctorProfileView(doctor: Doctor(id: UUID(), fullName: "Anubahv", experience: 10, qualifications: "Tumse Jayda", isActive: true, phoneNumber: "1234567898", email: "tumkopatanahihonichahiye@gmail.com", gender: "male", licenseNumber: "123-456-789"))
 }

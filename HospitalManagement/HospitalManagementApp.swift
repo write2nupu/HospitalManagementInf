@@ -9,10 +9,13 @@ import SwiftUI
 
 @main
 struct HospitalManagementApp: App {
+    @StateObject private var viewModel = HospitalManagementViewModel()
+    
     var body: some Scene {
         WindowGroup {
-//            UserRoleScreen()
-            mainBoard()
+
+            UserRoleScreen()
+                .environmentObject(viewModel)
         }
     }
 }

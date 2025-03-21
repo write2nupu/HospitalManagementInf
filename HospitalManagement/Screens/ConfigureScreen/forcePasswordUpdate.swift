@@ -127,6 +127,9 @@ struct forcePasswordUpdate: View {
             .navigationBarBackButtonHidden(true)
             .navigationDestination(isPresented: $isUpdated) {
                 mainBoard()  // ✅ Navigate to Dashboard
+//                AdminHomeView()
+//                ContentView()
+
             }
         }
        

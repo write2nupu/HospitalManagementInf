@@ -22,11 +22,11 @@ struct UserRoleScreen: View {
                 Spacer()
                 
                 ForEach(roles, id: \.self) { role in
-                    if role == "Patient" {
-                        NavigationLink(destination: LoginScreen()) {
-                            RoleCard(role: role)
+                        if role == "Patient" {
+                            NavigationLink(destination: PatientLoginSignupView()) {
+                                RoleCard(role: role)
+                            }
                         }
-                    }
                     
                     else if role == "Doctor" {
                         NavigationLink(destination: DoctorLoginView(message: "Doctor")) {
@@ -34,12 +34,15 @@ struct UserRoleScreen: View {
                         }
                     }
                     else if role == "Admin" {
+
                         NavigationLink(destination: DoctorLoginView(message: "Admin")) {
                             RoleCard(role: role)
                         }
                     }
                     else if role == "Super-Admin" {
-                        NavigationLink(destination: DoctorLoginView(message: "Super admin")) {
+
+                        NavigationLink(destination: SuperAdminLoginView(message: "Super admin")) {
+
                             RoleCard(role: role)
                         }
                     }

@@ -1,193 +1,140 @@
 import SwiftUI
 
-// MARK: - Patient Model
-struct Patient {
-    var name: String
-    var dob: Date
-    var contactNumber: String
-    var email: String
-    var bloodGroup: String?
-    var allergies: String?
-    var medicalConditions: String?
-    var medications: String?
-    var pastSurgeries: String?
-    var emergencyContact: String
-}
-
 // MARK: - Patient Dashboard View
 struct PatientDashboard: View {
-    @State private var patient = Patient(
-        name: "Shivani Verma",
-        dob: Calendar.current.date(byAdding: .year, value: -22, to: Date()) ?? Date(),
-        contactNumber: "+91 9876543210",
-        email: "shivani.verma@example.com",
-        bloodGroup: "O+",
-        allergies: "None",
-        medicalConditions: "Asthma",
-        medications: "Inhaler",
-        pastSurgeries: "Appendix Surgery (2018)",
-        emergencyContact: "Ravi Verma - +91 9876543211"
-    )
+    @EnvironmentObject private var viewModel: HospitalManagementViewModel
+    @State private var patient: Patient
     
-    @State private var isEditing = false
-    @State private var updatedPatient: Patient
-    
-    init() {
-        let defaultPatient = Patient(
-            name: "Shivani Verma",
-            dob: Calendar.current.date(byAdding: .year, value: -22, to: Date()) ?? Date(),
-            contactNumber: "+91 9876543210",
-            email: "shivani.verma@example.com",
-            bloodGroup: "O+",
-            allergies: "None",
-            medicalConditions: "Asthma",
-            medications: "Inhaler",
-            pastSurgeries: "Appendix Surgery (2018)",
-            emergencyContact: "Ravi Verma - +91 9876543211"
-        )
-        _updatedPatient = State(initialValue: defaultPatient)
+    init(patient: Patient) {
+        _patient = State(initialValue: patient)
     }
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // MARK: - Personal Details Section
-                    EditableSection(
-                        title: "👤 Personal Details",
-                        isEditing: $isEditing
-                    ) {
-                        EditableInfoRow(title: "Name", value: $updatedPatient.name)
-                        
-                        HStack {
-                            Text("DOB:")
-                                .fontWeight(.semibold)
-                                .foregroundColor(.mint)
-                            Spacer()
-                            if isEditing {
-                                DatePicker("", selection: $updatedPatient.dob, displayedComponents: .date)
-                                    .datePickerStyle(.compact)
-                                    .labelsHidden()
-                            } else {
-                                Text(updatedPatient.dob.formatted(date: .long, time: .omitted))
-                            }
-                        }
-                        .padding(.vertical, 2)
-
-                        EditableInfoRow(title: "Age", value: .constant("\(calculateAge(from: updatedPatient.dob)) years"))
-                        EditableInfoRow(title: "Contact", value: $updatedPatient.contactNumber)
-                        EditableInfoRow(title: "Email", value: $updatedPatient.email)
-                    }
-                    
-                    // MARK: - Medical Information Section
-                    EditableSection(
-                        title: "🩺 Medical Information",
-                        isEditing: $isEditing
-                    ) {
-                        EditableInfoRow(title: "Blood Group", value: .constant(patient.bloodGroup ?? "N/A"))
-                        EditableInfoRow(title: "Allergies", value: .constant(patient.allergies ?? "None"))
-                        EditableInfoRow(title: "Medical Conditions", value: .constant(patient.medicalConditions ?? "None"))
-                        EditableInfoRow(title: "Medications", value: .constant(patient.medications ?? "None"))
-                        EditableInfoRow(title: "Past Surgeries", value: .constant(patient.pastSurgeries ?? "None"))
-                    }
-
-                    // MARK: - Emergency Contact Section
-                    EditableSection(
-                        title: "🚨 Emergency Contact",
-                        isEditing: $isEditing
-                    ) {
-                        EditableInfoRow(title: "Contact", value: $updatedPatient.emergencyContact)
-                    }
-
-                    // MARK: - Save/Cancel Buttons
-                    if isEditing {
-                        HStack {
-                            Button("Cancel") {
-                                updatedPatient = patient // Reset changes
-                                isEditing.toggle()
-                            }
-                            .foregroundColor(.red)
-                            
-                            Spacer()
-                            
-                            Button("Save") {
-                                patient = updatedPatient // Save changes
-                                isEditing.toggle()
-                            }
-                            .foregroundColor(.mint)
-                        }
+            VStack {
+                // Patient Info Section
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Welcome, \(patient.fullName)")
+                        .font(.title)
                         .padding()
-                    }
-                }
-                .padding()
+                    
+                    PatientInfoCard(patient: patient)
+                }// Quick Actions
+                ////                ScrollView {
+                ////                    LazyVGrid(columns: [
+                ////                        GridItem(.flexible()),
+                ////                        GridItem(.flexible())
+                ////                    ], spacing: 20) {
+                ////                        NavigationLink(destination: AppointmentView(patient: patient)) {
+                ////                            DashboardCard(title: "Book Appointment",
+                ////                                        systemImage: "calendar.badge.plus")
+                ////                        }
+                ////
+                ////                        NavigationLink(destination: MedicalHistoryView(patient: patient)) {
+                ////                            DashboardCard(title: "Medical History",
+                ////                                        systemImage: "list.clipboard")
+                ////                        }
+                ////
+                ////                        NavigationLink(destination: ProfileView(patient: $patient)) {
+                ////                            DashboardCard(title: "Profile",
+                ////                                        systemImage: "person.circle")
+                ////                        }
+                ////
+                ////                        NavigationLink(destination: EmergencyContactView(patient: patient)) {
+                ////                            DashboardCard(title: "Emergency Contacts",
+                ////                                        systemImage: "phone.circle")
+                ////                        }
+                //                    }
+                //                    .padding()
+                //                }
+                //            }
+                //            .navigationBarTitleDisplayMode(.inline)
             }
-            .navigationTitle("Patient Dashboard")
-            .toolbar {
-                Button(isEditing ? "Done" : "Edit") {
-                    isEditing.toggle()
+        }
+    }
+    
+    struct PatientInfoCard: View {
+        let patient: Patient
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Patient ID: \(patient.id)")
+                Text("Phone: \(patient.phoneNumber)")
+                Text("Email: \(patient.email)")
+                if let details = patient.detailId {
+                    Text("Blood Group: \(details)")
                 }
-                .foregroundColor(.mint)
             }
+            .padding()
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(10)
+            .padding(.horizontal)
         }
     }
-
-    // MARK: - Age Calculation
-    func calculateAge(from dob: Date) -> Int {
-        let calendar = Calendar.current
-        let ageComponents = calendar.dateComponents([.year], from: dob, to: Date())
-        return ageComponents.year ?? 0
-    }
-}
-
-// MARK: - Editable Section Component
-struct EditableSection<Content: View>: View {
-    let title: String
-    @Binding var isEditing: Bool
-    let content: Content
-
-    init(title: String, isEditing: Binding<Bool>, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self._isEditing = isEditing
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(.mint)
-            Divider().background(Color.mint)
-            content
+    
+    struct DashboardCard: View {
+        let title: String
+        let systemImage: String
+        
+        var body: some View {
+            VStack {
+                Image(systemName: systemImage)
+                    .font(.system(size: 30))
+                Text(title)
+                    .font(.headline)
+            }
+            .frame(maxWidth: .infinity, minHeight: 100)
+            .background(Color.blue.opacity(0.1))
+            .cornerRadius(10)
         }
-        .padding()
-        .background(Color.mint.opacity(0.1))
-        .cornerRadius(12)
     }
-}
-
-// MARK: - Editable Info Row
-struct EditableInfoRow: View {
-    let title: String
-    @Binding var value: String
-
-    var body: some View {
-        HStack {
-            Text("\(title):")
-                .fontWeight(.semibold)
-                .foregroundColor(.mint)
-            Spacer()
-            TextField(title, text: $value)
-                .multilineTextAlignment(.trailing)
-                .disabled(false)
+    
+    // MARK: - Editable Section Component
+    struct EditableSection<Content: View>: View {
+        let title: String
+        @Binding var isEditing: Bool
+        let content: Content
+        
+        init(title: String, isEditing: Binding<Bool>, @ViewBuilder content: () -> Content) {
+            self.title = title
+            self._isEditing = isEditing
+            self.content = content()
         }
-        .padding(.vertical, 4)
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(title)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(.mint)
+                Divider().background(Color.mint)
+                content
+            }
+            .padding()
+            .background(Color.mint.opacity(0.1))
+            .cornerRadius(12)
+        }
     }
-}
+    
+    // MARK: - Editable Info Row
+    struct EditableInfoRow: View {
+        let title: String
+        @Binding var value: String
+        
+        var body: some View {
+            HStack {
+                Text("\(title):")
+                    .fontWeight(.semibold)
+                    .foregroundColor(.mint)
+                Spacer()
+                TextField(title, text: $value)
+                    .multilineTextAlignment(.trailing)
+                    .disabled(false)
+            }
+            .padding(.vertical, 4)
+        }
 
-// MARK: - Preview
-struct PatientDashboard_Previews: PreviewProvider {
-    static var previews: some View {
-        PatientDashboard()
     }
+    
+    
 }
