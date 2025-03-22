@@ -6,8 +6,12 @@ struct AdminLoginViewS: View {
     @State private var password = ""
     @State private var showAlert = false
     @State private var errorMessage = ""
-    @State private var isLoggedIn = false // ✅ State for Navigation
-    @State private var isPasswordVisible = false // ✅ Toggle password visibility
+    @State private var isLoggedIn = false
+    @State private var isPasswordVisible = false
+    @State private var isLoading = false
+    @StateObject private var supabaseController = SupabaseController()
+    @AppStorage("currentUserId") private var currentUserId: String = ""
+    @AppStorage("isLoggedIn") private var isUserLoggedIn = false
 
     var body: some View {
         NavigationStack {
@@ -36,17 +40,26 @@ struct AdminLoginViewS: View {
                 }
 
                 // **Login Button**
-                Button(action: handleLogin) {
-                    Text("Login")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(isValid() ? Color.mint : Color.gray) // ✅ Disable if invalid
-                        .cornerRadius(12)
-                        .shadow(color: .mint.opacity(0.3), radius: 4, x: 0, y: 2)
+                Button(action: {
+                    Task {
+                        await handleLogin()
+                    }
+                }) {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Text("Login")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
                 }
-                .disabled(!isValid()) // ✅ Disable button when inputs are invalid
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(isValid() ? Color.mint : Color.gray)
+                .cornerRadius(12)
+                .shadow(color: .mint.opacity(0.3), radius: 4, x: 0, y: 2)
+                .disabled(!isValid() || isLoading)
                 .padding(.horizontal)
                 .padding(.top, 20)
 
@@ -64,14 +77,34 @@ struct AdminLoginViewS: View {
     }
 
     // MARK: - **Login Logic**
-    private func handleLogin() {
-        if isValid() {
-            isLoggedIn = true
-            print("Logged in successfully.")
-        } else {
+    private func handleLogin() async {
+        guard isValid() else {
+            errorMessage = "Please enter valid email and password"
             showAlert = true
-            errorMessage = "Invalid credentials. Please check your input."
+            return
         }
+
+        isLoading = true
+        do {
+            let user = try await supabaseController.signIn(email: emailOrPhone, password: password)
+            
+            // Check if user is an admin
+            if user.role.lowercased().contains("admin") {
+                // Store user info
+                currentUserId = user.id.uuidString
+                isUserLoggedIn = true
+                isLoggedIn = true
+                print("Successfully logged in as Admin")
+            } else {
+                errorMessage = "Access denied. You must be an Admin to login."
+                showAlert = true
+            }
+        } catch {
+            errorMessage = "Invalid credentials. Please try again."
+            showAlert = true
+            print("Login error: \(error.localizedDescription)")
+        }
+        isLoading = false
     }
 
     // MARK: - **Input Validation**

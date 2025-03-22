@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D191C5352D8E7E4000F88CA3 /* SwiftSMTP in Frameworks */ = {isa = PBXBuildFile; productRef = D191C5342D8E7E4000F88CA3 /* SwiftSMTP */; };
 		D1CD2DCC2D8AC27A00E54378 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D1CD2DCB2D8AC27A00E54378 /* Auth */; };
 		D1CD2DCE2D8AC27A00E54378 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = D1CD2DCD2D8AC27A00E54378 /* Functions */; };
 		D1CD2DD02D8AC27A00E54378 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = D1CD2DCF2D8AC27A00E54378 /* PostgREST */; };
@@ -37,6 +38,7 @@
 				D1CD2DD72D8AC2A500E54378 /* Supabase in Frameworks */,
 				D1CD2DCC2D8AC27A00E54378 /* Auth in Frameworks */,
 				D1CD2DD42D8AC27A00E54378 /* Storage in Frameworks */,
+				D191C5352D8E7E4000F88CA3 /* SwiftSMTP in Frameworks */,
 				D1CD2DD22D8AC27A00E54378 /* Realtime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -94,6 +96,7 @@
 				D1CD2DD12D8AC27A00E54378 /* Realtime */,
 				D1CD2DD32D8AC27A00E54378 /* Storage */,
 				D1CD2DD62D8AC2A500E54378 /* Supabase */,
+				D191C5342D8E7E4000F88CA3 /* SwiftSMTP */,
 			);
 			productName = HospitalManagement;
 			productReference = 18B769792D8970B300A3B8B4 /* HospitalManagement.app */;
@@ -125,6 +128,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				D1CD2DCA2D8AC27A00E54378 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				D191C5332D8E7E4000F88CA3 /* XCRemoteSwiftPackageReference "Swift-SMTP" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 18B7697A2D8970B300A3B8B4 /* Products */;
@@ -358,6 +362,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		D191C5332D8E7E4000F88CA3 /* XCRemoteSwiftPackageReference "Swift-SMTP" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Kitura/Swift-SMTP.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.0.0;
+			};
+		};
 		D1CD2DCA2D8AC27A00E54378 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift.git";
@@ -369,6 +381,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		D191C5342D8E7E4000F88CA3 /* SwiftSMTP */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D191C5332D8E7E4000F88CA3 /* XCRemoteSwiftPackageReference "Swift-SMTP" */;
+			productName = SwiftSMTP;
+		};
 		D1CD2DCB2D8AC27A00E54378 /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D1CD2DCA2D8AC27A00E54378 /* XCRemoteSwiftPackageReference "supabase-swift" */;

@@ -399,40 +399,7 @@ class SupabaseController: ObservableObject {
             return []
         }
     }
-    
-    // MARK: - Fetch Doctor Available Slots
-    //    func fetchDoctorSlots(doctorId: UUID) async -> [String] {
-    //        do {
-    //            let slots: [DoctorSlot] = try await client
-    //                .from("DoctorSlots")
-    //                .select()
-    //                .eq("doctorId", value: doctorId)
-    //                .execute()
-    //                .value
-    //            return slots.map { $0.slotTime }
-    //        } catch {
-    //            print("Error fetching doctor slots: \(error)")
-    //            return []
-    //        }
-    //    }
-    
-    // MARK: - Fetch Doctor Languages
-    //    func fetchDoctorLanguages(doctorId: UUID) async -> [String] {
-    //        do {
-    //            let languages: [DoctorLanguage] = try await client
-    //                .from("DoctorLanguages")
-    //                .select()
-    //                .eq("doctorId", value: doctorId)
-    //                .execute()
-    //                .value
-    //            return languages.map { $0.language }
-    //        } catch {
-    //            print("Error fetching doctor languages: \(error)")
-    //            return []
-    //        }
-    //    }
-    //}
-    
+
     // MARK: - Fetch Hospital Departments
     func fetchHospitalDepartments(hospitalId: UUID) async -> [Department] {
         do {

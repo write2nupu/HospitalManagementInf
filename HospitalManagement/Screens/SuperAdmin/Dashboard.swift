@@ -272,38 +272,32 @@ struct AddHospitalView: View {
             
             print("Creating admin with ID: \(adminId) for hospital: \(hospitalId)")
             
-            
-                try await supabaseController.client
-                    .from("Admin")
-                    .insert(admin)
-                    .execute()
+            try await supabaseController.client
+                .from("Admin")
+                .insert(admin)
+                .execute()
                 
-                print("Admin created successfully")
+            print("Admin created successfully")
                 
-                print("Creating hospital with ID: \(hospitalId)")
+            print("Creating hospital with ID: \(hospitalId)")
 
-                // Add hospital to Supabase first
-                try! await supabaseController.client
-                    .from("Hospitals")
-                    .insert(hospital)
-                    .execute()
-            
+            // Add hospital to Supabase
+            try await supabaseController.client
+                .from("Hospitals")
+                .insert(hospital)
+                .execute()
             
             print("Hospital created successfully")
             
-            // Update hospital with assigned_admin_id
-//            var updatedHospital = hospital
-//            updatedHospital.assigned_admin_id = adminId
-           // updatedHospital.updated_at = Date()
+            // Send admin credentials via email
+            do {
+                try await EmailService.shared.sendAdminCredentials(to: admin, hospitalName: hospital.name)
+                print("Admin credentials sent successfully to \(admin.email)")
+            } catch {
+                print("Failed to send admin credentials email: \(error)")
+                // Note: We don't throw here since the hospital and admin were created successfully
+            }
             
-//            try await supabaseController.client
-//                .from("Hospitals")
-//                .update(updatedHospital)
-//                .eq("id", value: hospitalId)
-//                .execute()
-//            
-//            print("Hospital updated with admin ID")
-//            
             // Refresh the hospitals list
             if let parentViewModel = viewModel as? HospitalManagementViewModel {
                 parentViewModel.hospitals = await supabaseController.fetchHospitals()
@@ -318,8 +312,8 @@ struct AddHospitalView: View {
     }
     
     private func generateRandomPassword() -> String {
-        let digits = "0123456789"
-        return String((0..<6).map { _ in digits.randomElement()! })
+        let password = "9876543210abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        return String((0..<8).map { _ in password.randomElement()! })
     }
     
     private var isValidForm: Bool {
