@@ -90,7 +90,7 @@ struct DepartmentListCard: View {
     @EnvironmentObject private var viewModel: HospitalManagementViewModel
     
     private var doctorCount: Int {
-        viewModel.getDoctorsByHospital(hospitalId: department.hospitalId ?? UUID()).count
+        viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID()).count
     }
     
     var body: some View {
@@ -126,12 +126,12 @@ struct DepartmentListCard: View {
             HStack(spacing: 8) {
                 Image(systemName: "person.2.fill")
                     .foregroundColor(.green)
-                Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospitalId ?? UUID()).filter { $0.isActive }.count) active")
+                Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID()).filter { $0.is_active }.count) active")
                     .font(.subheadline)
                     .foregroundColor(.primary)
                 Text("•")
                     .foregroundColor(.secondary)
-                Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospitalId ?? UUID()).filter { !$0.isActive }.count) inactive")
+                Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID()).filter { !$0.is_active }.count) inactive")
                     .font(.subheadline)
                     .foregroundColor(.primary)
             }

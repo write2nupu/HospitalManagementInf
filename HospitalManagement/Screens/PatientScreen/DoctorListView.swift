@@ -29,7 +29,7 @@ struct DoctorListView: View {
         .task {
             // Fetch department details for each doctor
             for doctor in doctors {
-                if let departmentId = doctor.departmentId {
+                if let departmentId = doctor.department_id {
                     if let department = await supabaseController.fetchDepartmentDetails(departmentId: departmentId) {
                         departmentDetails[departmentId] = department
                     }
@@ -49,12 +49,12 @@ struct DoctorListView: View {
                 .clipShape(Circle())
 
             VStack(alignment: .leading, spacing: 5) {
-                Text(doctor.fullName)
+                Text(doctor.full_name)
                     .font(.title3)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
 
-                if let departmentId = doctor.departmentId,
+                if let departmentId = doctor.department_id,
                    let department = departmentDetails[departmentId] {
                     Text(department.name)
                         .font(.subheadline)

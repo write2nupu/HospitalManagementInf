@@ -25,9 +25,9 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     ProfileRow(title: "Full Name", value: patient.fullName)
                     ProfileRow(title: "Patient ID", value: patient.id.uuidString)
-                    ProfileRow(title: "Phone", value: patient.phoneNumber)
+                    ProfileRow(title: "Phone", value: patient.contactNo)
                     ProfileRow(title: "Email", value: patient.email)
-                    if let details = patient.detailId {
+                    if let details = patient.detail_id {
                         ProfileRow(title: "Blood Group", value: details.uuidString)
                     }
                 }

@@ -23,15 +23,15 @@ struct DepartmentDetailView: View {
     
     private var departmentDoctors: [Doctor] {
         // Make sure we're getting the latest doctors from the view model
-        let doctors = viewModel.getDoctorsByHospital(hospitalId: department.hospitalId ?? UUID())
-            .filter { $0.departmentId == department.id }
+        let doctors = viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID())
+            .filter { $0.department_id == department.id }
         
         // First apply status filter
         let statusFiltered = doctors.filter { doctor in
             switch statusFilter {
             case .all: return true
-            case .active: return doctor.isActive
-            case .inactive: return !doctor.isActive
+            case .active: return doctor.is_active
+            case .inactive: return !doctor.is_active
             }
         }
         
@@ -40,9 +40,9 @@ struct DepartmentDetailView: View {
             return statusFiltered
         } else {
             return statusFiltered.filter { doctor in
-                doctor.fullName.localizedCaseInsensitiveContains(searchText) ||
-                doctor.phoneNumber.localizedCaseInsensitiveContains(searchText) ||
-                doctor.email.localizedCaseInsensitiveContains(searchText)
+                doctor.full_name.localizedCaseInsensitiveContains(searchText) ||
+                doctor.phone_number.localizedCaseInsensitiveContains(searchText) ||
+                doctor.email_address.localizedCaseInsensitiveContains(searchText)
             }
         }
     }
@@ -179,22 +179,22 @@ struct DoctorListCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(doctor.fullName)
+                Text(doctor.full_name)
                     .font(.headline)
                 Spacer()
-                StatusBadge(isActive: doctor.isActive)
+                StatusBadge(isActive: doctor.is_active)
             }
             
             VStack(alignment: .leading, spacing: 8) {
                 Label {
-                    Text(doctor.phoneNumber)
+                    Text(doctor.phone_number)
                 } icon: {
                     Image(systemName: "phone.fill")
                         .foregroundColor(.green)
                 }
                 
                 Label {
-                    Text(doctor.email)
+                    Text(doctor.email_address)
                 } icon: {
                     Image(systemName: "envelope.fill")
                         .foregroundColor(.mint)
@@ -221,7 +221,7 @@ struct DepartmentDetailView_Previews: PreviewProvider {
                     id: UUID(),
                     name: "Cardiology",
                     description: "Heart and cardiovascular care",
-                    hospitalId: UUID(),
+                    hospital_id: UUID(),
                     fees: 100.0
                 )
             )
