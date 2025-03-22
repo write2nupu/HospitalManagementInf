@@ -3,6 +3,7 @@ import SwiftUI
 struct AddDepartmentView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var viewModel: HospitalManagementViewModel
+    @StateObject private var supabaseController = SupabaseController()
     @State private var departmentName = ""
     @State private var description = ""
     @State private var feesString = ""
@@ -84,7 +85,7 @@ struct AddDepartmentView: View {
             id: UUID(),
             name: departmentName,
             description: description.isEmpty ? nil : description,
-            hospital_id: getCurrentHospitalId(),
+            hospital_id: nil,
             fees: fees
         )
         

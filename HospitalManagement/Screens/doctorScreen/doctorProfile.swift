@@ -128,7 +128,4 @@ struct DoctorProfileView: View {
     }
 }
 
-// ✅ Preview
-#Preview {
-    DoctorProfileView(doctor: Doctor(id: UUID(), full_name: "Anubahv", experience: 10, qualifications: "Tumse Jayda", is_active: true, phone_number: "1234567898", email_address: "tumkopatanahihonichahiye@gmail.com", gender: "male", license_num: "123-456-789"))
-}
+

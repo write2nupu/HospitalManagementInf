@@ -12,6 +12,7 @@ struct SuperAdminLoginView: View {
     @StateObject private var supabaseController = SupabaseController()
     @AppStorage("currentUserId") private var currentUserId: String = ""
     @AppStorage("isLoggedIn") private var isUserLoggedIn = false
+    @State private var superAdminUser: User? = nil
 
     var body: some View {
         NavigationStack {
@@ -99,6 +100,7 @@ struct SuperAdminLoginView: View {
                 // Store user info
                 currentUserId = user.id.uuidString
                 isUserLoggedIn = true
+                superAdminUser = user
                 isLoggedIn = true
                 print("Successfully logged in as Super Admin")
             } else {

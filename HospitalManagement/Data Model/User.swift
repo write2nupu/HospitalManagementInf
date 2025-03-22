@@ -11,6 +11,4 @@ struct User: Codable {
     let hospital_id: UUID?
     let created_at: String
     let updated_at: String
-    
-    // No need for CodingKeys since our property names match the database exactly
 } 

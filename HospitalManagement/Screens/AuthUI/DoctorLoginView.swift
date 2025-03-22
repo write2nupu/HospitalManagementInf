@@ -8,8 +8,11 @@ struct DoctorLoginView: View {
     @State private var errorMessage = ""
     @State private var isLoggedIn = false // ✅ State for Navigation
     @State private var isPasswordVisible = false // ✅ Toggle password visibility
-    
-    var docUser: AuthData = AuthData(role: "doctor")
+    @State private var isLoading = false
+    @StateObject private var supabaseController = SupabaseController()
+    @State private var doctorUser: User? = nil
+    @AppStorage("currentUserId") private var currentUserId: String = ""
+    @AppStorage("isLoggedIn") private var isUserLoggedIn = false
     
 //    doctor to be deleted when Superbase function get integrated
     
@@ -41,46 +44,75 @@ struct DoctorLoginView: View {
                 }
 
                 // **Login Button**
-                Button(action: handleLogin) {
-                    Text("Login")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(isValid() ? Color.mint : Color.gray) // ✅ Disable if invalid
-                        .cornerRadius(12)
-                        .shadow(color: .mint.opacity(0.3), radius: 4, x: 0, y: 2)
+                Button(action: {
+                    Task {
+                        await handleLogin()
+                    }
+                }) {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Text("Login")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
                 }
-                .disabled(!isValid()) // ✅ Disable button when inputs are invalid
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(isValid() ? Color.mint : Color.gray)
+                .cornerRadius(12)
+                .shadow(color: .mint.opacity(0.3), radius: 4, x: 0, y: 2)
+                .disabled(!isValid() || isLoading)
                 .padding(.horizontal)
                 .padding(.top, 20)
 
-                // **Navigation Trigger after Successful Login**
-                NavigationLink(destination: forcePasswordUpdate(user: docUser), isActive: $isLoggedIn) { EmptyView() }
-
-
-                Spacer() // Push content upward
+                Spacer()
             }
             .padding()
             .background(Color.mint.opacity(0.05))
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Login Failed"), message: Text(errorMessage), dismissButton: .default(Text("OK")))
             }
+            // ✅ Navigation only triggers when isLoggedIn becomes true
+            .navigationDestination(isPresented: $isLoggedIn) {
+                if let user = doctorUser {
+                    forcePasswordUpdate(user: user)
+                }
+            }
         }
     }
 
     // MARK: - **Login Logic**
-    private func handleLogin() {
-        if isValid() {
-            isLoggedIn = true
-            
-//            Save token to Mobile Storage and update UUID to user.id
-            
-            print("Doctor Logged in successfully.")
-        } else {
+    private func handleLogin() async {
+        guard isValid() else {
+            errorMessage = "Please enter valid email and password"
             showAlert = true
-            errorMessage = "Invalid credentials. Please check your input."
+            return
         }
+
+        isLoading = true
+        do {
+            let user = try await supabaseController.signIn(email: emailOrPhone, password: password)
+            
+            // Check if user is a doctor
+            if user.role.lowercased().contains("doctor") {
+                // Store user info
+                currentUserId = user.id.uuidString
+                isUserLoggedIn = true
+                doctorUser = user
+                isLoggedIn = true
+                print("Successfully logged in as Doctor")
+            } else {
+                errorMessage = "Access denied. You must be a Doctor to login."
+                showAlert = true
+            }
+        } catch {
+            errorMessage = "Invalid credentials. Please try again."
+            showAlert = true
+            print("Login error: \(error.localizedDescription)")
+        }
+        isLoading = false
     }
 
     // MARK: - **Input Validation**

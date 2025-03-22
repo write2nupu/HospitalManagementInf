@@ -193,7 +193,7 @@ struct AddDoctorView: View {
             qualifications: qualifications,
             is_active: true,
             is_first_login: true,
-            initial_password: initialPassword,
+            initial_password: String((0..<8).map { _ in "9876543210abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".randomElement()! }) ,
             phone_num: phoneNumber,
             email_address: email,
             gender: gender,

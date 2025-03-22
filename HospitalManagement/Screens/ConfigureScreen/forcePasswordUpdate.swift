@@ -2,7 +2,7 @@ import SwiftUI
 
 struct forcePasswordUpdate: View {
     
-    var user: AuthData  // Accept User Data
+    var user: User  // Accept User Data
     
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
@@ -142,7 +142,4 @@ struct PasswordField: View {
     }
 }
 
-// ✅ Preview
-#Preview {
-    forcePasswordUpdate(user: AuthData(role: "admin"))
-}
+

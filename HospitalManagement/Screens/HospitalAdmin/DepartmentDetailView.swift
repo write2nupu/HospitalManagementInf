@@ -171,9 +171,9 @@ struct DepartmentDetailView: View {
             }
         }
         .task {
-            if let hospitalId = getCurrentHospitalId() {
-                doctors = await supabaseController.getDoctorsByHospital(hospitalId: hospitalId)
-                doctors = doctors.filter { $0.department_id == department.id }
+//            if let hospitalId = getCurrentHospitalId() {
+//                doctor = await SupabaseController.getDoctorsByHospital(hospitalId: hospitalId)
+//                doctors = doctors.filter { $0.department_id == department.id }
             }
         }
     }
@@ -184,7 +184,7 @@ struct DepartmentDetailView: View {
         // For example, get it from UserDefaults or your auth state
         return nil // Replace with actual implementation
     }
-}
+
 
 struct DoctorListCard: View {
     let doctor: Doctor
@@ -200,7 +200,7 @@ struct DoctorListCard: View {
             
             VStack(alignment: .leading, spacing: 8) {
                 Label {
-                    Text(doctor.phone_number)
+                    Text(doctor.phone_num)
                 } icon: {
                     Image(systemName: "phone.fill")
                         .foregroundColor(.green)
@@ -222,36 +222,36 @@ struct DoctorListCard: View {
                 .fill(Color(.systemBackground))
                 .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
         )
-        .padding(.horizontal)
-        .contentShape(Rectangle())
-        .swipeActions(edge: .trailing) {
-            Button {
-                showStatusConfirmation = true
-            } label: {
-                Label(doctor.is_active ? "Deactivate" : "Activate",
-                      systemImage: doctor.is_active ? "person.fill.xmark" : "person.fill.checkmark")
-            }
-            .tint(doctor.is_active ? .red : .green)
-        }
-        .alert(doctor.is_active ? "Confirm Deactivation" : "Confirm Activation", 
-               isPresented: $showStatusConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button(doctor.is_active ? "Deactivate" : "Activate", 
-                  role: doctor.is_active ? .destructive : .none) {
-                Task {
-                    await toggleDoctorStatus()
-                }
-            }
-        } message: {
-            Text(doctor.is_active ? 
-                "Are you sure you want to deactivate Dr. \(doctor.full_name)?" :
-                "Do you want to activate Dr. \(doctor.full_name)?")
-        }
-        .alert("Status Updated", isPresented: $showStatusChangeAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("\(doctor.full_name) has been \(doctor.is_active ? "deactivated" : "activated")")
-        }
+//        .padding(.horizontal)
+//        .contentShape(Rectangle())
+//        .swipeActions(edge: .trailing) {
+//            Button {
+//                showStatusConfirmation = true
+//            } label: {
+//                Label(doctor.is_active ? "Deactivate" : "Activate",
+//                      systemImage: doctor.is_active ? "person.fill.xmark" : "person.fill.checkmark")
+//            }
+//            .tint(doctor.is_active ? .red : .green)
+//        }
+//        .alert(doctor.is_active ? "Confirm Deactivation" : "Confirm Activation", 
+//               isPresented: $showStatusConfirmation) {
+//            Button("Cancel", role: .cancel) { }
+//            Button(doctor.is_active ? "Deactivate" : "Activate", 
+//                  role: doctor.is_active ? .destructive : .none) {
+//                Task {
+//                    await toggleDoctorStatus()
+//                }
+//            }
+//        } message: {
+//            Text(doctor.is_active ? 
+//                "Are you sure you want to deactivate Dr. \(doctor.full_name)?" :
+//                "Do you want to activate Dr. \(doctor.full_name)?")
+//        }
+//        .alert("Status Updated", isPresented: $showStatusChangeAlert) {
+//            Button("OK", role: .cancel) { }
+//        } message: {
+//            Text("\(doctor.full_name) has been \(doctor.is_active ? "deactivated" : "activated")")
+//        }
     }
 }
 

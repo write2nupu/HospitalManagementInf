@@ -14,7 +14,7 @@ struct updateFields: View {
     init(doctor: Doctor) {
         self.doctor = doctor  // ✅ Initialize doctor
         _email = State(initialValue: doctor.email_address)
-        _phone = State(initialValue: doctor.phone_number)
+        _phone = State(initialValue: doctor.phone_num)
     }
 
     var body: some View {

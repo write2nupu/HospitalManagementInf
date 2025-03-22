@@ -120,8 +120,3 @@ enum AppointmentStatus: String, Codable {
     case completed
     case cancelled
 }
-
-struct AuthData{
-    var id: UUID?
-    var role: String
-}
