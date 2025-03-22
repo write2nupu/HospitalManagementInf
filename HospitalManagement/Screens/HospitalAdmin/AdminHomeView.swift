@@ -120,7 +120,7 @@ struct AdminHomeView: View {
                                                         .fontWeight(.bold)
                                                         .foregroundColor(.primary)
                                                     Spacer()
-                                                    Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospitalId ?? UUID()).count) doctors")
+                                                    Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID()).count) doctors")
                                                         .font(.caption)
                                                         .foregroundColor(.secondary)
                                                 }
@@ -144,12 +144,12 @@ struct AdminHomeView: View {
                                                 HStack(spacing: 8) {
                                                     Image(systemName: "person.2.fill")
                                                         .foregroundColor(.green)
-                                                    Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospitalId ?? UUID()).filter { $0.isActive }.count) active")
+                                                    Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID()).filter { $0.is_active }.count) active")
                                                         .font(.subheadline)
                                                         .foregroundColor(.primary)
                                                     Text("•")
                                                         .foregroundColor(.secondary)
-                                                    Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospitalId ?? UUID()).filter { !$0.isActive }.count) inactive")
+                                                    Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID()).filter { !$0.is_active }.count) inactive")
                                                         .font(.subheadline)
                                                         .foregroundColor(.primary)
                                                 }
@@ -300,14 +300,14 @@ struct DoctorRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text(doctor.fullName)
+                Text(doctor.full_name)
                     .font(.headline)
                 Text(doctor.qualifications)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
             Spacer()
-            if doctor.isActive {
+            if doctor.is_active {
                 Text("Active")
                     .foregroundColor(.green)
             } else {

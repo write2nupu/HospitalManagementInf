@@ -75,8 +75,8 @@ struct DepartmentListView: View {
             
             // Group active doctors by department
             doctorsByDepartment = Dictionary(
-                grouping: allDoctors.filter { $0.isActive },
-                by: { $0.departmentId ?? UUID() }
+                grouping: allDoctors.filter { $0.is_active },
+                by: { $0.department_id ?? UUID() }
             )
             
         } catch {

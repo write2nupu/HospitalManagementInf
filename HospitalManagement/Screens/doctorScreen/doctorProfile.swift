@@ -24,19 +24,19 @@ struct DoctorProfileView: View {
 //                }
                 
                 Section(header: Text("Basic Information")) {
-                    profileRow(title: "Full Name", value: doctor.fullName)
+                    profileRow(title: "Full Name", value: doctor.full_name)
                     if let department = departmentDetails {
                         profileRow(title: "Department", value: department.name)
                     }
                     profileRow(title: "Qualifications", value: doctor.qualifications)
                     profileRow(title: "Experience", value: "\(doctor.experience) years")
-                    profileRow(title: "License Number", value: doctor.licenseNumber)
+                    profileRow(title: "License Number", value: doctor.license_num)
                     profileRow(title: "Gender", value: doctor.gender)
                 }
                 
                 Section(header: Text("Contact Information")) {
-                    profileRow(title: "Phone", value: doctor.phoneNumber)
-                    profileRow(title: "Email", value: doctor.email)
+                    profileRow(title: "Phone", value: doctor.phone_number)
+                    profileRow(title: "Email", value: doctor.email_address)
                 }
                 
                 Section {
@@ -88,7 +88,7 @@ struct DoctorProfileView: View {
                 UserRoleScreen()
             }
             .task {
-                if let departmentId = doctor.departmentId {
+                if let departmentId = doctor.department_id {
                     departmentDetails = await supabaseController.fetchDepartmentDetails(departmentId: departmentId)
                 }
             }
@@ -129,5 +129,5 @@ struct DoctorProfileView: View {
 
 // ✅ Preview
 #Preview {
-    DoctorProfileView(doctor: Doctor(id: UUID(), fullName: "Anubahv", experience: 10, qualifications: "Tumse Jayda", isActive: true, phoneNumber: "1234567898", email: "tumkopatanahihonichahiye@gmail.com", gender: "male", licenseNumber: "123-456-789"))
+    DoctorProfileView(doctor: Doctor(id: UUID(), full_name: "Anubahv", experience: 10, qualifications: "Tumse Jayda", is_active: true, phone_number: "1234567898", email_address: "tumkopatanahihonichahiye@gmail.com", gender: "male", license_num: "123-456-789"))
 }

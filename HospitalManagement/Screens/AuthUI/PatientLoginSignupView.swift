@@ -18,7 +18,7 @@ struct PatientLoginSignupView: View {
     @State private var navigateToDashboard = false
     @State private var navigateToSignUp = false   // Added for Signup Navigation
     
-    var patent: Patient = Patient(id: UUID(), fullName: "temp", gender: "male", dateOfBirth: Date(), phoneNumber: "", email: "")
+    var patent: Patient = Patient(id: UUID(), fullName: "temp", gender: "male", dateOfBirth: Date(), contactNo: "", email: "")
 
     var body: some View {
         NavigationStack {
