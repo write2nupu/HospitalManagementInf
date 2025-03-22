@@ -1,11 +1,3 @@
-//
-//  SuperAdmin.swift
-//  HospitalManagement
-//
-//  Created by Mariyo on 21/03/25.
-//
-
-import Foundation
 import SwiftUI
 
 struct SuperAdminLoginView: View {
@@ -80,6 +72,12 @@ struct SuperAdminLoginView: View {
             .background(Color.mint.opacity(0.05))
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Login Failed"), message: Text(errorMessage), dismissButton: .default(Text("OK")))
+            }
+            // ✅ Navigation only triggers when isLoggedIn becomes true
+            .navigationDestination(isPresented: $isLoggedIn) {
+                if let user = superAdminUser {
+                    forcePasswordUpdate(user: user)
+                }
             }
         }
     }

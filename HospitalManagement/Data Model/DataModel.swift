@@ -47,6 +47,7 @@ struct Hospital: Identifiable, Codable {
     var license_number: String
     var is_active: Bool
     var assigned_admin_id: UUID?
+    
 }
 
 struct Department: Identifiable, Codable, Hashable {
@@ -118,4 +119,9 @@ enum AppointmentStatus: String, Codable {
     case scheduled
     case completed
     case cancelled
+}
+
+struct AuthData{
+    var id: UUID?
+    var role: String
 }

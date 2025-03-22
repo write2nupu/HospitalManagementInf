@@ -12,7 +12,7 @@ struct HospitalCard: View {
     let viewModel: HospitalManagementViewModel
     @StateObject private var supabaseController = SupabaseController()
     @State private var adminDetails: Admin?
-    
+  
     var body: some View {
         NavigationLink {
             HospitalDetailView(viewModel: viewModel, hospital: hospital)
@@ -74,6 +74,7 @@ struct HospitalCard: View {
                 adminDetails = await supabaseController.fetchAdminByUUID(adminId: adminId)
             }
         }
+       
     }
 }
 
@@ -111,33 +112,7 @@ struct SuperAdminProfileButton: View {
     }
 }
 
-struct SuperAdminProfileView: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section("Super Admin Information") {
-                    HStack {
-                        Text("Name:")
-                        Spacer()
-                        Text("Super Admin")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Email:")
-                        Spacer()
-                        Text("admin@example.com")
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            .navigationTitle("Profile")
-            .navigationBarItems(trailing: Button("Done") { dismiss() })
-        }
-    }
-}
+
 
 struct AddHospitalView: View {
     @Environment(\.dismiss) private var dismiss
@@ -397,6 +372,10 @@ struct QuickActionCard: View {
 }
 
 struct ContentView: View {
+    
+//    var superAdminID: UUID
+//    accept id form force update screen and fect user by that ID and stre that doctor in this variable
+    
     @StateObject private var viewModel = HospitalManagementViewModel()
     @StateObject private var supabaseController = SupabaseController()
     @State private var showingAddHospital = false
@@ -481,6 +460,7 @@ struct ContentView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Dashboard")
+            .navigationBarBackButtonHidden(true)
             .searchable(text: $searchText, prompt: "Search hospitals...")
             .navigationBarItems(trailing: SuperAdminProfileButton(isShowingProfile: $showingProfile))
             .sheet(isPresented: $showingAddHospital) {
@@ -535,6 +515,7 @@ struct HospitalList: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("All Hospitals")
+        
     }
 }
 

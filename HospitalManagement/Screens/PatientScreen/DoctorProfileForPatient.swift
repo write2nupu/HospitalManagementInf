@@ -69,6 +69,23 @@ struct DoctorProfileForPatient: View {
                     }
                 }
                 .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.mint.opacity(0.1))
+                .cornerRadius(15)
+                .shadow(color: .mint.opacity(0.3), radius: 5, x: 0, y: 2)
+                
+                // Details Section
+                VStack(spacing: 10) {
+//                    profileCard(title: "Qualifications", value: doctor.qualifications)
+//                    profileCard(title: "Experience", value: "\(doctor.experience) years")
+//                    profileCard(title: "Consultation Fee", value: "₹\(String(format: "%.2f", doctor.consultationFee))")
+                }
+
+                // Info Sections (Aligned for Consistency)
+//                infoSection(title: "Hospital Affiliations", items: doctor.hospitalAffiliations)
+//                infoSection(title: "Available Slots", items: doctor.availableSlots)
+//                infoSection(title: "Languages Spoken", items: doctor.languagesSpoken!)
+
             }
         }
         .navigationTitle("Doctor Profile")

@@ -3,6 +3,7 @@ import Foundation
 
 struct AddDoctorView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var viewModel: HospitalManagementViewModel
     @StateObject private var supabaseController = SupabaseController()
     
     // If department is passed, use it. Otherwise, allow selection
@@ -25,7 +26,7 @@ struct AddDoctorView: View {
         _selectedDepartment = State(initialValue: department)
     }
     
-    // Add new validation properties
+    // Validation properties
     private var isPhoneNumberValid: Bool {
         phoneNumber.count == 10 && phoneNumber.allSatisfy { $0.isNumber }
     }
@@ -37,8 +38,7 @@ struct AddDoctorView: View {
     }
     
     private var isExperienceValid: Bool {
-        guard let experienceInt = Int(experience) else { return false }
-        return experienceInt > 0
+        !experience.isEmpty
     }
     
     private var isQualificationsValid: Bool {
@@ -152,19 +152,20 @@ struct AddDoctorView: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {
-                    Task {
-                        await saveDoctor()
-                    }
+                    saveDoctor()
                 }
                 .disabled(!isFormValid)
+                .foregroundColor(.blue)
             }
         }
-        .alert(alertMessage, isPresented: $showAlert) {
+        .alert("Message", isPresented: $showAlert) {
             Button("OK") {
                 if alertMessage.contains("successfully") {
                     dismiss()
                 }
             }
+        } message: {
+            Text(alertMessage)
         }
         .task {
             if initialDepartment == nil {
@@ -175,16 +176,13 @@ struct AddDoctorView: View {
         }
     }
     
-    private func saveDoctor() async {
+    private func saveDoctor() {
         // Use either initialDepartment or selectedDepartment
         guard let department = initialDepartment ?? selectedDepartment else {
             alertMessage = "Please select a department"
             showAlert = true
             return
         }
-        
-        // Generate initial password
-        let initialPassword = String((0..<6).map { _ in "0123456789".randomElement()! })
         
         let newDoctor = Doctor(
             id: UUID(),
@@ -203,11 +201,7 @@ struct AddDoctorView: View {
         )
         
         do {
-            try await supabaseController.client
-                .from("Doctors")
-                .insert(newDoctor)
-                .execute()
-            
+            try viewModel.addDoctor(newDoctor)
             alertMessage = "Doctor added successfully"
             showAlert = true
         } catch {
@@ -221,5 +215,15 @@ struct AddDoctorView: View {
         // Implement this based on your authentication system
         // For example, get it from UserDefaults or your auth state
         return nil // Replace with actual implementation
+    }
+}
+
+// MARK: - Preview
+struct AddDoctorView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            AddDoctorView()
+                .environmentObject(HospitalManagementViewModel())
+        }
     }
 }
