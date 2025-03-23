@@ -13,6 +13,7 @@ struct SuperAdminLoginView: View {
     @AppStorage("currentUserId") private var currentUserId: String = ""
     @AppStorage("isLoggedIn") private var isUserLoggedIn = false
     @State private var superAdminUser: User? = nil
+    @State private var shouldShowDashboard = false
 
     var body: some View {
         NavigationStack {
@@ -64,21 +65,20 @@ struct SuperAdminLoginView: View {
                 .padding(.horizontal)
                 .padding(.top, 20)
 
-                // Navigation after successful login
-                NavigationLink(destination: ContentView(), isActive: $isLoggedIn) { EmptyView() }
-
-                Spacer() // Push content upward
+                Spacer()
             }
             .padding()
             .background(Color.mint.opacity(0.05))
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Login Failed"), message: Text(errorMessage), dismissButton: .default(Text("OK")))
             }
-            // ✅ Navigation only triggers when isLoggedIn becomes true
             .navigationDestination(isPresented: $isLoggedIn) {
                 if let user = superAdminUser {
                     forcePasswordUpdate(user: user)
                 }
+            }
+            .navigationDestination(isPresented: $shouldShowDashboard) {
+                ContentView()
             }
         }
     }
@@ -100,8 +100,21 @@ struct SuperAdminLoginView: View {
                 // Store user info
                 currentUserId = user.id.uuidString
                 isUserLoggedIn = true
-                superAdminUser = user
-                isLoggedIn = true
+                
+                // Check if first login from the Users table
+                let users: [User] = try await supabaseController.client
+                    .from("Users")
+                    .select()
+                    .eq("id", value: user.id.uuidString)
+                    .execute()
+                    .value
+                
+                if let firstUser = users.first, firstUser.is_first_login {
+                    superAdminUser = user
+                    isLoggedIn = true
+                } else {
+                    shouldShowDashboard = true
+                }
                 print("Successfully logged in as Super Admin")
             } else {
                 errorMessage = "Access denied. You must be a Super Admin to login."

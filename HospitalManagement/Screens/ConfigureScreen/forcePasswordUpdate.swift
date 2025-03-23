@@ -3,13 +3,15 @@ import SwiftUI
 struct forcePasswordUpdate: View {
     
     var user: User  // Accept User Data
-    
+    @Environment(\.dismiss) private var dismiss
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
     @State private var isPasswordVisible = false
     @State private var isConfirmPasswordVisible = false
     @State private var isUpdated = false
     @State private var errorMessage: String? = nil
+    @State private var isLoading = false
+    @StateObject private var supabaseController = SupabaseController()
     
     var body: some View {
         NavigationStack {
@@ -43,18 +45,25 @@ struct forcePasswordUpdate: View {
                     
                     // Update Password Button
                     Button(action: {
-                        validateAndUpdatePassword()
+                        Task {
+                            await validateAndUpdatePassword()
+                        }
                     }) {
-                        Text("Update Password")
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(AppConfig.buttonColor)
-                            .cornerRadius(12)
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            Text("Update Password")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                        }
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(AppConfig.buttonColor)
+                    .cornerRadius(12)
                     .padding(.horizontal, 40)
-                    .disabled(password.isEmpty || confirmPassword.isEmpty)
+                    .disabled(password.isEmpty || confirmPassword.isEmpty || isLoading)
                     .opacity(password.isEmpty || confirmPassword.isEmpty ? 0.6 : 1)
                     
                     Spacer()
@@ -62,7 +71,6 @@ struct forcePasswordUpdate: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
-            // ✅ Corrected Navigation
             .navigationDestination(isPresented: $isUpdated) {
                 getDashboardView()
             }
@@ -70,39 +78,68 @@ struct forcePasswordUpdate: View {
     }
     
     // ✅ Function to Validate Password
-    private func validateAndUpdatePassword() {
+    private func validateAndUpdatePassword() async {
         if password.isEmpty || confirmPassword.isEmpty {
             errorMessage = "Please fill in both fields"
-        } else if password.count < 6 {
-            errorMessage = "Password must be at least 6 characters"
-        } else if password != confirmPassword {
-            errorMessage = "Passwords do not match"
-        } else {
-            errorMessage = nil
-            isUpdated = true // ✅ Trigger Navigation
+            return
         }
+        if password.count < 6 {
+            errorMessage = "Password must be at least 6 characters"
+            return
+        }
+        if password != confirmPassword {
+            errorMessage = "Passwords do not match"
+            return
+        }
+        
+        isLoading = true
+        do {
+            // First update the password
+            try await supabaseController.client.auth.update(user: .init(password: password))
+            
+            // Then update is_first_login flag in the appropriate table based on role
+            if user.role.lowercased().contains("super") && user.role.lowercased().contains("admin") {
+                try await supabaseController.client
+                    .from("Users")
+                    .update(["is_first_login": false])
+                    .eq("id", value: user.id.uuidString)
+                    .execute()
+            } else if user.role.lowercased().contains("admin") {
+                try await supabaseController.client
+                    .from("Admin")
+                    .update(["is_first_login": false])
+                    .eq("id", value: user.id.uuidString)
+                    .execute()
+            } else if user.role.lowercased().contains("doctor") {
+                try await supabaseController.client
+                    .from("Doctors")
+                    .update(["is_first_login": false])
+                    .eq("id", value: user.id.uuidString)
+                    .execute()
+            }
+            
+            errorMessage = nil
+            isUpdated = true
+        } catch {
+            errorMessage = "Failed to update password: \(error.localizedDescription)"
+        }
+        isLoading = false
     }
     
     // ✅ Function to Determine Dashboard
     @ViewBuilder
     private func getDashboardView() -> some View {
-//        switch user.role.lowercased() {
-//        case "admin":
-//            AdminHomeView()
-//        case "superadmin":
-//            ContentView()
-//        case "doctor":
-//            mainBoard()
-//        default:
-//            Text("Role not recognized").foregroundColor(.red)
-//        }
-        
-        if user.role.lowercased() == "admin" {
-            AdminHomeView()
-        } else if user.role.lowercased() == "superadmin" {
+        if user.role.lowercased().contains("super") && user.role.lowercased().contains("admin") {
             ContentView()
-        } else if user.role.lowercased() == "doctor"{
+                .navigationBarBackButtonHidden(true)
+        } else if user.role.lowercased().contains("admin") {
+            AdminHomeView()
+                .navigationBarBackButtonHidden(true)
+        } else if user.role.lowercased().contains("doctor") {
             mainBoard()
+                .navigationBarBackButtonHidden(true)
+        } else {
+            Text("Role not recognized").foregroundColor(.red)
         }
     }
 }
