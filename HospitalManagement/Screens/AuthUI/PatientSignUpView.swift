@@ -36,11 +36,9 @@ struct PersonalInfoView: View {
                 .font(.title)
                 .fontWeight(.bold)
                 .foregroundColor(.mint)
+                .frame(maxWidth: .infinity, alignment: .center)
 
-            TextField("Full Name", text: $fullName)
-                .padding()
-                .background(Color.mint.opacity(0.2))
-                .cornerRadius(8)
+            CustomTextField(placeholder: "Full Name", text: $fullName)
 
             GenderPickerView(gender: $gender, genders: genders)
 
@@ -48,12 +46,9 @@ struct PersonalInfoView: View {
                 .padding()
                 .background(Color.mint.opacity(0.2))
                 .cornerRadius(8)
+                .frame(maxWidth: .infinity, alignment: .center)
 
-            TextField("Contact Number", text: $contactNumber)
-                .keyboardType(.phonePad)
-                .padding()
-                .background(Color.mint.opacity(0.2))
-                .cornerRadius(8)
+            CustomTextField(placeholder: "Contact Number", text: $contactNumber, keyboardType: .phonePad)
 
             Spacer()
 
@@ -103,6 +98,23 @@ struct GenderPickerView: View {
         .padding()
         .background(Color.mint.opacity(0.2))
         .cornerRadius(8)
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Custom TextField
+struct CustomTextField: View {
+    var placeholder: String
+    @Binding var text: String
+    var keyboardType: UIKeyboardType = .default
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .keyboardType(keyboardType)
+            .padding()
+            .background(Color.mint.opacity(0.2))
+            .cornerRadius(8)
+            .frame(maxWidth: .infinity)
     }
 }
 

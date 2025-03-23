@@ -25,6 +25,7 @@ class SupabaseController: ObservableObject {
             
                 .from("Patients")
                 .select()
+//                .eq("id", value: patientId)
                 .execute()
                 .value
             return patients

@@ -8,48 +8,50 @@ class HospitalManagementTestViewModel: ObservableObject {
 struct PatientDashboard: View {
     private var viewModel: HospitalManagementViewModel = .init()
     @State private var patient: Patient
-    @State private var showprofile = false
+    @State private var showProfile = false
     
     init(patient: Patient) {
         _patient = State(initialValue: patient)
     }
     
     var body: some View {
-        NavigationView {
-            VStack(alignment: .leading) {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 20) {
                 // Top Section
                 HStack {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Hi, \(patient.fullName)")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(.mint)
-                        Text("Welcome to your dashboard! Let's take care of your health.")
+                            .foregroundColor(.black)
+                        Text("Welcome! Let's take care of your health.")
                             .font(.body)
-                            .foregroundColor(.mint.opacity(0.8))
+                            .foregroundColor(.black.opacity(0.8))
                     }
                     Spacer()
                     Button(action: {
-//                        viewModel.showUserProfile = true  // ✅ No more error
-                        showprofile = true
+                        showProfile = true
                     }) {
                         Image(systemName: "person.crop.circle")
                             .font(.system(size: 30))
-                            .foregroundColor(.mint)
+                            .foregroundColor(.black)
                     }
-                    .sheet(isPresented: $showprofile) {
-                        ProfileView(patient: $patient)
-                    } 
-                }
-                .padding()
+                    .sheet(isPresented: $showProfile) {
+                        if let selectedDetails = viewModel.patientDetails.first(where: { $0.id == patient.detailId }) {
+                            ProfileView(patient: $patient, patientDetails: selectedDetails)
+                        } else {
+                            Text("No details found for this patient.")
+                            
+                        }
+                    }                }
+                .padding(.horizontal)
                 
                 // Quick Actions Section
                 Text("Quick Action")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.mint)
+                    .foregroundColor(.black)
                     .padding(.horizontal)
-                    .padding(.top)
                 
                 NavigationLink(destination: HospitalListView()) {
                     VStack {
@@ -67,6 +69,8 @@ struct PatientDashboard: View {
                 }
                 Spacer()
             }
+            .padding(.vertical, 20)
+            .navigationBarHidden(true)
             .navigationBarBackButtonHidden(true)
         }
     }

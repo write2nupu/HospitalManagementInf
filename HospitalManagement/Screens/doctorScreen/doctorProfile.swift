@@ -40,20 +40,21 @@ struct DoctorProfileView: View {
                 // Fetch doctor details
                 if let departmentId = doctor.departmentId {
                     departmentDetails = await supabaseController.fetchDepartmentDetails(departmentId: departmentId)
+                    
                 }
             }
         }
     }
-    
-    // Reusable Profile Row Component
-    private func profileRow(title: String, value: String) -> some View {
-        HStack {
-            Text(title).fontWeight(.none)
-            Spacer()
-            Text(value).foregroundColor(.gray)
-        }
-    }
 }
+        
+        // Reusable Profile Row Component
+        private func profileRow(title: String, value: String) -> some View {
+            HStack {
+                Text(title).fontWeight(.none)
+                Spacer()
+                Text(value).foregroundColor(.gray)
+            }
+        }
 
 
 

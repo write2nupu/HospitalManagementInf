@@ -16,21 +16,20 @@ struct PatientLoginSignupView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var navigateToDashboard = false
-    @State private var navigateToSignUp = false   // Added for Signup Navigation
-    
+    @State private var navigateToSignUp = false
+
     var patent: Patient = Patient(id: UUID(), fullName: "temp", gender: "male", dateOfBirth: Date(), phoneNumber: "", email: "")
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 30) {
-                
+            VStack(spacing: 20) {
                 // Title
                 VStack(spacing: 5) {
                     Text("Patient Portal")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.mint)
-                    
+
                     Text("Welcome! Please \(selectedSegment == 0 ? "Login" : "Sign Up")")
                         .font(.body)
                         .foregroundColor(.gray)
@@ -44,18 +43,17 @@ struct PatientLoginSignupView: View {
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .padding(.horizontal)
-                
-                // Form Fields
-                VStack(spacing: 20) {
-                    customTextField(icon: "envelope.fill", placeholder: "Enter Email", text: $email, keyboardType: .emailAddress)
 
+                // Form Fields
+                VStack(spacing: 15) {
+                    customTextField(icon: "envelope.fill", placeholder: "Enter Email", text: $email, keyboardType: .emailAddress)
                     passwordField(icon: "lock.fill", placeholder: selectedSegment == 0 ? "Enter Password" : "Create Password", text: $password)
 
                     if selectedSegment == 1 {
                         passwordField(icon: "lock.fill", placeholder: "Confirm Password", text: $confirmPassword)
                     }
                 }
-                .padding(.top, 20)
+                .padding(.top, 10)
 
                 // Submit Button
                 Button(action: handleSubmit) {
@@ -68,6 +66,7 @@ struct PatientLoginSignupView: View {
                         .cornerRadius(12)
                 }
                 .padding(.horizontal)
+                .padding(.top, 10)
 
                 Spacer()
             }
@@ -77,10 +76,10 @@ struct PatientLoginSignupView: View {
                 Alert(title: Text("Action Required"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
             .navigationDestination(isPresented: $navigateToDashboard) {
-                PatientDashboard(patient: patent )  // Dashboard after successful Login
+                PatientDashboard(patient: patent)
             }
             .navigationDestination(isPresented: $navigateToSignUp) {
-                PatientSignupView()  // Navigate to Signup Flow
+                PatientSignupView()
             }
         }
     }
@@ -95,9 +94,9 @@ struct PatientLoginSignupView: View {
             showAlert = true
         } else {
             if selectedSegment == 0 {
-                navigateToDashboard = true  // Navigate to Dashboard for Login
+                navigateToDashboard = true
             } else {
-                navigateToSignUp = true    // Navigate to Signup Flow
+                navigateToSignUp = true
             }
         }
     }
@@ -121,13 +120,13 @@ struct PatientLoginSignupView: View {
         HStack {
             Image(systemName: icon)
                 .foregroundColor(.mint)
-            
+
             if isPasswordVisible {
                 TextField(placeholder, text: text)
             } else {
                 SecureField(placeholder, text: text)
             }
-            
+
             Button(action: {
                 isPasswordVisible.toggle()
             }) {
@@ -148,4 +147,3 @@ struct PatientLoginSignupView_Previews: PreviewProvider {
         PatientLoginSignupView()
     }
 }
-
