@@ -7,40 +7,21 @@ struct AdminProfile: Codable {
     var email: String = "admin@hospital.com"
     var phone: String = "9876543210"
     var password: String = "••••••••"
-    var role: String
-    
-    init(id: String = "ADM-2025-001",
-         name: String = "Dr. Admin",
-         hospitalName: String = "City General Hospital",
-         email: String = "admin@hospital.com",
-         phone: String = "9876543210",
-         password: String = "••••••••",
-         role: String = "Hospital Administrator") {
-        self.id = id
-        self.name = name
-        self.hospitalName = hospitalName
-        self.email = email
-        self.phone = phone
-        self.password = password
-        self.role = role
-    }
+    let role: String = "Hospital Administrator"
 }
 
 struct EditContactSheet: View {
     @Environment(\.dismiss) private var dismiss
-    let admin: Admin
-    let onSave: (Admin) -> Void
-    
+    @Binding var profile: AdminProfile
     @State private var email: String
     @State private var phone: String
     @State private var showAlert = false
     @State private var alertMessage = ""
     
-    init(admin: Admin, onSave: @escaping (Admin) -> Void) {
-        self.admin = admin
-        self.onSave = onSave
-        _email = State(initialValue: admin.email)
-        _phone = State(initialValue: admin.phoneNumber)
+    init(profile: Binding<AdminProfile>) {
+        self._profile = profile
+        _email = State(initialValue: profile.wrappedValue.email)
+        _phone = State(initialValue: profile.wrappedValue.phone)
     }
     
     var body: some View {
@@ -62,6 +43,7 @@ struct EditContactSheet: View {
                 trailing: Button("Save") {
                     saveChanges()
                 }
+                .foregroundColor(.blue)
             )
             .alert("Update Status", isPresented: $showAlert) {
                 Button("OK") {
@@ -90,11 +72,15 @@ struct EditContactSheet: View {
             return
         }
         
-        var updatedAdmin = admin
-        updatedAdmin.email = email
-        updatedAdmin.phoneNumber = phone
+        // Update profile
+        profile.email = email
+        profile.phone = phone
         
-        onSave(updatedAdmin)
+        // Save to UserDefaults or your backend
+        if let encoded = try? JSONEncoder().encode(profile) {
+            UserDefaults.standard.set(encoded, forKey: "adminProfile")
+        }
+        
         alertMessage = "Profile updated successfully"
         showAlert = true
     }
@@ -157,6 +143,7 @@ struct ContactInfoSheet: View {
                     }
                     isEditing.toggle()
                 }
+                .foregroundColor(.blue)
             )
             .alert("Update Status", isPresented: $showAlert) {
                 Button("OK") {
@@ -201,62 +188,67 @@ struct ContactInfoSheet: View {
 
 struct AdminProfileView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var supabaseController = SupabaseController()
-    @State private var admin: Admin?
+    @EnvironmentObject private var viewModel: HospitalManagementViewModel
+    @State private var profile = AdminProfile()
     @State private var showingContactSheet = false
     @State private var showingLogoutAlert = false
     @AppStorage("isLoggedIn") private var isLoggedIn = true
-    @AppStorage("currentAdminId") private var currentAdminId: String = ""
+    @AppStorage("userRole") private var userRole: String?
     
     var body: some View {
         NavigationView {
             Form {
-                if let admin = admin {
-                    Section("Admin Information") {
-                        HStack {
-                            Text("Admin ID")
-                            Spacer()
-                            Text(admin.id.uuidString)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        HStack {
-                            Text("Name")
-                            Spacer()
-                            Text(admin.fullName)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        HStack {
-                            Text("Role")
-                            Spacer()
-                            Text("Hospital Administrator")
-                                .foregroundColor(.secondary)
-                        }
+                Section("Admin Information") {
+                    HStack {
+                        Text("Admin ID")
+                        Spacer()
+                        Text(profile.id)
+                            .foregroundColor(.secondary)
                     }
                     
-                    Section("Contact Information") {
-                        HStack {
-                            Text("Email")
-                            Spacer()
-                            Text(admin.email)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        HStack {
-                            Text("Phone")
-                            Spacer()
-                            Text(admin.phoneNumber)
-                                .foregroundColor(.secondary)
-                        }
+                    HStack {
+                        Text("Name")
+                        Spacer()
+                        Text(profile.name)
+                            .foregroundColor(.secondary)
                     }
                     
-                    Section {
-                        Button(action: { showingContactSheet = true }) {
-                            Text("Edit Contact Information")
-                        }
-                        .foregroundColor(.blue)
+                    HStack {
+                        Text("Hospital")
+                        Spacer()
+                        Text(profile.hospitalName)
+                            .foregroundColor(.secondary)
                     }
+                    
+                    HStack {
+                        Text("Role")
+                        Spacer()
+                        Text(profile.role)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Section("Contact Information") {
+                    HStack {
+                        Text("Email")
+                        Spacer()
+                        Text(profile.email)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack {
+                        Text("Phone")
+                        Spacer()
+                        Text(profile.phone)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Section {
+                    Button(action: { showingContactSheet = true }) {
+                        Text("Edit Contact Information")
+                    }
+                    .foregroundColor(.blue)
                 }
                 
                 Section {
@@ -269,13 +261,7 @@ struct AdminProfileView: View {
             .navigationTitle("Profile")
             .navigationBarItems(trailing: Button("Done") { dismiss() })
             .sheet(isPresented: $showingContactSheet) {
-                if let admin = admin {
-                    EditContactSheet(admin: admin) { updatedAdmin in
-                        Task {
-                            await updateAdmin(updatedAdmin)
-                        }
-                    }
-                }
+                ContactInfoSheet(profile: $profile)
             }
             .alert("Logout", isPresented: $showingLogoutAlert) {
                 Button("Cancel", role: .cancel) { }
@@ -285,36 +271,28 @@ struct AdminProfileView: View {
             } message: {
                 Text("Are you sure you want to logout?")
             }
-            .task {
-                await loadAdminProfile()
+            .onAppear {
+                loadProfile()
             }
         }
     }
     
-    private func loadAdminProfile() async {
-        if let adminId = UUID(uuidString: currentAdminId) {
-            admin = await supabaseController.fetchAdminByUUID(adminId: adminId)
-        }
-    }
-    
-    private func updateAdmin(_ updatedAdmin: Admin) async {
-        do {
-            try await supabaseController.client
-                .from("Admins")
-                .update(updatedAdmin)
-                .eq("id", value: updatedAdmin.id)
-                .execute()
-            
-            admin = updatedAdmin
-        } catch {
-            print("Error updating admin: \(error)")
+    private func loadProfile() {
+        if let data = UserDefaults.standard.data(forKey: "adminProfile"),
+           let decoded = try? JSONDecoder().decode(AdminProfile.self, from: data) {
+            profile = decoded
         }
     }
     
     private func logout() {
-        // Clear user data
-        currentAdminId = ""
+        // Clear all user data
+        UserDefaults.standard.removeObject(forKey: "adminProfile")
+        userRole = nil  // Clear the user role
         isLoggedIn = false
+        
+        // Post notification to trigger app-level navigation
+        NotificationCenter.default.post(name: .init("LogoutNotification"), object: nil)
+        
         dismiss()
     }
 }

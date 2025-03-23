@@ -25,6 +25,7 @@ struct ProfileView: View {
                     profileRow(title: "E-Mail", value: patient.email)
                 }
                 
+
                 Section(header: Text("Medical Information")) {
                     if let patientBloodGroup = patientDetails.bloodGroup {
                         profileRow(title: "Blood Group", value: patientBloodGroup)
@@ -43,6 +44,7 @@ struct ProfileView: View {
                     }
                     if let patientEmergencyContact = patientDetails.bloodGroup {
                         profileRow(title: "Emergency Contact", value: patientEmergencyContact)
+
                     }
                 }
             }

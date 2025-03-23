@@ -1,7 +1,5 @@
 import SwiftUI
 
-// Doctor Profile Data Model
-
 struct DoctorProfileView: View {
     @EnvironmentObject private var viewModel: HospitalManagementViewModel
     @StateObject private var supabaseController = SupabaseController()
@@ -10,23 +8,72 @@ struct DoctorProfileView: View {
     @State private var doctorDetails: Doctor?
     @State private var departmentDetails: Department?
     
+    @State private var isLoggedOut = false
+    @State private var showLogoutAlert = false
     var body: some View {
         NavigationStack {
             Form {
+//                Section(header: Text("Available Slots")) {
+//                    ForEach(doctor.availableSlots, id: \.self) { slot in
+//                        slotSetUp(slot: slot, isAvailable: checkAvailability(for: slot))
+//                    }
+//                }
+                
+//                Section(header: Text("Consultation Fee")) {
+//                    profileRow(title: "Fee", value: "₹\(String(format: "%.2f", doctor.consultationFee))")
+//                }
+                
                 Section(header: Text("Basic Information")) {
-                    profileRow(title: "Full Name", value: doctor.fullName)
+                    profileRow(title: "Full Name", value: doctor.full_name)
                     if let department = departmentDetails {
                         profileRow(title: "Department", value: department.name)
                     }
                     profileRow(title: "Qualifications", value: doctor.qualifications)
                     profileRow(title: "Experience", value: "\(doctor.experience) years")
-                    profileRow(title: "License Number", value: doctor.licenseNumber)
+                    profileRow(title: "License Number", value: doctor.license_num)
                     profileRow(title: "Gender", value: doctor.gender)
                 }
                 
                 Section(header: Text("Contact Information")) {
-                    profileRow(title: "Phone", value: doctor.phoneNumber)
-                    profileRow(title: "Email", value: doctor.email)
+                    profileRow(title: "Phone", value: doctor.phone_number)
+                    profileRow(title: "Email", value: doctor.email_address)
+                }
+                
+                Section {
+                    NavigationLink(destination: updateFields(doctor: doctor)) {
+                        Text("Edit Phone and Email")
+                            .foregroundColor(AppConfig.buttonColor)
+                            .fontWeight(.semibold)
+                    }
+                }
+                
+                Section {
+                    NavigationLink(destination: updatePassword(doctor: doctor)) {
+                        Text("Update Password")
+                            .foregroundColor(AppConfig.buttonColor)
+                            .fontWeight(.semibold)
+                    }
+                }
+                
+                Section {
+                    Button(action: {
+                        showLogoutAlert = true
+                    }) {
+                        Text("Logout")
+                            .fontWeight(.bold)
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    .alert(isPresented: $showLogoutAlert) {
+                        Alert(
+                            title: Text("Logout"),
+                            message: Text("Are you sure you want to logout?"),
+                            primaryButton: .destructive(Text("Logout")) {
+                                handleLogout()
+                            },
+                            secondaryButton: .cancel()
+                        )
+                    }
                 }
                 
                 if let department = departmentDetails {
@@ -36,9 +83,12 @@ struct DoctorProfileView: View {
                 }
             }
             .navigationTitle("Doctor Profile")
+            .tint(AppConfig.buttonColor)
+            .fullScreenCover(isPresented: .constant(isLoggedOut)) {
+                UserRoleScreen()
+            }
             .task {
-                // Fetch doctor details
-                if let departmentId = doctor.departmentId {
+                if let departmentId = doctor.department_id {
                     departmentDetails = await supabaseController.fetchDepartmentDetails(departmentId: departmentId)
                     
                 }
@@ -56,5 +106,7 @@ struct DoctorProfileView: View {
             }
         }
 
-
-
+// ✅ Preview
+#Preview {
+    DoctorProfileView(doctor: Doctor(id: UUID(), full_name: "Anubahv", experience: 10, qualifications: "Tumse Jayda", is_active: true, phone_number: "1234567898", email_address: "tumkopatanahihonichahiye@gmail.com", gender: "male", license_num: "123-456-789"))
+}

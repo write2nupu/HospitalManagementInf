@@ -12,7 +12,7 @@ struct HospitalCard: View {
     let viewModel: HospitalManagementViewModel
     @StateObject private var supabaseController = SupabaseController()
     @State private var adminDetails: Admin?
-    
+  
     var body: some View {
         NavigationLink {
             HospitalDetailView(viewModel: viewModel, hospital: hospital)
@@ -25,7 +25,7 @@ struct HospitalCard: View {
                         .fontWeight(.bold)
                         .foregroundColor(.black)
                     Spacer()
-                    StatusBadge(isActive: hospital.isActive)
+                    StatusBadge(isActive: hospital.is_active)
                 }
                 
                 // Location info
@@ -41,7 +41,7 @@ struct HospitalCard: View {
                 HStack(spacing: 8) {
                     Image(systemName: "phone.fill")
                         .foregroundColor(.mint)
-                    Text(hospital.mobileNumber)
+                    Text(hospital.mobile_number)
                         .font(.subheadline)
                         .foregroundColor(.black)
                 }
@@ -51,7 +51,7 @@ struct HospitalCard: View {
                     Image(systemName: "person.fill")
                         .foregroundColor(.mint)
                     if let admin = adminDetails {
-                        Text("Admin: \(admin.fullName)")
+                        Text("Admin: \(admin.full_name)")
                             .font(.subheadline)
                             .foregroundColor(.black)
                     } else {
@@ -70,10 +70,11 @@ struct HospitalCard: View {
         }
         .buttonStyle(.plain)
         .task {
-            if let adminId = hospital.assignedAdminId {
+            if let adminId = hospital.assigned_admin_id {
                 adminDetails = await supabaseController.fetchAdminByUUID(adminId: adminId)
             }
         }
+       
     }
 }
 
@@ -111,33 +112,7 @@ struct SuperAdminProfileButton: View {
     }
 }
 
-struct SuperAdminProfileView: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section("Super Admin Information") {
-                    HStack {
-                        Text("Name:")
-                        Spacer()
-                        Text("Super Admin")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Email:")
-                        Spacer()
-                        Text("admin@example.com")
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            .navigationTitle("Profile")
-            .navigationBarItems(trailing: Button("Done") { dismiss() })
-        }
-    }
-}
+
 
 struct AddHospitalView: View {
     @Environment(\.dismiss) private var dismiss
@@ -243,11 +218,11 @@ struct AddHospitalView: View {
             let admin = Admin(
                 id: adminId,
                 email: adminEmail,
-                fullName: adminFullName,
-                phoneNumber: adminPhone,
-                hospitalId: nil,
-                isFirstLogin: true,
-                initialPassword: generateRandomPassword()
+                full_name: adminFullName,
+                phone_number: adminPhone,
+                hospital_id: nil,
+                is_first_login: true,
+                initial_password: generateRandomPassword()
             )
             
             // Create the hospital
@@ -258,11 +233,11 @@ struct AddHospitalView: View {
                 city: city,
                 state: state,
                 pincode: pincode,
-                mobileNumber: contact,
+                mobile_number: contact,
                 email: email,
-                licenseNumber: licenseNumber,
-                isActive: isActive,
-                assignedAdminId: adminId
+                license_number: licenseNumber,
+                is_active: isActive,
+                assigned_admin_id: adminId
             )
             
             // Add admin to Supabase
@@ -370,6 +345,10 @@ struct QuickActionCard: View {
 }
 
 struct ContentView: View {
+    
+//    var superAdminID: UUID
+//    accept id form force update screen and fect user by that ID and stre that doctor in this variable
+    
     @StateObject private var viewModel = HospitalManagementViewModel()
     @StateObject private var supabaseController = SupabaseController()
     @State private var showingAddHospital = false
@@ -384,10 +363,10 @@ struct ContentView: View {
             hospital.city.localizedCaseInsensitiveContains(searchText) ||
             hospital.state.localizedCaseInsensitiveContains(searchText)
         }).sorted { h1, h2 in
-            if h1.isActive == h2.isActive {
+            if h1.is_active == h2.is_active {
                 return h1.name < h2.name
             }
-            return h1.isActive && !h2.isActive
+            return h1.is_active && !h2.is_active
         }
         return sorted
     }
@@ -449,6 +428,7 @@ struct ContentView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Dashboard")
+            .navigationBarBackButtonHidden(true)
             .searchable(text: $searchText, prompt: "Search hospitals...")
             .navigationBarItems(trailing: SuperAdminProfileButton(isShowingProfile: $showingProfile))
             .sheet(isPresented: $showingAddHospital) {
@@ -481,6 +461,7 @@ struct HospitalList: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("All Hospitals")
+        
     }
 }
 

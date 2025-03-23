@@ -19,11 +19,11 @@ struct SuperAdmin: Identifiable, Codable{
 struct Admin: Identifiable, Codable, Hashable {
     var id: UUID
     var email: String
-    var fullName: String
-    var phoneNumber: String
-    var hospitalId: UUID?
-    var isFirstLogin: Bool?
-    var initialPassword: String
+    var full_name: String
+    var phone_number: String
+    var hospital_id: UUID?
+    var is_first_login: Bool?
+    var initial_password: String
     
     // Add Hashable conformance
     func hash(into hasher: inout Hasher) {
@@ -42,11 +42,11 @@ struct Hospital: Identifiable, Codable {
     var city: String
     var state: String
     var pincode: String
-    var mobileNumber: String
+    var mobile_number: String
     var email: String
-    var licenseNumber : String
-    var isActive: Bool
-    var assignedAdminId: UUID?
+    var license_number : String
+    var is_active: Bool
+    var assigned_admin_id: UUID?
     
 }
 
@@ -54,7 +54,7 @@ struct Department: Identifiable, Codable, Hashable {
     var id : UUID
     var name: String
     var description: String?
-    var hospitalId: UUID?
+    var hospital_id: UUID?
     var fees: Double
     
     // Add Hashable conformance
@@ -69,18 +69,18 @@ struct Department: Identifiable, Codable, Hashable {
 
 struct Doctor : Identifiable, Codable {
     var id: UUID
-    var fullName: String
-    var departmentId : UUID?
-    var hospitalId: UUID?
+    var full_name: String
+    var department_id : UUID?
+    var hospital_id: UUID?
     var experience : Int
     var qualifications : String
-    var isActive: Bool
-    var isFirstLogin: Bool?
-    var initialPassword: String?
-    var phoneNumber: String
-    var email: String
+    var is_active: Bool
+    var is_first_login: Bool?
+    var initial_password: String?
+    var phone_number: String
+    var email_address: String
     var gender : String
-    var licenseNumber: String
+    var license_num: String
     
 }
 struct Patient: Identifiable, Codable {
@@ -88,20 +88,20 @@ struct Patient: Identifiable, Codable {
     var fullName: String
     var gender: String
     var dateOfBirth: Date
-    var phoneNumber: String
+    var contactNo: String
     var email: String
-    var detailId: UUID?
+    var detail_id: UUID?
     var password: String?
 }
 
 struct PatientDetails: Identifiable, Codable {
     var id : UUID
-    var bloodGroup: String?
+    var blood_group: String?
     var allergies: String?
-    var existingMedicalRecord: String?
-    var currentMedication : String?
-    var pastSurgeries : String?
-    var emergencyContact : String?
+    var existing_medical_record: String?
+    var current_medication : String?
+    var past_surgeries : String?
+    var emergency_contact : String?
 }
 
 
@@ -119,4 +119,9 @@ enum AppointmentStatus: String, Codable {
     case scheduled
     case completed
     case cancelled
+}
+
+struct AuthData{
+    var id: UUID?
+    var role: String
 }

@@ -1,67 +1,97 @@
 import SwiftUI
 
 struct AllDepartmentsView: View {
-    @StateObject private var supabaseController = SupabaseController()
-    @State private var departments: [Department] = []
-    @State private var doctors: [Doctor] = []
+    @EnvironmentObject private var viewModel: HospitalManagementViewModel
+    @State private var searchText = ""
+    
+    var filteredDepartments: [Department] {
+        if searchText.isEmpty {
+            return viewModel.departments
+        } else {
+            return viewModel.departments.filter { department in
+                department.name.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+    }
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(spacing: 24) {
                 // Header with total count
-                HStack {
-                    Text("Total Departments")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text("\(departments.count)")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.mint)
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack {
+                        Text("Total Departments")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text("\(viewModel.departments.count)")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.mint)
+                    }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
                 
                 // Departments List
-                LazyVStack(spacing: 16) {
-                    ForEach(departments) { department in
-                        NavigationLink(destination: DepartmentDetailView(department: department)) {
-                            DepartmentCard(
-                                department: department,
-                                doctorCount: doctors.filter { $0.departmentId == department.id }.count,
-                                activeDoctorCount: doctors.filter { $0.departmentId == department.id && $0.isActive }.count
-                            )
+                VStack(spacing: 16) {
+                    if viewModel.departments.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "building.2")
+                                .font(.system(size: 40))
+                                .foregroundColor(.mint.opacity(0.3))
+                            Text("No departments to display")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Text("Add a department to get started")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                    } else if filteredDepartments.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 40))
+                                .foregroundColor(.mint.opacity(0.3))
+                            Text("No departments found")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Text("Try a different search term")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                    } else {
+                        ForEach(filteredDepartments) { department in
+                            NavigationLink {
+                                DepartmentDetailView(department: department)
+                            } label: {
+                                DepartmentListCard(department: department)
+                            }
                         }
                     }
                 }
+                .padding(.horizontal)
             }
             .padding(.vertical)
         }
         .navigationTitle("All Departments")
-        .task {
-            if let hospitalId = getCurrentHospitalId() {
-                // Fetch departments and doctors concurrently
-                async let departmentsTask = supabaseController.fetchHospitalDepartments(hospitalId: hospitalId)
-                async let doctorsTask = supabaseController.getDoctorsByHospital(hospitalId: hospitalId)
-                
-                let (fetchedDepartments, fetchedDoctors) = await (departmentsTask, doctorsTask)
-                departments = fetchedDepartments
-                doctors = fetchedDoctors
-            }
-        }
-    }
-    
-    // Helper function to get current hospital ID (implement based on your auth system)
-    private func getCurrentHospitalId() -> UUID? {
-        // Implement this based on your authentication system
-        // For example, get it from UserDefaults or your auth state
-        return nil // Replace with actual implementation
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "Search departments..."
+        )
     }
 }
 
-struct DepartmentCard: View {
+struct DepartmentListCard: View {
     let department: Department
-    let doctorCount: Int
-    let activeDoctorCount: Int
+    @EnvironmentObject private var viewModel: HospitalManagementViewModel
+    
+    private var doctorCount: Int {
+        viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID()).count
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -83,12 +113,10 @@ struct DepartmentCard: View {
                     .font(.system(size: 20))
                     .foregroundColor(.mint)
                 VStack(alignment: .leading, spacing: 4) {
-                    if let description = department.description {
-                        Text(description)
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                    }
-                    Text("₹\(String(format: "%.2f", department.fees))")
+                    Text("Department ID")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                    Text("#\(department.id.uuidString.prefix(8))")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -98,29 +126,31 @@ struct DepartmentCard: View {
             HStack(spacing: 8) {
                 Image(systemName: "person.2.fill")
                     .foregroundColor(.green)
-                Text("\(activeDoctorCount) active")
+                Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID()).filter { $0.is_active }.count) active")
                     .font(.subheadline)
                     .foregroundColor(.primary)
                 Text("•")
                     .foregroundColor(.secondary)
-                Text("\(doctorCount - activeDoctorCount) inactive")
+                Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID()).filter { !$0.is_active }.count) inactive")
                     .font(.subheadline)
                     .foregroundColor(.primary)
             }
         }
         .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 15)
                 .fill(Color(.systemBackground))
                 .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
         )
-        .padding(.horizontal)
     }
 }
 
-#Preview {
-    NavigationStack {
-        AllDepartmentsView()
+// MARK: - Preview
+struct AllDepartmentsView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            AllDepartmentsView()
+                .environmentObject(HospitalManagementViewModel())
+        }
     }
 } 

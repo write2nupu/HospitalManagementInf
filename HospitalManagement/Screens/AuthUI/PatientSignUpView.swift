@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Patient Signup View
 struct PatientSignupView: View {
     @State private var showDashboard = false
-    var patient: Patient = Patient(id: UUID(), fullName: "Ram", gender: "male", dateOfBirth: Date(), phoneNumber: "1234567890", email: "ram@mail.com")
+    var patient: Patient = Patient(id: UUID(), fullName: "Ram", gender: "male", dateOfBirth: Date(), contactNo: "1234567890", email: "ram@mail.com")
 
     var body: some View {
         NavigationStack {

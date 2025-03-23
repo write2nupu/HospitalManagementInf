@@ -24,7 +24,7 @@ struct DoctorProfileForPatient: View {
                             .background(Circle().fill(Color.mint.opacity(0.1)))
                         
                         VStack(spacing: 4) {
-                            Text(doctor.fullName)
+                            Text(doctor.full_name)
                                 .font(.title2)
                                 .fontWeight(.bold)
                             
@@ -34,7 +34,7 @@ struct DoctorProfileForPatient: View {
                                     .foregroundColor(.secondary)
                             }
                             
-                            StatusBadge(isActive: doctor.isActive)
+                            StatusBadge(isActive: doctor.is_active)
                                 .padding(.top, 4)
                         }
                     }
@@ -50,13 +50,13 @@ struct DoctorProfileForPatient: View {
                         if let department = departmentDetails {
                             InfoRow(icon: "indianrupeesign", title: "Consultation Fee", value: String(format: "₹%.2f", department.fees))
                         }
-                        InfoRow(icon: "creditcard.fill", title: "License Number", value: doctor.licenseNumber)
+                        InfoRow(icon: "creditcard.fill", title: "License Number", value: doctor.license_num)
                     }
                     
                     // Contact Information
                     InfoSection(title: "Contact Information") {
-                        InfoRow(icon: "phone.fill", title: "Phone", value: doctor.phoneNumber)
-                        InfoRow(icon: "envelope.fill", title: "Email", value: doctor.email)
+                        InfoRow(icon: "phone.fill", title: "Phone", value: doctor.phone_number)
+                        InfoRow(icon: "envelope.fill", title: "Email", value: doctor.email_address)
                     }
                     
                     // Hospital Affiliations
@@ -69,6 +69,23 @@ struct DoctorProfileForPatient: View {
                     }
                 }
                 .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.mint.opacity(0.1))
+                .cornerRadius(15)
+                .shadow(color: .mint.opacity(0.3), radius: 5, x: 0, y: 2)
+                
+                // Details Section
+                VStack(spacing: 10) {
+//                    profileCard(title: "Qualifications", value: doctor.qualifications)
+//                    profileCard(title: "Experience", value: "\(doctor.experience) years")
+//                    profileCard(title: "Consultation Fee", value: "₹\(String(format: "%.2f", doctor.consultationFee))")
+                }
+
+                // Info Sections (Aligned for Consistency)
+//                infoSection(title: "Hospital Affiliations", items: doctor.hospitalAffiliations)
+//                infoSection(title: "Available Slots", items: doctor.availableSlots)
+//                infoSection(title: "Languages Spoken", items: doctor.languagesSpoken!)
+
             }
         }
         .navigationTitle("Doctor Profile")
@@ -82,12 +99,12 @@ struct DoctorProfileForPatient: View {
         isLoading = true
         
         // Fetch department details
-        if let departmentId = doctor.departmentId {
+        if let departmentId = doctor.department_id {
             departmentDetails = await supabaseController.fetchDepartmentDetails(departmentId: departmentId)
         }
         
         // Fetch hospital affiliations
-        if let hospitalId = doctor.hospitalId {
+        if let hospitalId = doctor.hospital_id {
             hospitalAffiliations = await supabaseController.fetchHospitalAffiliations(doctorId: hospitalId)
         }
         
