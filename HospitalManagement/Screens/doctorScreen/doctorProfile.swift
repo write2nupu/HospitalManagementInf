@@ -90,42 +90,21 @@ struct DoctorProfileView: View {
             .task {
                 if let departmentId = doctor.department_id {
                     departmentDetails = await supabaseController.fetchDepartmentDetails(departmentId: departmentId)
+                    
                 }
             }
         }
     }
-    
-    // ✅ Move these functions OUTSIDE the body
-    private func profileRow(title: String, value: String) -> some View {
-        HStack {
-            Text(title).fontWeight(.none)
-            Spacer()
-            Text(value).foregroundColor(.gray)
-        }
-    }
-    
-    private func slotSetUp(slot: String, isAvailable: Bool) -> some View {
-        HStack {
-            Text(slot) // Display slot name (Morning / Evening)
-                .fontWeight(.regular)
-            
-            Spacer()
-            
-            Text(isAvailable ? "Available" : "Not Available") // Show status
-                .foregroundColor(isAvailable ? .green : .red)
-                .fontWeight(.semibold)
-        }
-        .cornerRadius(8)
-    }
-    
-    private func checkAvailability(for slot: String) -> Bool {
-        return true
-    }
-    
-    private func handleLogout() {
-        isLoggedOut = true
-    }
 }
+        
+        // Reusable Profile Row Component
+        private func profileRow(title: String, value: String) -> some View {
+            HStack {
+                Text(title).fontWeight(.none)
+                Spacer()
+                Text(value).foregroundColor(.gray)
+            }
+        }
 
 // ✅ Preview
 #Preview {
