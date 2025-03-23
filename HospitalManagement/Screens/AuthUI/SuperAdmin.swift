@@ -12,7 +12,7 @@ struct SuperAdminLoginView: View {
     @StateObject private var supabaseController = SupabaseController()
     @AppStorage("currentUserId") private var currentUserId: String = ""
     @AppStorage("isLoggedIn") private var isUserLoggedIn = false
-    @State private var superAdminUser: User? = nil
+    @State private var superAdminUser: users? = nil
     @State private var shouldShowDashboard = false
 
     var body: some View {
@@ -102,8 +102,8 @@ struct SuperAdminLoginView: View {
                 isUserLoggedIn = true
                 
                 // Check if first login from the Users table
-                let users: [User] = try await supabaseController.client
-                    .from("Users")
+                let users: [users] = try await supabaseController.client
+                    .from("users")
                     .select()
                     .eq("id", value: user.id.uuidString)
                     .execute()
@@ -182,3 +182,4 @@ struct SuperAdminLoginView: View {
 #Preview {
     SuperAdminLoginView(message: "Super Admin")
 }
+

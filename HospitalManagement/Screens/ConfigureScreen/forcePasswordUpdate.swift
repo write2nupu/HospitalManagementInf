@@ -2,7 +2,7 @@ import SwiftUI
 
 struct forcePasswordUpdate: View {
     
-    var user: User  // Accept User Data
+    var user: users  // Accept User Data
     @Environment(\.dismiss) private var dismiss
     @State private var password: String = ""
     @State private var confirmPassword: String = ""

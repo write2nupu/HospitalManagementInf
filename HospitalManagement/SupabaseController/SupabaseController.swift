@@ -14,8 +14,8 @@ class SupabaseController: ObservableObject {
     private let decoder: JSONDecoder
     init() {
         self.client = SupabaseClient(
-            supabaseURL: URL(string: "https://ktbjqlbmbhberbebtbyx.supabase.co")!,
-            supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0YmpxbGJtYmhiZXJiZWJ0Ynl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzMTk0MjMsImV4cCI6MjA1Nzg5NTQyM30._wdosJBARTE6y4t80snhslM3lOH2PHMmV6y-ErUdBPY"
+            supabaseURL: URL(string: "https://lsjxoslxrmubrcpzgnrk.supabase.co")!,
+            supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxzanhvc2x4cm11YnJjcHpnbnJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDQwOTgsImV4cCI6MjA1ODI4MDA5OH0.wxc_rk_L_9R08wyjuoTX8KyYUJ71LDxdZ9n7RFNkzwE"
         )
         self.encoder = JSONEncoder()
                 self.encoder.keyEncodingStrategy = .convertToSnakeCase
@@ -23,7 +23,7 @@ class SupabaseController: ObservableObject {
                 self.decoder = JSONDecoder()
                 self.decoder.keyDecodingStrategy = .convertFromSnakeCase
     }
-    func signUp(email: String, password: String, userData: [String: Any]) async throws -> User {
+    func signUp(email: String, password: String, userData: [String: Any]) async throws -> users {
         print("Attempting to sign up with email:", email)
         
         // Convert userData to [String: AnyJSON]
@@ -54,7 +54,7 @@ class SupabaseController: ObservableObject {
         let currentDate = ISO8601DateFormatter().string(from: Date())
         
         // Create user object
-        let user = User(
+        let user = users(
             id: userId,
             email: email,
             full_name: userData["full_name"] as? String ?? "",
@@ -69,7 +69,7 @@ class SupabaseController: ObservableObject {
         
         // Add user to User table
         try await client
-            .from("User")
+            .from("users")
             .insert(user)
             .execute()
         
@@ -98,7 +98,7 @@ class SupabaseController: ObservableObject {
         return user
     }
     
-    func signIn(email: String, password: String) async throws -> User {
+    func signIn(email: String, password: String) async throws -> users {
         print("Attempting to sign in with email:", email)
         
         let authResponse = try await client.auth.signIn(
@@ -136,7 +136,7 @@ class SupabaseController: ObservableObject {
         print("Role after normalization:", role)
         
         // Create a User object directly from the auth response
-        let user = User(
+        let user = users(
             id: userId,
             email: authResponse.user.email ?? email,
             full_name: fullName,
@@ -258,7 +258,7 @@ class SupabaseController: ObservableObject {
     func fetchHospitals() async -> [Hospital] {
         do {
             let hospitals: [Hospital] = try await client
-                .from("Hospitals")  // Capital H to match schema
+                .from("Hospital")  // Capital H to match schema
                 .select()
                 .order("name")
                 .execute()
@@ -369,7 +369,7 @@ class SupabaseController: ObservableObject {
     func addHospital(_ hospital: Hospital) async throws {
         do {
             try await client
-                .from("Hospitals")  // Capital H to match schema
+                .from("Hospital")  // Capital H to match schema
                 .insert(hospital)
                 .single()  // expect a single row
                 .execute()
@@ -384,7 +384,7 @@ class SupabaseController: ObservableObject {
     func fetchDoctorByUUID(doctorId: UUID) async -> Doctor? {
         do {
             let doctors: [Doctor] = try await client
-                .from("Doctors")
+                .from("Doctor")
                 .select("""
                     id,
                     fullName,
@@ -418,7 +418,7 @@ class SupabaseController: ObservableObject {
     func updateDoctor(_ doctor: Doctor) async {
         do {
             try await client
-                .from("Doctors")
+                .from("Doctor")
                 .update(doctor)
                 .eq("id", value: doctor.id)
                 .execute()
@@ -432,7 +432,7 @@ class SupabaseController: ObservableObject {
     func fetchHospitalAffiliations(doctorId: UUID) async -> [String] {
         do {
             let hospitals: [Hospital] = try await client
-                .from("Hospitals")
+                .from("Hospital")
                 .select()
                 .eq("id", value: doctorId)
                 .execute()
@@ -448,7 +448,7 @@ class SupabaseController: ObservableObject {
     func fetchHospitalDepartments(hospitalId: UUID) async -> [Department] {
         do {
             let departments: [Department] = try await client
-                .from("Departments")
+                .from("Department")
                 .select()
                 .eq("hospitalId", value: hospitalId)
                 .execute()
@@ -464,7 +464,7 @@ class SupabaseController: ObservableObject {
     func fetchPatientDetails(patientId: UUID) async -> Patient? {
         do {
             let patients: [Patient] = try await client
-                .from("Patients")
+                .from("Patient")
                 .select()
                 .eq("id", value: patientId)
                 .execute()
@@ -480,7 +480,7 @@ class SupabaseController: ObservableObject {
     func updatePatient(_ patient: Patient) async {
         do {
             try await client
-                .from("Patients")
+                .from("Patient")
                 .update(patient)
                 .eq("id", value: patient.id)
                 .execute()
@@ -494,7 +494,7 @@ class SupabaseController: ObservableObject {
     func getDoctorsByHospital(hospitalId: UUID) async -> [Doctor] {
         do {
             let doctors: [Doctor] = try await client
-                .from("Doctors")
+                .from("Doctor")
                 .select("""
                     id,
                     full_name,
@@ -532,8 +532,8 @@ class SupabaseController: ObservableObject {
         let defaultPhone = "1234567890"
         
         // Check if super admin already exists
-        let existingUsers: [User] = try await client
-            .from("User")
+        let existingUsers: [users] = try await client
+            .from("users")
             .select()
             .eq("role", value: "super_admin")
             .execute()

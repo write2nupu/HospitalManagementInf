@@ -247,6 +247,17 @@ struct AddHospitalView: View {
             
             print("Creating admin with ID: \(adminId) for hospital: \(hospitalId)")
             
+            // First sign up the admin using Supabase Auth
+            do {
+                try await supabaseController.client.auth.signUp(
+                    email: adminEmail,
+                    password: initialPassword
+                )
+            } catch {
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create admin account: \(error.localizedDescription)"])
+            }
+            
+            // Then create the admin record in the database
             try await supabaseController.client
                 .from("Admin")
                 .insert(admin)
@@ -258,7 +269,7 @@ struct AddHospitalView: View {
 
             // Add hospital to Supabase
             try await supabaseController.client
-                .from("Hospitals")
+                .from("Hospital")
                 .insert(hospital)
                 .execute()
             
@@ -372,9 +383,6 @@ struct QuickActionCard: View {
 }
 
 struct ContentView: View {
-    
-//    var superAdminID: UUID
-//    accept id form force update screen and fect user by that ID and stre that doctor in this variable
     
     @StateObject private var viewModel = HospitalManagementViewModel()
     @StateObject private var supabaseController = SupabaseController()

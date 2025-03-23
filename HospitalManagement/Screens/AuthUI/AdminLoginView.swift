@@ -11,7 +11,7 @@ struct AdminLoginViewS: View {
     @State private var isPasswordVisible = false
     @State private var isLoading = false
     @StateObject private var supabaseController = SupabaseController()
-    @State private var userAdminData: User?
+    @State private var userAdminData: users?
     @AppStorage("currentUserId") private var currentUserId: String = ""
     @AppStorage("isLoggedIn") private var isUserLoggedIn = false
 

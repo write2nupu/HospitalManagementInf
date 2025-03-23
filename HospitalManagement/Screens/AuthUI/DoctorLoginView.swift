@@ -10,7 +10,7 @@ struct DoctorLoginView: View {
     @State private var isPasswordVisible = false // ✅ Toggle password visibility
     @State private var isLoading = false
     @StateObject private var supabaseController = SupabaseController()
-    @State private var doctorUser: User? = nil
+    @State private var doctorUser: users? = nil
     @AppStorage("currentUserId") private var currentUserId: String = ""
     @AppStorage("isLoggedIn") private var isUserLoggedIn = false
     
