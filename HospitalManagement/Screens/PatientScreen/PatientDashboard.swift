@@ -54,6 +54,7 @@ struct PatientDashboard: View {
                 }
                 
                 Spacer()
+                    .navigationBarBackButtonHidden(true)
             }
             
             // MARK: - Navigation Title with Patient's Name

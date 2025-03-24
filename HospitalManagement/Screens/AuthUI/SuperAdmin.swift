@@ -19,7 +19,7 @@ struct SuperAdminLoginView: View {
         NavigationStack {
             VStack(spacing: 30) {
                 // App Logo
-                Image(systemName: "building.columns.fill")
+                Image(systemName: "building.2.fill")
                     .resizable()
                     .frame(width: 100, height: 100)
                     .foregroundColor(.mint)
