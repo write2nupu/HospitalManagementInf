@@ -12,6 +12,7 @@ struct AppConfig {
     static let backgroundColor = Color(.white) // BackGroundColor
     static let primaryColor = Color(.mint.opacity(0.2)) // PrimaryColor
     static let buttonColor = Color(.mint) // PrimaryColor
+    static let fontColor = Color(.black)
 }
 
 // MARK: - Hex Color Extension 

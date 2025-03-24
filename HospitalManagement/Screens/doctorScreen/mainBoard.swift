@@ -132,3 +132,5 @@ struct mainBoard: View {
         isLoading = false
     }
 }
+
+

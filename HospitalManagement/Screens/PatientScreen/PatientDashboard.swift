@@ -8,65 +8,86 @@ class HospitalManagementTestViewModel: ObservableObject {
 struct PatientDashboard: View {
     private var viewModel: HospitalManagementViewModel = .init()
     @State private var patient: Patient
-    @State private var showprofile = false
+    @State private var showProfile = false
     
     init(patient: Patient) {
         _patient = State(initialValue: patient)
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(alignment: .leading) {
-                // Top Section
-                HStack {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Hi, \(patient.fullName)")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundColor(.mint)
-                        Text("Welcome to your dashboard! Let's take care of your health.")
-                            .font(.body)
-                            .foregroundColor(.mint.opacity(0.8))
-                    }
-                    Spacer()
-                    Button(action: {
-//                        viewModel.showUserProfile = true  // ✅ No more error
-                        showprofile = true
-                    }) {
-                        Image(systemName: "person.crop.circle")
-                            .font(.system(size: 30))
-                            .foregroundColor(.mint)
-                    }
-                    .sheet(isPresented: $showprofile) {
-                        ProfileView(patient: $patient)
-                    } 
-                }
-                .padding()
                 
-                // Quick Actions Section
+                // MARK: - Subtitle Section
+                Text("Let's take care of your health.")
+                    .font(.body)
+                    .foregroundColor(AppConfig.fontColor)
+                    .padding(.horizontal)
+                
+                // MARK: - Quick Actions Section
                 Text("Quick Action")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.fontColor)
                     .padding(.horizontal)
                     .padding(.top)
                 
                 NavigationLink(destination: HospitalListView()) {
-                    VStack {
-                        Image(systemName: "building.2.fill")
+                    VStack(spacing: 12) {
+                        Image(systemName: "building.fill")
                             .font(.system(size: 40))
-                            .foregroundColor(.mint)
-                        Text("Find Hospital")
-                            .font(.headline)
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
+                        
+                        Text("Select Hospital")
+                            .font(.title3)
+                            .foregroundColor(AppConfig.fontColor)
+                            .fontWeight(.regular)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 100)
-                    .background(Color.mint.opacity(0.1))
-                    .cornerRadius(10)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 15)
+                            .fill(Color(.systemBackground))
+                            .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                    )
                     .padding(.horizontal)
                 }
+                
                 Spacer()
             }
+            
+            // MARK: - Navigation Title with Patient's Name
+            .navigationTitle(Text("Hi, \(patient.fullName)"))
+            .toolbar {
+                // Profile Picture in the Top Right
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: {
+                        showProfile = true
+                    }) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .frame(width: 40, height: 40)
+                            .foregroundColor(AppConfig.buttonColor)
+                    }
+                    .sheet(isPresented: $showProfile) {
+                        ProfileView(patient: $patient)
+                    }
+                }
+            }
+            .background(AppConfig.backgroundColor)
+            
         }
     }
+}
+
+// MARK: - Preview
+#Preview {
+    PatientDashboard(patient: Patient(
+        id: UUID(),
+        fullName: "Tarun",
+        gender: "male",
+        dateOfBirth: Date(),
+        contactNo: "1234567898",
+        email: "tarun@gmail.com"
+    ))
 }
