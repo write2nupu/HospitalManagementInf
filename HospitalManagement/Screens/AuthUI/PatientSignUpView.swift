@@ -24,15 +24,20 @@ struct PatientSignupView: View {
 struct PersonalInfoView: View {
     @Binding var showMedicalInfo: Bool
     @Binding var patientDetails: Patient?
+    @StateObject private var supabaseController = SupabaseController()
 
     @State private var fullName = ""
     @State private var gender = "Select Gender"
     @State private var dateOfBirth = Date()
     @State private var contactNumber = ""
     @State private var email = ""
+    @State private var password = ""
+    @State private var confirmPassword = ""
+    @State private var isPasswordVisible = false
 
     @State private var showAlert = false
     @State private var alertMessage = ""
+    @State private var isLoading = false
 
     let genders = ["Select Gender", "Male", "Female", "Other"]
 
@@ -66,17 +71,55 @@ struct PersonalInfoView: View {
                 .padding()
                 .background(Color.mint.opacity(0.2))
                 .cornerRadius(8)
+                
+            // Password fields
+            if isPasswordVisible {
+                TextField("Password", text: $password)
+                    .padding()
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(8)
+                
+                TextField("Confirm Password", text: $confirmPassword)
+                    .padding()
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(8)
+            } else {
+                SecureField("Password", text: $password)
+                    .padding()
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(8)
+                
+                SecureField("Confirm Password", text: $confirmPassword)
+                    .padding()
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(8)
+            }
+            
+            Button(action: { isPasswordVisible.toggle() }) {
+                Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                    .foregroundColor(.gray)
+            }
 
             Spacer()
 
-            Button(action: validateAndProceed) {
-                Text("Next")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.mint)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
+            Button(action: {
+                Task {
+                    await validateAndProceed()
+                }
+            }) {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Text("Next")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.mint)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
             }
+            .disabled(isLoading)
         }
         .padding()
         .alert(isPresented: $showAlert) {
@@ -84,13 +127,45 @@ struct PersonalInfoView: View {
         }
     }
 
-    private func validateAndProceed() {
-        if fullName.isEmpty || gender == "Select Gender" || contactNumber.isEmpty || email.isEmpty {
+    private func validateAndProceed() async {
+        if fullName.isEmpty || gender == "Select Gender" || contactNumber.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty {
             alertMessage = "Please fill in all required fields."
             showAlert = true
-        } else {
-            showMedicalInfo = true
+            return
         }
+        
+        if password != confirmPassword {
+            alertMessage = "Passwords do not match."
+            showAlert = true
+            return
+        }
+        
+        isLoading = true
+        
+        do {
+            let newPatient = Patient(
+                id: UUID(),
+                fullName: fullName,
+                gender: gender.lowercased(),
+                dateOfBirth: dateOfBirth,
+                contactNo: contactNumber,
+                email: email
+            )
+            
+            let registeredPatient = try await supabaseController.signUpPatient(
+                email: email,
+                password: password,
+                userData: newPatient
+            )
+            
+            patientDetails = registeredPatient
+            showMedicalInfo = true
+        } catch {
+            alertMessage = error.localizedDescription
+            showAlert = true
+        }
+        
+        isLoading = false
     }
 }
 
@@ -171,7 +246,7 @@ struct MedicalInfoView: View {
 
                 // Navigation trigger
                 NavigationLink(
-                    destination: PatientDashboard(patient: patient ),
+                    destination: PatientLoginSignupView(),
                     isActive: $showDashboard
                 ) {
                     EmptyView()

@@ -551,4 +551,117 @@ func getDoctorsByDepartment(departmentId: UUID) async throws -> [Doctor] {
         .value
     return doctors
 }
+
+// MARK: - Patient Authentication
+func signUpPatient(email: String, password: String, userData: Patient) async throws -> Patient {
+    print("Attempting to sign up patient with email:", email)
+    
+    let lowercaseEmail = email.lowercased()
+    
+    // First create the auth user
+    let authResponse = try await client.auth.signUp(
+        email: lowercaseEmail,
+        password: password
+    )
+    
+    print("Auth Response:", authResponse)
+    
+    let userId = authResponse.user.id
+    let currentDate = ISO8601DateFormatter().string(from: Date())
+    
+    // Create user record in users table
+    let user = users(
+        id: userId,
+        email: lowercaseEmail,
+        full_name: userData.fullname,
+        phone_number: userData.contactno,
+        role: "patient",
+        is_first_login: true,
+        is_active: true,
+        hospital_id: nil,
+        created_at: currentDate,
+        updated_at: currentDate
+    )
+    
+    try await client
+        .from("users")
+        .insert(user)
+        .execute()
+    
+    print("User added to users table successfully")
+    
+    // Create patient record with proper formatting
+    let dateFormatter = ISO8601DateFormatter()
+    let patientData: [String: AnyJSON] = [
+        "id": .string(userId.uuidString),
+        "fullname": .string(userData.fullname),
+        "gender": .string(userData.gender),
+        "dateofbirth": .string(dateFormatter.string(from: userData.dateofbirth)),
+        "contactno": .string(userData.contactno),
+        "email": .string(lowercaseEmail),
+        "detail_id": .null
+    ]
+    
+    print("Attempting to insert patient data:", patientData)
+    
+    let insertedPatients: [Patient] = try await client
+        .from("Patient")
+        .insert(patientData)
+        .select()
+        .execute()
+        .value
+    
+    guard let insertedPatient = insertedPatients.first else {
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create patient record"])
+    }
+    
+    print("Patient added to Patient table successfully")
+    return insertedPatient
+}
+
+func signInPatient(email: String, password: String) async throws -> Patient {
+    print("Attempting to sign in patient with email:", email)
+    
+    let lowercaseEmail = email.lowercased()
+    
+    // First authenticate the user
+    let authResponse = try await client.auth.signIn(
+        email: lowercaseEmail,
+        password: password
+    )
+    
+    print("Authentication successful")
+    print("User ID from auth:", authResponse.user.id)
+    
+    // Create a decoder that matches our date format
+    let decoder = JSONDecoder()
+    let dateFormatter = ISO8601DateFormatter()
+    decoder.dateDecodingStrategy = .custom { decoder in
+        let container = try decoder.singleValueContainer()
+        let dateString = try container.decode(String.self)
+        if let date = dateFormatter.date(from: dateString) {
+            return date
+        }
+        throw DecodingError.dataCorruptedError(
+            in: container,
+            debugDescription: "Cannot decode date string \(dateString)"
+        )
+    }
+    
+    // Fetch patient details using the user ID
+    let patients: [Patient] = try await client
+        .from("Patient")
+        .select()
+        .eq("id", value: authResponse.user.id.uuidString)
+        .execute()
+        .value
+    
+    guard let patient = patients.first else {
+        print("No patient found with ID:", authResponse.user.id.uuidString)
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Patient account not found. Please contact support."])
+    }
+    
+    print("Patient found:", patient.fullname)
+    return patient
+}
 }

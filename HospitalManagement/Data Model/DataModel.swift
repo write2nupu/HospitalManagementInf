@@ -85,13 +85,59 @@ struct Doctor : Identifiable, Codable {
 }
 struct Patient: Identifiable, Codable {
     var id: UUID
-    var fullName: String
+    var fullname: String
     var gender: String
-    var dateOfBirth: Date
-    var contactNo: String
+    var dateofbirth: Date
+    var contactno: String
     var email: String
     var detail_id: UUID?
     var password: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case fullname
+        case gender
+        case dateofbirth
+        case contactno
+        case email
+        case detail_id
+        case password
+    }
+    
+    init(id: UUID, fullName: String, gender: String, dateOfBirth: Date, contactNo: String, email: String, detail_id: UUID? = nil, password: String? = nil) {
+        self.id = id
+        self.fullname = fullName
+        self.gender = gender
+        self.dateofbirth = dateOfBirth
+        self.contactno = contactNo
+        self.email = email
+        self.detail_id = detail_id
+        self.password = password
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        fullname = try container.decode(String.self, forKey: .fullname)
+        gender = try container.decode(String.self, forKey: .gender)
+        
+        // Handle date decoding from string
+        if let dateString = try? container.decode(String.self, forKey: .dateofbirth) {
+            let formatter = ISO8601DateFormatter()
+            if let date = formatter.date(from: dateString) {
+                dateofbirth = date
+            } else {
+                dateofbirth = Date() // Fallback to current date if parsing fails
+            }
+        } else {
+            dateofbirth = Date() // Fallback to current date if no date string
+        }
+        
+        contactno = try container.decode(String.self, forKey: .contactno)
+        email = try container.decode(String.self, forKey: .email)
+        detail_id = try container.decodeIfPresent(UUID.self, forKey: .detail_id)
+        password = try container.decodeIfPresent(String.self, forKey: .password)
+    }
 }
 
 struct PatientDetails: Identifiable, Codable {

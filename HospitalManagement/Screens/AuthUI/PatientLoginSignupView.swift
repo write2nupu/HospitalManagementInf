@@ -16,10 +16,13 @@ struct PatientLoginSignupView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var navigateToDashboard = false
-    @State private var navigateToSignUp = false   // Added for Signup Navigation
+    @State private var navigateToSignUp = false
+    @State private var isLoading = false
+    @AppStorage("isLoggedIn") private var isUserLoggedIn = false
+    @StateObject private var supabaseController = SupabaseController()
     
-    var patent: Patient = Patient(id: UUID(), fullName: "temp", gender: "male", dateOfBirth: Date(), contactNo: "", email: "")
-
+    @State private var currentPatient: Patient?
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 30) {
@@ -58,16 +61,26 @@ struct PatientLoginSignupView: View {
                 .padding(.top, 20)
 
                 // Submit Button
-                Button(action: handleSubmit) {
-                    Text(selectedSegment == 0 ? "Login" : "Sign Up")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.mint)
-                        .cornerRadius(12)
+                Button(action: {
+                    Task {
+                        await handleSubmit()
+                    }
+                }) {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Text(selectedSegment == 0 ? "Login" : "Sign Up")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                    }
                 }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.mint)
+                .cornerRadius(12)
                 .padding(.horizontal)
+                .disabled(isLoading)
 
                 Spacer()
             }
@@ -77,29 +90,46 @@ struct PatientLoginSignupView: View {
                 Alert(title: Text("Action Required"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
             .navigationDestination(isPresented: $navigateToDashboard) {
-                PatientDashboard(patient: patent )  // Dashboard after successful Login
+                if let patient = currentPatient {
+                    PatientDashboard(patient: patient)
+                }
             }
             .navigationDestination(isPresented: $navigateToSignUp) {
-                PatientSignupView()  // Navigate to Signup Flow
+                PatientSignupView()
             }
         }
     }
 
     // MARK: - Submission Logic
-    func handleSubmit() {
+    func handleSubmit() async {
         if email.isEmpty || password.isEmpty || (selectedSegment == 1 && confirmPassword.isEmpty) {
             alertMessage = "Please fill in all required fields."
             showAlert = true
-        } else if selectedSegment == 1 && password != confirmPassword {
+            return
+        }
+        
+        if selectedSegment == 1 && password != confirmPassword {
             alertMessage = "Passwords do not match."
             showAlert = true
-        } else {
-            if selectedSegment == 0 {
-                navigateToDashboard = true  // Navigate to Dashboard for Login
-            } else {
-                navigateToSignUp = true    // Navigate to Signup Flow
-            }
+            return
         }
+        
+        isLoading = true
+        
+        do {
+            if selectedSegment == 0 { // Login
+                currentPatient = try await supabaseController.signInPatient(email: email, password: password)
+                isUserLoggedIn = true
+                navigateToDashboard = true
+            } else { // Sign Up
+                navigateToSignUp = true
+            }
+        } catch {
+            alertMessage = error.localizedDescription
+            showAlert = true
+        }
+        
+        isLoading = false
     }
 
     // MARK: - Helper Views

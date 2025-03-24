@@ -58,7 +58,7 @@ struct PatientDashboard: View {
             }
             
             // MARK: - Navigation Title with Patient's Name
-            .navigationTitle(Text("Hi, \(patient.fullName)"))
+            .navigationTitle(Text("Hi, \(patient.fullname)"))
             .toolbar {
                 // Profile Picture in the Top Right
                 ToolbarItem(placement: .topBarTrailing) {
