@@ -111,19 +111,37 @@ struct forcePasswordUpdate: View {
                     .execute()
                 print("Updated is_first_login in Users table")
             } else if user.role.lowercased().contains("admin") {
+                // Update Admin table
                 try await supabaseController.client
                     .from("Admin")
                     .update(["is_first_login": false])
                     .eq("id", value: user.id.uuidString)
                     .execute()
                 print("Updated is_first_login in Admin table")
+                
+                // Also update users table
+                try await supabaseController.client
+                    .from("users")
+                    .update(["is_first_login": false])
+                    .eq("id", value: user.id.uuidString)
+                    .execute()
+                print("Updated is_first_login in users table")
             } else if user.role.lowercased().contains("doctor") {
+                // Update Doctor table
                 try await supabaseController.client
                     .from("Doctor")
                     .update(["is_first_login": false])
                     .eq("id", value: user.id.uuidString)
                     .execute()
                 print("Updated is_first_login in Doctor table")
+                
+                // Also update users table
+                try await supabaseController.client
+                    .from("users")
+                    .update(["is_first_login": false])
+                    .eq("id", value: user.id.uuidString)
+                    .execute()
+                print("Updated is_first_login in users table")
             }
             
             errorMessage = nil

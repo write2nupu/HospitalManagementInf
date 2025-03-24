@@ -76,7 +76,11 @@ struct AdminLoginViewS: View {
             // ✅ Navigation only triggers when isLoggedIn becomes true
             .navigationDestination(isPresented: $isLoggedIn) {
                 if let user = userAdminData {
-                    forcePasswordUpdate(user: user)
+                    if user.is_first_login {
+                        forcePasswordUpdate(user: user)
+                    } else {
+                        AdminHomeView()
+                    }
                 }
             }
         }
@@ -123,25 +127,49 @@ struct AdminLoginViewS: View {
                         print("Warning: Admin has no associated hospital ID")
                     }
                     
-                    // User is an admin and authentication successful
-                    let user = users(
-                        id: authResponse.user.id,
-                        email: admin.email,
-                        full_name: admin.full_name,
-                        phone_number: admin.phone_number,
-                        role: "admin",
-                        is_first_login: admin.is_first_login ?? true,
-                        is_active: true,
-                        hospital_id: admin.hospital_id,
-                        created_at: ISO8601DateFormatter().string(from: Date()),
-                        updated_at: ISO8601DateFormatter().string(from: Date())
-                    )
+                    // Check users table for existing user
+                    let existingUsers: [users] = try await supabaseController.client.database
+                        .from("users")
+                        .select()
+                        .eq("id", value: authResponse.user.id.uuidString)
+                        .execute()
+                        .value
                     
-                    // Store user info
-                    currentUserId = user.id.uuidString
-                    isUserLoggedIn = true
-                    userAdminData = user
-                    isLoggedIn = true
+                    if let existingUser = existingUsers.first {
+                        // Use existing user's data
+                        userAdminData = existingUser
+                        currentUserId = existingUser.id.uuidString
+                        isUserLoggedIn = true
+                        isLoggedIn = true
+                        print("Found existing user, is_first_login:", existingUser.is_first_login)
+                    } else {
+                        // Create new user object for admin
+                        let user = users(
+                            id: authResponse.user.id,
+                            email: admin.email,
+                            full_name: admin.full_name,
+                            phone_number: admin.phone_number,
+                            role: "admin",
+                            is_first_login: true,
+                            is_active: true,
+                            hospital_id: admin.hospital_id,
+                            created_at: ISO8601DateFormatter().string(from: Date()),
+                            updated_at: ISO8601DateFormatter().string(from: Date())
+                        )
+                        
+                        // Create new user in users table
+                        try await supabaseController.client
+                            .from("users")
+                            .insert(user)
+                            .execute()
+                        print("Created new user record in users table")
+                        
+                        // Store user info
+                        userAdminData = user
+                        currentUserId = user.id.uuidString
+                        isUserLoggedIn = true
+                        isLoggedIn = true
+                    }
                     print("Successfully logged in as Admin")
                 } catch let authError {
                     print("Authentication error:", authError.localizedDescription)
