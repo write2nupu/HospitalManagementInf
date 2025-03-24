@@ -112,7 +112,7 @@ struct forcePasswordUpdate: View {
                     .execute()
             } else if user.role.lowercased().contains("doctor") {
                 try await supabaseController.client
-                    .from("Doctors")
+                    .from("Doctor")
                     .update(["is_first_login": false])
                     .eq("id", value: user.id.uuidString)
                     .execute()

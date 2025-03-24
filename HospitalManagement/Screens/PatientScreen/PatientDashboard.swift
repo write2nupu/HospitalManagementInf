@@ -15,7 +15,7 @@ struct PatientDashboard: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(alignment: .leading) {
                 // Top Section
                 HStack {
@@ -66,6 +66,7 @@ struct PatientDashboard: View {
                     .padding(.horizontal)
                 }
                 Spacer()
+                    .navigationBarBackButtonHidden(true)
             }
         }
     }

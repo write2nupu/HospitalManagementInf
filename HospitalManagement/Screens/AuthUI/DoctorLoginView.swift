@@ -21,7 +21,7 @@ struct DoctorLoginView: View {
         NavigationStack {
             VStack(spacing: 30) {
                 // **App Logo**
-                Image(systemName: "building.columns.fill")
+                Image(systemName: "stethoscope")
                     .resizable()
                     .frame(width: 100, height: 100)
                     .foregroundColor(.mint)

@@ -170,7 +170,12 @@ struct AddDoctorView: View {
         .task {
             if initialDepartment == nil {
                 if let hospitalId = getCurrentHospitalId() {
-                    departments = await supabaseController.fetchHospitalDepartments(hospitalId: hospitalId)
+                    do {
+                        departments = try await supabaseController.fetchHospitalDepartments(hospitalId: hospitalId)
+                    } catch {
+                        alertMessage = "Failed to load departments: \(error.localizedDescription)"
+                        showAlert = true
+                    }
                 }
             }
         }

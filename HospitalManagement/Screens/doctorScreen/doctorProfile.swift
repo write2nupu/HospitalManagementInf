@@ -96,7 +96,7 @@ struct DoctorProfileView: View {
         }
     }
     
-    // ✅ Move these functions OUTSIDE the body
+    // Move these functions OUTSIDE the body
     private func profileRow(title: String, value: String) -> some View {
         HStack {
             Text(title).fontWeight(.none)

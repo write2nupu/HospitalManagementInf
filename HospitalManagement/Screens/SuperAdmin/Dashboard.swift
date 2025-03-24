@@ -467,7 +467,7 @@ struct ContentView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Dashboard")
+            .navigationTitle("Home")
             .navigationBarBackButtonHidden(true)
             .searchable(text: $searchText, prompt: "Search hospitals...")
             .navigationBarItems(trailing: SuperAdminProfileButton(isShowingProfile: $showingProfile))

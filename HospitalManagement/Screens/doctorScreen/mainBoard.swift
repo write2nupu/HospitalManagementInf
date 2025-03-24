@@ -3,8 +3,7 @@ import SwiftUI
 
 
 struct mainBoard: View {
-//    var docID: UUID
-//    accept id form force update screen and fect user by that ID and stre that doctor in this variable
+
     
     var doctor: Doctor = Doctor(id: UUID(), full_name: "Anubhav Dubey", experience: 10, qualifications: "MBS", is_active: true, phone_num: "091234857", email_address: "anubhav@mail.com", gender: "male", license_num: "123-123-123")
     @State private var selectedTab: Tab = .dashBoard
