@@ -93,37 +93,58 @@ struct SuperAdminLoginView: View {
 
         isLoading = true
         do {
-            let user = try await supabaseController.signIn(email: email, password: password)
+            print("Attempting to login with email:", email)
             
-            // Check if user is a super admin
-            if user.role.lowercased().contains("super") && user.role.lowercased().contains("admin") {
-                // Store user info
-                currentUserId = user.id.uuidString
-                isUserLoggedIn = true
+            // First check if user exists in Users table with super_admin role
+            let superAdmins: [users] = try await supabaseController.client.database
+                .from("users")
+                .select()
+                .eq("email", value: email)
+                .eq("role", value: "super_admin")
+                .execute()
+                .value
+            
+            print("Found \(superAdmins.count) super admin(s) with email:", email)
+            
+            if let superAdmin = superAdmins.first {
+                print("Found super admin in database, attempting authentication")
                 
-                // Check if first login from the Users table
-                let users: [users] = try await supabaseController.client
-                    .from("users")
-                    .select()
-                    .eq("id", value: user.id.uuidString)
-                    .execute()
-                    .value
-                
-                if let firstUser = users.first, firstUser.is_first_login {
-                    superAdminUser = user
-                    isLoggedIn = true
-                } else {
-                    shouldShowDashboard = true
+                // Then try to authenticate
+                do {
+                    let authResponse = try await supabaseController.client.auth.signIn(
+                        email: email,
+                        password: password
+                    )
+                    print("Authentication successful")
+                    
+                    // Store user info
+                    currentUserId = authResponse.user.id.uuidString
+                    isUserLoggedIn = true
+                    
+                    // Check if first login
+                    if superAdmin.is_first_login {
+                        superAdminUser = superAdmin
+                        isLoggedIn = true
+                        print("First login detected, showing password update screen")
+                    } else {
+                        shouldShowDashboard = true
+                        print("Not first login, showing dashboard")
+                    }
+                    print("Successfully logged in as Super Admin")
+                } catch let authError {
+                    print("Authentication error:", authError.localizedDescription)
+                    errorMessage = "Invalid credentials. Please check your email and password."
+                    showAlert = true
                 }
-                print("Successfully logged in as Super Admin")
             } else {
                 errorMessage = "Access denied. You must be a Super Admin to login."
                 showAlert = true
+                print("Access denied. Email not found in Users table with super_admin role")
             }
-        } catch {
-            errorMessage = "Invalid credentials. Please try again."
+        } catch let dbError {
+            print("Database error:", dbError.localizedDescription)
+            errorMessage = "An error occurred. Please try again."
             showAlert = true
-            print("Login error: \(error.localizedDescription)")
         }
         isLoading = false
     }
