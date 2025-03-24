@@ -416,22 +416,22 @@ class SupabaseController: ObservableObject {
         }
     }
 
-    // MARK: - Fetch Hospital Departments
-    func fetchHospitalDepartments(hospitalId: UUID) async -> [Department] {
-        do {
-            let departments: [Department] = try await client
-                .from("Department")
-                .select()
-                .eq("hospitalId", value: hospitalId)
-                .execute()
-                .value
-            return departments
-        } catch {
-            print("Error fetching hospital departments: \(error)")
-            return []
-        }
-    }
-    
+//    // MARK: - Fetch Hospital Departments
+//    func fetchHospitalDepartments(hospitalId: UUID) async -> [Department] {
+//        do {
+//            let departments: [Department] = try await client
+//                .from("Department")
+//                .select()
+//                .eq("hospitalId", value: hospitalId)
+//                .execute()
+//                .value
+//            return departments
+//        } catch {
+//            print("Error fetching hospital departments: \(error)")
+//            return []
+//        }
+//    }
+//    
     // MARK: - Fetch Patient Details
     func fetchPatientDetails(patientId: UUID) async -> Patient? {
         do {
@@ -529,4 +529,26 @@ class SupabaseController: ObservableObject {
             print("Super admin already exists")
         }
     }
+
+// MARK: - Fetch Departments by Hospital
+func fetchHospitalDepartments(hospitalId: UUID) async throws -> [Department] {
+    let departments: [Department] = try await client
+        .from("Department")
+        .select()
+        .eq("hospital_id", value: hospitalId.uuidString)
+        .execute()
+        .value
+    return departments
+}
+
+// MARK: - Fetch Doctors by Department
+func getDoctorsByDepartment(departmentId: UUID) async throws -> [Doctor] {
+    let doctors: [Doctor] = try await client
+        .from("Doctor")
+        .select()
+        .eq("department_id", value: departmentId.uuidString)
+        .execute()
+        .value
+    return doctors
+}
 }

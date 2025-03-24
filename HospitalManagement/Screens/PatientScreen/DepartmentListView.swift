@@ -62,30 +62,28 @@ struct DepartmentListView: View {
         }
         
         do {
-            // Fetch departments and doctors concurrently
-            let departmentsTask = await supabaseController.fetchHospitalDepartments(hospitalId: hospitalId)
-            let doctorsTask = await supabaseController.getDoctorsByHospital(hospitalId: hospitalId)
-            
-            // Wait for both to complete and handle potential errors
-            let fetchedDepartments = try await departmentsTask
-            let allDoctors = try await doctorsTask
-            
-            // Update departments
-            departments = fetchedDepartments
-            
-            // Group active doctors by department
-            doctorsByDepartment = Dictionary(
-                grouping: allDoctors.filter { $0.is_active },
-                by: { $0.department_id ?? UUID() }
-            )
-            
-        } catch {
-            errorMessage = "Failed to load departments: \(error.localizedDescription)"
-        }
-        
-        isLoading = false
-    }
+            // Fetch departments first
+                 let fetchedDepartments = try await supabaseController.fetchHospitalDepartments(hospitalId: hospitalId)
+                 departments = fetchedDepartments
+                 
+                 // Fetch doctors for each department
+                 var doctorsByDept: [UUID: [Doctor]] = [:]
+                 for department in fetchedDepartments {
+                     let doctors = try await supabaseController.getDoctorsByDepartment(departmentId: department.id)
+                     doctorsByDept[department.id] = doctors.filter { $0.is_active }
+                 }
+                 
+                 // Update doctors by department
+                 doctorsByDepartment = doctorsByDept
+                 
+             } catch {
+                 errorMessage = "Failed to load departments: \(error.localizedDescription)"
+             }
+             
+             isLoading = false
 
+            
+        }
     // MARK: - Department Card UI
     private func departmentCard(department: Department) -> some View {
         VStack(alignment: .leading, spacing: 6) {  // 🔹 Consistent alignment
