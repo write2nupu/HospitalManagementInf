@@ -1,4 +1,5 @@
 import SwiftUI
+import PostgREST
 import Foundation
 
 struct AddDoctorView: View {
@@ -176,6 +177,15 @@ struct AddDoctorView: View {
         }
     }
     
+    // Helper function to get current hospital ID
+    private func getCurrentHospitalId() -> UUID? {
+        guard let hospitalId = UserDefaults.standard.string(forKey: "hospitalId"),
+              let hospitalUUID = UUID(uuidString: hospitalId) else {
+            return nil
+        }
+        return hospitalUUID
+    }
+    
     private func saveDoctor() {
         // Use either initialDepartment or selectedDepartment
         guard let department = initialDepartment ?? selectedDepartment else {
@@ -184,37 +194,83 @@ struct AddDoctorView: View {
             return
         }
         
+        guard let hospitalId = getCurrentHospitalId() else {
+            alertMessage = "Could not determine hospital ID"
+            showAlert = true
+            return
+        }
+        
+        let initialPassword = String((0..<8).map { _ in "9876543210abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".randomElement()! })
+        
         let newDoctor = Doctor(
             id: UUID(),
             full_name: fullName,
             department_id: department.id,
-            hospital_id: getCurrentHospitalId(),
+            hospital_id: hospitalId,
             experience: Int(experience) ?? 0,
             qualifications: qualifications,
             is_active: true,
             is_first_login: true,
-            initial_password: String((0..<8).map { _ in "9876543210abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".randomElement()! }) ,
+            initial_password: initialPassword,
             phone_num: phoneNumber,
             email_address: email,
             gender: gender,
             license_num: licenseNumber
         )
         
-        do {
-            try viewModel.addDoctor(newDoctor)
-            alertMessage = "Doctor added successfully"
-            showAlert = true
-        } catch {
-            alertMessage = "Error adding doctor: \(error.localizedDescription)"
-            showAlert = true
+        Task {
+            do {
+                // First create auth user for the doctor
+                let doctorMetadata: [String: AnyJSON] = [
+                    "full_name": .string(fullName),
+                    "phone_number": .string(phoneNumber),
+                    "role": .string("doctor"),
+                    "hospital_id": .string(hospitalId.uuidString),
+                    "department_id": .string(department.id.uuidString),
+                    "is_first_login": .bool(true),
+                    "is_active": .bool(true)
+                ]
+                
+                // Create auth user
+                let authResponse = try await supabaseController.client.auth.signUp(
+                    email: email,
+                    password: initialPassword,
+                    data: doctorMetadata
+                )
+                
+                // Update doctor ID to match auth user ID
+                var doctorWithAuthId = newDoctor
+                doctorWithAuthId.id = authResponse.user.id
+                
+                // Save to Supabase Doctor table
+                try await supabaseController.client
+                    .from("Doctor")
+                    .insert(doctorWithAuthId)
+                    .execute()
+                
+                // Update local view model
+                try viewModel.addDoctor(doctorWithAuthId)
+                
+                // Send doctor credentials via email
+                do {
+                    try await EmailService.shared.sendDoctorCredentials(
+                        to: doctorWithAuthId,
+                        password: initialPassword,
+                        departmentName: department.name
+                    )
+                    print("Doctor credentials sent successfully to \(email)")
+                } catch {
+                    print("Failed to send doctor credentials email: \(error)")
+                    // Don't throw here since doctor was created successfully
+                }
+                
+                alertMessage = "Doctor added successfully"
+                showAlert = true
+            } catch {
+                alertMessage = "Error adding doctor: \(error.localizedDescription)"
+                showAlert = true
+            }
         }
-    }
-    
-    // Helper function to get current hospital ID (implement based on your auth system)
-    private func getCurrentHospitalId() -> UUID? {
-        // Implement this based on your authentication system
-        // For example, get it from UserDefaults or your auth state
-        return nil // Replace with actual implementation
     }
 }
 

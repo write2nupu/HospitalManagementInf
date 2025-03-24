@@ -74,4 +74,24 @@ class EmailService {
         
         try await sendEmail(to: admin.email, subject: subject, body: body)
     }
+    
+    func sendDoctorCredentials(to doctor: Doctor, password: String, departmentName: String) async throws {
+        let subject = "Welcome - Your Doctor Account Credentials"
+        let body = """
+        Dear Dr. \(doctor.full_name),
+
+        Welcome to the Hospital Management System. You have been registered as a doctor in the \(departmentName) department.
+
+        Your login credentials are:
+        Email: \(doctor.email_address)
+        Initial Password: \(password)
+
+        Please change your password upon your first login for security purposes.
+
+        Best regards,
+        Hospital Management System Team
+        """
+        
+        try await sendEmail(to: doctor.email_address, subject: subject, body: body)
+    }
 }

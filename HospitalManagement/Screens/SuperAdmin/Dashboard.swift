@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import PostgREST
 
 struct HospitalCard: View {
     let hospital: Hospital
@@ -233,7 +234,7 @@ struct AddHospitalView: View {
             let adminId = UUID()
             let initialPassword = generateRandomPassword()
             
-            let admin = Admin(
+            var admin = Admin(
                 id: adminId,
                 email: adminEmail,
                 full_name: adminFullName,
@@ -247,12 +248,29 @@ struct AddHospitalView: View {
             
             print("Creating admin with ID: \(adminId) for hospital: \(hospitalId)")
             
+            // Convert admin metadata to AnyJSON format
+            let adminMetadata: [String: AnyJSON] = [
+                "full_name": .string(adminFullName),
+                "phone_number": .string(adminPhone),
+                "role": .string("admin"),
+                "hospital_id": .string(hospitalId.uuidString),
+                "is_first_login": .bool(true),
+                "is_active": .bool(true)
+            ]
+            
             // First sign up the admin using Supabase Auth
             do {
-                try await supabaseController.client.auth.signUp(
+                let authResponse = try await supabaseController.client.auth.signUp(
                     email: adminEmail,
-                    password: initialPassword
+                    password: initialPassword,
+                    data: adminMetadata
                 )
+                
+                // Update admin ID to match auth user ID
+                admin.id = authResponse.user.id
+                hospital.assigned_admin_id = admin.id
+                
+                print("Admin auth account created with ID:", authResponse.user.id)
             } catch {
                 throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create admin account: \(error.localizedDescription)"])
             }

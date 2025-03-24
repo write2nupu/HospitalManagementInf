@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct AdminLoginViewS: View {
     var message: String
@@ -91,24 +92,71 @@ struct AdminLoginViewS: View {
 
         isLoading = true
         do {
-            let user = try await supabaseController.signIn(email: emailOrPhone, password: password)
+            print("Attempting to login with email:", emailOrPhone)
             
-            // Check if user is an admin
-            if user.role.lowercased().contains("admin") {
-                // Store user info
-                currentUserId = user.id.uuidString
-                isUserLoggedIn = true
-                userAdminData = user
-                isLoggedIn = true
-                print("Successfully logged in as Admin")
+            // First check if user exists in Admin table
+            let admins: [Admin] = try await supabaseController.client.database
+                .from("Admin")
+                .select()
+                .eq("email", value: emailOrPhone)
+                .execute()
+                .value
+            
+            print("Found \(admins.count) admin(s) with email:", emailOrPhone)
+            
+            if let admin = admins.first {
+                print("Found admin in database, attempting authentication")
+                
+                // Then try to authenticate
+                do {
+                    let authResponse = try await supabaseController.client.auth.signIn(
+                        email: emailOrPhone,
+                        password: password
+                    )
+                    print("Authentication successful")
+                    
+                    // Store hospital ID in UserDefaults
+                    if let hospitalId = admin.hospital_id {
+                        UserDefaults.standard.set(hospitalId.uuidString, forKey: "hospitalId")
+                        print("Stored hospital ID in UserDefaults:", hospitalId.uuidString)
+                    } else {
+                        print("Warning: Admin has no associated hospital ID")
+                    }
+                    
+                    // User is an admin and authentication successful
+                    let user = users(
+                        id: authResponse.user.id,
+                        email: admin.email,
+                        full_name: admin.full_name,
+                        phone_number: admin.phone_number,
+                        role: "admin",
+                        is_first_login: admin.is_first_login ?? true,
+                        is_active: true,
+                        hospital_id: admin.hospital_id,
+                        created_at: ISO8601DateFormatter().string(from: Date()),
+                        updated_at: ISO8601DateFormatter().string(from: Date())
+                    )
+                    
+                    // Store user info
+                    currentUserId = user.id.uuidString
+                    isUserLoggedIn = true
+                    userAdminData = user
+                    isLoggedIn = true
+                    print("Successfully logged in as Admin")
+                } catch let authError {
+                    print("Authentication error:", authError.localizedDescription)
+                    errorMessage = "Invalid credentials. Please check your email and password."
+                    showAlert = true
+                }
             } else {
                 errorMessage = "Access denied. You must be an Admin to login."
                 showAlert = true
+                print("Access denied. Email not found in Admin table")
             }
-        } catch {
-            errorMessage = "Invalid credentials. Please try again."
+        } catch let dbError {
+            print("Database error:", dbError.localizedDescription)
+            errorMessage = "An error occurred. Please try again."
             showAlert = true
-            print("Login error: \(error.localizedDescription)")
         }
         isLoading = false
     }

@@ -101,111 +101,83 @@ class SupabaseController: ObservableObject {
     func signIn(email: String, password: String) async throws -> users {
         print("Attempting to sign in with email:", email)
         
-        let authResponse = try await client.auth.signIn(
-            email: email,
-            password: password
-        )
-        print("Auth Response:", authResponse)
+        // First check if user exists in Admin table
+        let admins: [Admin] = try await client.database
+            .from("Admin")
+            .select()
+            .eq("email", value: email)
+            .execute()
+            .value
         
-        let userId = authResponse.user.id
-        let userMetadata = authResponse.user.userMetadata
-        let currentDate = ISO8601DateFormatter().string(from: Date())
+        print("Found \(admins.count) admin(s) with email: \(email)")
         
-        print("Raw userMetadata:", userMetadata)
-        
-        // Extract values from userMetadata
-        let fullName = userMetadata["full_name"] as? String ?? ""
-        let phoneNumber = userMetadata["phone_number"] as? String ?? ""
-        
-        // Extract and normalize role
-        var role = "patient"  // default role
-        if let metadataRole = userMetadata["role"] {
-            // Handle both String and non-String cases
-            if let roleStr = metadataRole as? String {
-                role = roleStr
-            } else {
-                // If it's not a String, convert it to string
-                role = String(describing: metadataRole)
-            }
-        } else if let authRole = authResponse.user.role {
-            role = authRole
-        }
-        
-        // Normalize role to lowercase for comparison
-        role = role.lowercased()
-        print("Role after normalization:", role)
-        
-        // Create a User object directly from the auth response
-        let user = users(
-            id: userId,
-            email: authResponse.user.email ?? email,
-            full_name: fullName,
-            phone_number: phoneNumber,
-            role: role,
-            is_first_login: true,
-            is_active: true,
-            hospital_id: nil,
-            created_at: currentDate,
-            updated_at: currentDate
-        )
-        
-        print("Created user object with role:", user.role)
-        
-        // For super_admin role, we don't need to store in any table
-        if role.contains("super") && role.contains("admin") {
-            print("Detected super admin role, returning user directly")
-            return user
-        }
-        
-        // For other roles, try to find or create in their respective tables
-        switch role {
-        case "admin":
-            // Try to fetch existing admin
+        if let admin = admins.first {
+            print("Found admin in Admin table:", admin.email)
+            
+            // Then try to authenticate
             do {
-                let admins: [Admin] = try await client.database
-                    .from("Admin")
+                let authResponse = try await client.auth.signIn(
+                    email: email,
+                    password: password
+                )
+                print("Authentication successful for admin")
+                
+                // Check if user exists in Users table
+                let existingUsers: [users] = try await client.database
+                    .from("users")
                     .select()
-                    .eq("id", value: userId.uuidString)
+                    .eq("email", value: email)
                     .execute()
                     .value
                 
-                if let _ = admins.first {
-                    return user
+                print("Found \(existingUsers.count) user(s) with email: \(email)")
+                
+                if let existingUser = existingUsers.first {
+                    print("Found existing user with role:", existingUser.role)
+                    // Update role to ensure it's admin
+                    if existingUser.role != "admin" {
+                        var updatedUser = existingUser
+                        updatedUser.role = "admin"
+                        try await client.database
+                            .from("users")
+                            .update(updatedUser)
+                            .eq("id", value: existingUser.id)
+                            .execute()
+                        print("Updated user role to admin")
+                        return updatedUser
+                    }
+                    return existingUser
                 }
                 
-                // Create new admin if not found
-                let admin = Admin(
-                    id: userId,
-                    email: user.email,
-                    full_name: user.full_name,
-                    phone_number: user.phone_number ?? "",
-                    hospital_id: nil,
-                    is_first_login: true,
-                    initial_password: String((0..<6).map { _ in "0123456789".randomElement()! })
+                // Create new user record for admin
+                let adminUser = users(
+                    id: authResponse.user.id,
+                    email: admin.email,
+                    full_name: admin.full_name,
+                    phone_number: admin.phone_number,
+                    role: "admin",
+                    is_first_login: admin.is_first_login ?? true,
+                    is_active: true,
+                    hospital_id: admin.hospital_id,
+                    created_at: ISO8601DateFormatter().string(from: Date()),
+                    updated_at: ISO8601DateFormatter().string(from: Date())
                 )
                 
                 try await client.database
-                    .from("Admin")
-                    .insert(admin)
+                    .from("users")
+                    .insert(adminUser)
                     .execute()
+                
+                print("Created new user record with admin role")
+                return adminUser
             } catch {
-                print("Error handling admin user:", error)
+                print("Authentication error:", error.localizedDescription)
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid credentials. Please check your email and password."])
             }
-            
-        case "doctor":
-            // Similar logic for doctors
-            break
-            
-        case "patient":
-            // Similar logic for patients
-            break
-            
-        default:
-            print("Unhandled role type:", role)
-            break
         }
         
-        return user
+        print("No admin found with email: \(email)")
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Access denied. You must be an Admin to login."])
     }
     
     // MARK: - Fetch Patients
