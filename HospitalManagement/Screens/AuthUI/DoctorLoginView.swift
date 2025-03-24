@@ -93,24 +93,73 @@ struct DoctorLoginView: View {
 
         isLoading = true
         do {
-            let user = try await supabaseController.signIn(email: emailOrPhone, password: password)
+            print("Attempting to login with email:", emailOrPhone)
             
-            // Check if user is a doctor
-            if user.role.lowercased().contains("doctor") {
-                // Store user info
-                currentUserId = user.id.uuidString
-                isUserLoggedIn = true
-                doctorUser = user
-                isLoggedIn = true
-                print("Successfully logged in as Doctor")
+            // First check if user exists in Doctor table
+            let doctors: [Doctor] = try await supabaseController.client.database
+                .from("Doctor")
+                .select()
+                .eq("email_address", value: emailOrPhone)
+                .execute()
+                .value
+            
+            print("Found \(doctors.count) doctor(s) with email:", emailOrPhone)
+            
+            if let doctor = doctors.first {
+                print("Found doctor in database, attempting authentication")
+                
+                // Then try to authenticate
+                do {
+                    let authResponse = try await supabaseController.client.auth.signIn(
+                        email: emailOrPhone,
+                        password: password
+                    )
+                    print("Authentication successful")
+                    
+                    // Store hospital and department IDs in UserDefaults
+                    if let hospitalId = doctor.hospital_id {
+                        UserDefaults.standard.set(hospitalId.uuidString, forKey: "hospitalId")
+                        print("Stored hospital ID in UserDefaults:", hospitalId.uuidString)
+                    }
+                    if let departmentId = doctor.department_id {
+                        UserDefaults.standard.set(departmentId.uuidString, forKey: "departmentId")
+                        print("Stored department ID in UserDefaults:", departmentId.uuidString)
+                    }
+                    
+                    // Create user object for doctor
+                    let user = users(
+                        id: authResponse.user.id,
+                        email: doctor.email_address,
+                        full_name: doctor.full_name,
+                        phone_number: doctor.phone_num,
+                        role: "doctor",
+                        is_first_login: doctor.is_first_login ?? true,
+                        is_active: doctor.is_active,
+                        hospital_id: doctor.hospital_id,
+                        created_at: ISO8601DateFormatter().string(from: Date()),
+                        updated_at: ISO8601DateFormatter().string(from: Date())
+                    )
+                    
+                    // Store user info
+                    currentUserId = user.id.uuidString
+                    isUserLoggedIn = true
+                    doctorUser = user
+                    isLoggedIn = true
+                    print("Successfully logged in as Doctor")
+                } catch let authError {
+                    print("Authentication error:", authError.localizedDescription)
+                    errorMessage = "Invalid credentials. Please check your email and password."
+                    showAlert = true
+                }
             } else {
                 errorMessage = "Access denied. You must be a Doctor to login."
                 showAlert = true
+                print("Access denied. Email not found in Doctor table")
             }
-        } catch {
-            errorMessage = "Invalid credentials. Please try again."
+        } catch let dbError {
+            print("Database error:", dbError.localizedDescription)
+            errorMessage = "An error occurred. Please try again."
             showAlert = true
-            print("Login error: \(error.localizedDescription)")
         }
         isLoading = false
     }

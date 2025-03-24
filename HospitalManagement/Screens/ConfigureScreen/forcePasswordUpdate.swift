@@ -1,4 +1,5 @@
 import SwiftUI
+import PostgREST
 
 struct forcePasswordUpdate: View {
     
@@ -94,8 +95,12 @@ struct forcePasswordUpdate: View {
         
         isLoading = true
         do {
+            print("Attempting to update password for user:", user.id.uuidString)
+            print("User role:", user.role)
+            
             // First update the password
             try await supabaseController.client.auth.update(user: .init(password: password))
+            print("Password updated successfully in auth")
             
             // Then update is_first_login flag in the appropriate table based on role
             if user.role.lowercased().contains("super") && user.role.lowercased().contains("admin") {
@@ -104,23 +109,30 @@ struct forcePasswordUpdate: View {
                     .update(["is_first_login": false])
                     .eq("id", value: user.id.uuidString)
                     .execute()
+                print("Updated is_first_login in Users table")
             } else if user.role.lowercased().contains("admin") {
                 try await supabaseController.client
                     .from("Admin")
                     .update(["is_first_login": false])
                     .eq("id", value: user.id.uuidString)
                     .execute()
+                print("Updated is_first_login in Admin table")
             } else if user.role.lowercased().contains("doctor") {
                 try await supabaseController.client
-                    .from("Doctors")
+                    .from("Doctor")
                     .update(["is_first_login": false])
                     .eq("id", value: user.id.uuidString)
                     .execute()
+                print("Updated is_first_login in Doctor table")
             }
             
             errorMessage = nil
             isUpdated = true
         } catch {
+            print("Error updating password:", error)
+            if let postgrestError = error as? PostgrestError {
+                print("Postgrest error details:", postgrestError)
+            }
             errorMessage = "Failed to update password: \(error.localizedDescription)"
         }
         isLoading = false

@@ -119,7 +119,7 @@ struct updatePassword: View {
                 }
             }
             .fullScreenCover(isPresented: $isUpdated) { // Full-screen navigation
-                mainBoard(doctor: doctor)
+                mainBoard()
                     .navigationBarBackButtonHidden(true) // Removes back button
             }
         }
