@@ -52,10 +52,11 @@ struct PersonalInfoView: View {
 
             GenderPickerView(gender: $gender, genders: genders)
 
-            DatePicker("Date of Birth", selection: $dateOfBirth, displayedComponents: .date)
+            DatePicker("Date of Birth", selection: $dateOfBirth, in: ...Calendar.current.date(byAdding: .day, value: -1, to: Date())!, displayedComponents: .date)
                 .padding()
                 .background(Color.mint.opacity(0.2))
                 .cornerRadius(8)
+
 
             TextField("Contact Number", text: $contactNumber)
                 .keyboardType(.phonePad)

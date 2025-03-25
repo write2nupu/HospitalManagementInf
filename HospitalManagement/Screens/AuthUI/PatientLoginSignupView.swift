@@ -18,14 +18,17 @@ struct PatientLoginSignupView: View {
             VStack(spacing: 30) {
                 // Title
                 VStack(spacing: 5) {
-                    Text("Patient Portal")
+                    Image(systemName: "person.fill")
+                        .resizable()
+                        .frame(width: 100, height: 100)
+                        .foregroundColor(.mint)
+                        .padding(.bottom, 10)
+
+                    // **Title**
+                    Text("Patient")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.mint)
-                    
-                    Text("Welcome! Please Login")
-                        .font(.body)
-                        .foregroundColor(.black)
                 }
                 .padding(.top, 40)
                 
@@ -60,11 +63,17 @@ struct PatientLoginSignupView: View {
                 
                 // Signup Button
                 NavigationLink(destination: PatientSignupView()) {
-                    Text("Don't have an account? Sign Up")
-                        .font(.headline)
-                        .foregroundColor(.black)
-                        .padding(.top, 10)
-                        .background(Color.clear)
+                    HStack(spacing: 0) {
+                        Text("Don't have an account? ")
+                            .font(.body)
+                            .foregroundColor(.black)
+                        
+                        Text("Sign Up")
+                            .font(.headline)
+                            .foregroundColor(.mint)
+                    }
+                    .padding(.top, 10)
+                    .background(Color.clear)
                 }
                 
                 Spacer()
