@@ -1,14 +1,14 @@
 import SwiftUICore
 import SwiftUI
 
-
 struct mainBoard: View {
-//    var docID: UUID
-//    accept id form force update screen and fect user by that ID and stre that doctor in this variable
-    
-    var doctor: Doctor = Doctor(id: UUID(), full_name: "Anubhav Dubey", experience: 10, qualifications: "MBS", is_active: true, phone_number: "091234857", email_address: "anubhav@mail.com", gender: "male", license_num: "123-123-123")
+    @StateObject private var supabaseController = SupabaseController()
+    @AppStorage("currentUserId") private var currentUserId: String = ""
     @State private var selectedTab: Tab = .dashBoard
     @State private var showProfile = false
+    @State private var doctor: Doctor?
+    @State private var isLoading = true
+    @State private var errorMessage: String?
 
     enum Tab {
         case appointments, patients, dashBoard
@@ -21,7 +21,7 @@ struct mainBoard: View {
         case .patients:
             return "Patients"
         case .dashBoard:
-            return "Hi, Doctor"
+            return "Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")"
         }
     }
     
@@ -30,55 +30,107 @@ struct mainBoard: View {
             ZStack {
                 AppConfig.backgroundColor.ignoresSafeArea()
                 
-                VStack {
-                    // **Top Bar with Profile Button & Welcome Message**
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(heading) // ✅ Dynamically updates based on selectedTab
-                                .font(.largeTitle)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
-                        }
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            showProfile = true // ✅ Open profile modally
-                        }) {
-                            Image(systemName: "person.crop.circle.fill")
-                                .resizable()
-                                .frame(width: 40, height: 40)
-                                .foregroundColor(AppConfig.buttonColor)
-                        }
-                        
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 10)
-                    
-                    VStack(spacing: 0) {
-                        // **Content Area (Switches Based on Selected Tab)**
-                        Group {
-                            if selectedTab == .appointments {
-                                AppointmentView()
-                            } else if selectedTab == .patients {
-                                patientView()
-                            } else if selectedTab == .dashBoard {
-                                DoctorDashBoard()
+                if isLoading {
+                    ProgressView("Loading...")
+                } else if let error = errorMessage {
+                    VStack {
+                        Text(error)
+                            .foregroundColor(.red)
+                        Button("Retry") {
+                            Task {
+                                await fetchDoctorDetails()
                             }
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                        // **Custom Tab Bar**
-//                        TabBarView(selectedTab: $selectedTab)
-                        
                     }
-                    .ignoresSafeArea(.keyboard, edges: .bottom)
+                } else if let doctor = doctor {
+                    VStack {
+                        // **Top Bar with Profile Button & Welcome Message**
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(heading)
+                                    .font(.largeTitle)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.primary)
+                            }
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                showProfile = true
+                            }) {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .resizable()
+                                    .frame(width: 40, height: 40)
+                                    .foregroundColor(AppConfig.buttonColor)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 10)
+                        
+                        VStack(spacing: 0) {
+                            // **Content Area (Switches Based on Selected Tab)**
+                            Group {
+                                if selectedTab == .appointments {
+                                    AppointmentView()
+                                } else if selectedTab == .patients {
+                                    patientView()
+                                } else if selectedTab == .dashBoard {
+                                    DoctorDashBoard()
+                                }
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                        .ignoresSafeArea(.keyboard, edges: .bottom)
+                    }
                 }
             }
-            .sheet(isPresented: $showProfile) { // ✅ Modal presentation
-                DoctorProfileView(doctor: doctor)
+            .sheet(isPresented: $showProfile) {
+                if let doctor = doctor {
+                    DoctorProfileView(doctor: doctor)
+                }
             }
             .navigationBarBackButtonHidden(true)
+            .task {
+                await fetchDoctorDetails()
+            }
         }
     }
+    
+    private func fetchDoctorDetails() async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            print("Fetching doctor details for ID:", currentUserId)
+            
+            guard let doctorId = UUID(uuidString: currentUserId) else {
+                errorMessage = "Invalid doctor ID"
+                isLoading = false
+                return
+            }
+            
+            // Fetch doctor details from Supabase
+            let doctors: [Doctor] = try await supabaseController.client.database
+                .from("Doctor")
+                .select()
+                .eq("id", value: doctorId)
+                .execute()
+                .value
+            
+            if let fetchedDoctor = doctors.first {
+                print("Doctor details fetched successfully")
+                doctor = fetchedDoctor
+            } else {
+                print("No doctor found with ID:", doctorId)
+                errorMessage = "Doctor not found"
+            }
+        } catch {
+            print("Error fetching doctor details:", error)
+            errorMessage = "Failed to load doctor details"
+        }
+        
+        isLoading = false
+    }
 }
+
+

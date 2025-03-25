@@ -186,63 +186,77 @@ struct EditHospitalView: View {
     @State private var availableAdmins: [Admin] = []
     let onSave: (Hospital) -> Void
     
-    var body: some View {
-        Form {
-            Section("Hospital Information") {
-                TextField("Name", text: $hospital.name)
-                TextField("License Number", text: $hospital.license_number)
-                TextField("Address", text: $hospital.address)
-                TextField("City", text: $hospital.city)
-                TextField("State", text: $hospital.state)
-                TextField("Pincode", text: $hospital.pincode)
-            }
-            
-            Section("Contact Information") {
-                TextField("Phone", text: $hospital.mobile_number)
-                    .keyboardType(.phonePad)
-                TextField("Email", text: $hospital.email)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-            }
-            
-            Section("Admin Assignment") {
-                if !availableAdmins.isEmpty {
-                    Picker("Select Admin", selection: $selectedAdmin) {
-                        Text("None").tag(Optional<Admin>.none)
-                        ForEach(availableAdmins) { admin in
-                            Text(admin.full_name).tag(Optional(admin))
-                        }
+    // Break down the form sections into separate views
+    private var hospitalInfoSection: some View {
+        Section("Hospital Information") {
+            TextField("Name", text: $hospital.name)
+            TextField("License Number", text: $hospital.license_number)
+            TextField("Address", text: $hospital.address)
+            TextField("City", text: $hospital.city)
+            TextField("State", text: $hospital.state)
+            TextField("Pincode", text: $hospital.pincode)
+        }
+    }
+    
+    private var contactInfoSection: some View {
+        Section("Contact Information") {
+            TextField("Mobile Number", text: $hospital.mobile_number)
+            TextField("Email", text: $hospital.email)
+        }
+    }
+    
+    private var adminSection: some View {
+        Section("Admin Assignment") {
+            if !availableAdmins.isEmpty {
+                Picker("Select Admin", selection: $selectedAdmin) {
+                    Text("None").tag(Optional<Admin>.none)
+                    ForEach(availableAdmins) { admin in
+                        Text(admin.full_name).tag(Optional(admin))
                     }
-                } else {
-                    Text("No available admins")
                 }
+            } else {
+                Text("No available admins")
             }
         }
-        .navigationTitle("Edit Hospital")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarItems(
-            leading: Button("Cancel") {
-                isPresented = false
-            },
-            trailing: Button("Save") {
-                hospital.assigned_admin_id = selectedAdmin?.id
-                onSave(hospital)
-                isPresented = false
+    }
+    
+    private var statusSection: some View {
+        Section("Status") {
+            Toggle("Active", isOn: $hospital.is_active)
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                hospitalInfoSection
+                contactInfoSection
+                adminSection
+                statusSection
             }
-        )
-        .task {
-            do {
-                let admins: [Admin] = try await supabaseController.client
-                    .from("Admins")
-                    .select()
-                    .execute()
-                    .value
-                availableAdmins = admins
-                if let adminId = hospital.assigned_admin_id {
-                    selectedAdmin = admins.first { $0.id == adminId }
+            .navigationTitle("Edit Hospital")
+            .navigationBarItems(
+                leading: Button("Cancel") { isPresented = false },
+                trailing: Button("Save") {
+                    hospital.assigned_admin_id = selectedAdmin?.id
+                    onSave(hospital)
+                    isPresented = false
                 }
-            } catch {
-                print("Error fetching admins: \(error)")
+            )
+            .task {
+                do {
+                    let admins: [Admin] = try await supabaseController.client
+                        .from("Admin")
+                        .select()
+                        .execute()
+                        .value
+                    availableAdmins = admins
+                    if let adminId = hospital.assigned_admin_id {
+                        selectedAdmin = admins.first { $0.id == adminId }
+                    }
+                } catch {
+                    print("Error fetching admins: \(error)")
+                }
             }
         }
     }

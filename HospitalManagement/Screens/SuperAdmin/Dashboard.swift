@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import PostgREST
 
 struct HospitalCard: View {
     let hospital: Hospital
@@ -213,21 +214,10 @@ struct AddHospitalView: View {
         defer { isSubmitting = false }
         
         do {
-            // First create the admin
-            let adminId = UUID()
-            let admin = Admin(
-                id: adminId,
-                email: adminEmail,
-                full_name: adminFullName,
-                phone_number: adminPhone,
-                hospital_id: nil,
-                is_first_login: true,
-                initial_password: generateRandomPassword()
-            )
-            
-            // Create the hospital
-            let hospital = Hospital(
-                id: UUID(),
+            // First create the hospital without admin
+            let hospitalId = UUID()
+            var hospital = Hospital(
+                id: hospitalId,
                 name: name,
                 address: address,
                 city: city,
@@ -237,31 +227,97 @@ struct AddHospitalView: View {
                 email: email,
                 license_number: licenseNumber,
                 is_active: isActive,
-                assigned_admin_id: adminId
+                assigned_admin_id: nil  // Initially no admin
+            )
+
+            // Then create the admin
+            let adminId = UUID()
+            let initialPassword = generateRandomPassword()
+            
+            var admin = Admin(
+                id: adminId,
+                email: adminEmail,
+                full_name: adminFullName,
+                phone_number: adminPhone,
+                hospital_id: hospitalId,  // Link to hospital
+                is_first_login: true,
+                initial_password: initialPassword
             )
             
-            // Add admin to Supabase
+            hospital.assigned_admin_id = admin.id
+            
+            print("Creating admin with ID: \(adminId) for hospital: \(hospitalId)")
+            
+            // Convert admin metadata to AnyJSON format
+            let adminMetadata: [String: AnyJSON] = [
+                "full_name": .string(adminFullName),
+                "phone_number": .string(adminPhone),
+                "role": .string("admin"),
+                "hospital_id": .string(hospitalId.uuidString),
+                "is_first_login": .bool(true),
+                "is_active": .bool(true)
+            ]
+            
+            // First sign up the admin using Supabase Auth
+            do {
+                let authResponse = try await supabaseController.client.auth.signUp(
+                    email: adminEmail,
+                    password: initialPassword,
+                    data: adminMetadata
+                )
+                
+                // Update admin ID to match auth user ID
+                admin.id = authResponse.user.id
+                hospital.assigned_admin_id = admin.id
+                
+                print("Admin auth account created with ID:", authResponse.user.id)
+            } catch {
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create admin account: \(error.localizedDescription)"])
+            }
+            
+            // Then create the admin record in the database
             try await supabaseController.client
-                .from("Admins")
+                .from("Admin")
                 .insert(admin)
                 .execute()
-            
+                
+            print("Admin created successfully")
+                
+            print("Creating hospital with ID: \(hospitalId)")
+
             // Add hospital to Supabase
             try await supabaseController.client
-                .from("Hospitals")
+                .from("Hospital")
                 .insert(hospital)
                 .execute()
+            
+            print("Hospital created successfully")
+            
+            // Send admin credentials via email
+            do {
+                try await EmailService.shared.sendAdminCredentials(to: admin, hospitalName: hospital.name)
+                print("Admin credentials sent successfully to \(admin.email)")
+            } catch {
+                print("Failed to send admin credentials email: \(error)")
+                // Note: We don't throw here since the hospital and admin were created successfully
+            }
+            
+            // Refresh the hospitals list
+            if let parentViewModel = viewModel as? HospitalManagementViewModel {
+                parentViewModel.hospitals = await supabaseController.fetchHospitals()
+            }
             
             dismiss()
         } catch {
             validationMessage = "Error saving hospital: \(error.localizedDescription)"
+            print("Error saving hospital: \(error)")
             showingValidationAlert = true
         }
     }
     
     private func generateRandomPassword() -> String {
-        let digits = "0123456789"
-        return String((0..<6).map { _ in digits.randomElement()! })
+        let password = "9876543210abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        return String((0..<8).map { _ in password.randomElement()! })
     }
     
     private var isValidForm: Bool {
@@ -346,19 +402,16 @@ struct QuickActionCard: View {
 
 struct ContentView: View {
     
-//    var superAdminID: UUID
-//    accept id form force update screen and fect user by that ID and stre that doctor in this variable
-    
     @StateObject private var viewModel = HospitalManagementViewModel()
     @StateObject private var supabaseController = SupabaseController()
     @State private var showingAddHospital = false
     @State private var showingProfile = false
     @State private var searchText = ""
-    @State private var showingAllHospitals = false
-    @State private var hospitals: [Hospital] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
     
     var filteredHospitals: [Hospital] {
-        let sorted = (searchText.isEmpty ? hospitals : hospitals.filter { hospital in
+        let sorted = (searchText.isEmpty ? viewModel.hospitals : viewModel.hospitals.filter { hospital in
             hospital.name.localizedCaseInsensitiveContains(searchText) ||
             hospital.city.localizedCaseInsensitiveContains(searchText) ||
             hospital.state.localizedCaseInsensitiveContains(searchText)
@@ -374,57 +427,62 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    // Quick Actions Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Quick Actions")
-                            .font(.headline)
-                            .foregroundColor(.black)
-                            .padding(.horizontal)
-                        
-                        QuickActionCard {
-                            showingAddHospital = true
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    // Hospitals Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("Hospitals")
+                if isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    VStack(spacing: 24) {
+                        // Quick Actions Section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Quick Actions")
                                 .font(.headline)
                                 .foregroundColor(.black)
-                            Spacer()
-                            NavigationLink("See All", destination: HospitalList(hospitals: filteredHospitals, viewModel: viewModel))
-                                .foregroundColor(.mint)
-                        }
-                        .padding(.horizontal)
-                        
-                        if viewModel.hospitals.isEmpty {
-                            VStack(spacing: 12) {
-                                Image(systemName: "building.2")
-                                    .font(.system(size: 50))
-                                    .foregroundColor(.mint)
-                                Text("No hospitals yet")
-                                    .font(.title3)
-                                    .foregroundColor(.secondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
-                        } else {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                LazyHStack(spacing: 16) {
-                                    ForEach(filteredHospitals) { hospital in
-                                        HospitalCard(hospital: hospital, viewModel: viewModel)
-                                            .frame(width: 300)
-                                    }
-                                }
                                 .padding(.horizontal)
+                            
+                            QuickActionCard {
+                                showingAddHospital = true
+                            }
+                            .padding(.horizontal)
+                        }
+                        
+                        // Hospitals Section
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                Text("Hospitals")
+                                    .font(.headline)
+                                    .foregroundColor(.black)
+                                Spacer()
+                                NavigationLink("See All", destination: HospitalList(hospitals: filteredHospitals, viewModel: viewModel))
+                                    .foregroundColor(.mint)
+                            }
+                            .padding(.horizontal)
+                            
+                            if viewModel.hospitals.isEmpty {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "building.2")
+                                        .font(.system(size: 50))
+                                        .foregroundColor(.mint)
+                                    Text("No hospitals yet")
+                                        .font(.title3)
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 40)
+                            } else {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    LazyHStack(spacing: 16) {
+                                        ForEach(filteredHospitals) { hospital in
+                                            HospitalCard(hospital: hospital, viewModel: viewModel)
+                                                .frame(width: 300)
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
                             }
                         }
                     }
+                    .padding(.vertical)
                 }
-                .padding(.vertical)
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Dashboard")
@@ -437,11 +495,33 @@ struct ContentView: View {
             .sheet(isPresented: $showingProfile) {
                 SuperAdminProfileView()
             }
+            .refreshable {
+                await loadHospitals()
+            }
+            .alert("Error", isPresented: .constant(errorMessage != nil)) {
+                Button("OK") {
+                    errorMessage = nil
+                }
+            } message: {
+                if let error = errorMessage {
+                    Text(error)
+                }
+            }
         }
         .task {
-            let fetchedHospitals = await supabaseController.fetchHospitals()
-            hospitals = fetchedHospitals
+            await loadHospitals()
         }
+    }
+    
+    private func loadHospitals() async {
+        isLoading = true
+        do {
+            let fetchedHospitals = await supabaseController.fetchHospitals()
+            viewModel.hospitals = fetchedHospitals
+        } catch {
+            errorMessage = "Failed to load hospitals: \(error.localizedDescription)"
+        }
+        isLoading = false
     }
 }
 

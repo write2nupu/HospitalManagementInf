@@ -55,7 +55,7 @@ struct DoctorProfileForPatient: View {
                     
                     // Contact Information
                     InfoSection(title: "Contact Information") {
-                        InfoRow(icon: "phone.fill", title: "Phone", value: doctor.phone_number)
+                        InfoRow(icon: "phone.fill", title: "Phone", value: doctor.phone_num)
                         InfoRow(icon: "envelope.fill", title: "Email", value: doctor.email_address)
                     }
                     

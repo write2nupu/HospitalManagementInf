@@ -36,7 +36,7 @@ struct Admin: Identifiable, Codable, Hashable {
 }
 
 struct Hospital: Identifiable, Codable {
-    var id : UUID
+    var id: UUID
     var name: String
     var address: String
     var city: String
@@ -44,7 +44,7 @@ struct Hospital: Identifiable, Codable {
     var pincode: String
     var mobile_number: String
     var email: String
-    var license_number : String
+    var license_number: String
     var is_active: Bool
     var assigned_admin_id: UUID?
     
@@ -77,7 +77,7 @@ struct Doctor : Identifiable, Codable {
     var is_active: Bool
     var is_first_login: Bool?
     var initial_password: String?
-    var phone_number: String
+    var phone_num: String
     var email_address: String
     var gender : String
     var license_num: String
@@ -85,13 +85,59 @@ struct Doctor : Identifiable, Codable {
 }
 struct Patient: Identifiable, Codable {
     var id: UUID
-    var fullName: String
+    var fullname: String
     var gender: String
-    var dateOfBirth: Date
-    var contactNo: String
+    var dateofbirth: Date
+    var contactno: String
     var email: String
     var detail_id: UUID?
     var password: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case fullname
+        case gender
+        case dateofbirth
+        case contactno
+        case email
+        case detail_id
+        case password
+    }
+    
+    init(id: UUID, fullName: String, gender: String, dateOfBirth: Date, contactNo: String, email: String, detail_id: UUID? = nil, password: String? = nil) {
+        self.id = id
+        self.fullname = fullName
+        self.gender = gender
+        self.dateofbirth = dateOfBirth
+        self.contactno = contactNo
+        self.email = email
+        self.detail_id = detail_id
+        self.password = password
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        fullname = try container.decode(String.self, forKey: .fullname)
+        gender = try container.decode(String.self, forKey: .gender)
+        
+        // Handle date decoding from string
+        if let dateString = try? container.decode(String.self, forKey: .dateofbirth) {
+            let formatter = ISO8601DateFormatter()
+            if let date = formatter.date(from: dateString) {
+                dateofbirth = date
+            } else {
+                dateofbirth = Date() // Fallback to current date if parsing fails
+            }
+        } else {
+            dateofbirth = Date() // Fallback to current date if no date string
+        }
+        
+        contactno = try container.decode(String.self, forKey: .contactno)
+        email = try container.decode(String.self, forKey: .email)
+        detail_id = try container.decodeIfPresent(UUID.self, forKey: .detail_id)
+        password = try container.decodeIfPresent(String.self, forKey: .password)
+    }
 }
 
 struct PatientDetails: Identifiable, Codable {
@@ -119,9 +165,4 @@ enum AppointmentStatus: String, Codable {
     case scheduled
     case completed
     case cancelled
-}
-
-struct AuthData{
-    var id: UUID?
-    var role: String
 }

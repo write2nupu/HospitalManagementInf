@@ -3,6 +3,7 @@ import SwiftUI
 struct AddDepartmentView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var viewModel: HospitalManagementViewModel
+    @StateObject private var supabaseController = SupabaseController()
     @State private var departmentName = ""
     @State private var description = ""
     @State private var feesString = ""
@@ -80,21 +81,45 @@ struct AddDepartmentView: View {
             return
         }
         
+        // Get the current hospital ID from UserDefaults
+        guard let hospitalId = UserDefaults.standard.string(forKey: "hospitalId"),
+              let hospitalUUID = UUID(uuidString: hospitalId) else {
+            print("No hospital ID found in UserDefaults")
+            alertMessage = "Could not determine hospital ID. Please log out and log in again."
+            showAlert = true
+            return
+        }
+        
+        print("Creating department for hospital:", hospitalId)
+        
         let department = Department(
             id: UUID(),
             name: departmentName,
             description: description.isEmpty ? nil : description,
-            hospital_id: nil,
+            hospital_id: hospitalUUID,
             fees: fees
         )
         
-        do {
-            try viewModel.addDepartment(department)
-            alertMessage = "Department added successfully"
-            showAlert = true
-        } catch {
-            alertMessage = "Failed to add department: \(error.localizedDescription)"
-            showAlert = true
+        Task {
+            do {
+                // Save to Supabase
+                try await supabaseController.client
+                    .from("Department")
+                    .insert(department)
+                    .execute()
+                
+                print("Department saved to Supabase successfully")
+                
+                // Update local view model
+                try viewModel.addDepartment(department)
+                
+                alertMessage = "Department added successfully"
+                showAlert = true
+            } catch {
+                print("Error saving department:", error.localizedDescription)
+                alertMessage = "Failed to add department: \(error.localizedDescription)"
+                showAlert = true
+            }
         }
     }
 }

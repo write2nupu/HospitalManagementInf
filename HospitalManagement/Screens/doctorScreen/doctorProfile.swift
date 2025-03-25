@@ -10,37 +10,28 @@ struct DoctorProfileView: View {
     
     @State private var isLoggedOut = false
     @State private var showLogoutAlert = false
+    
     var body: some View {
         NavigationStack {
             Form {
-//                Section(header: Text("Available Slots")) {
-//                    ForEach(doctor.availableSlots, id: \.self) { slot in
-//                        slotSetUp(slot: slot, isAvailable: checkAvailability(for: slot))
-//                    }
-//                }
-                
-//                Section(header: Text("Consultation Fee")) {
-//                    profileRow(title: "Fee", value: "₹\(String(format: "%.2f", doctor.consultationFee))")
-//                }
-                
                 Section(header: Text("Basic Information")) {
-                    profileRow(title: "Full Name", value: doctor.full_name)
+                    profileRow(title: "Full Name", value: doctorDetails?.full_name ?? doctor.full_name)
                     if let department = departmentDetails {
                         profileRow(title: "Department", value: department.name)
                     }
-                    profileRow(title: "Qualifications", value: doctor.qualifications)
-                    profileRow(title: "Experience", value: "\(doctor.experience) years")
-                    profileRow(title: "License Number", value: doctor.license_num)
-                    profileRow(title: "Gender", value: doctor.gender)
+                    profileRow(title: "Qualifications", value: doctorDetails?.qualifications ?? doctor.qualifications)
+                    profileRow(title: "Experience", value: "\(doctorDetails?.experience ?? doctor.experience) years")
+                    profileRow(title: "License Number", value: doctorDetails?.license_num ?? doctor.license_num)
+                    profileRow(title: "Gender", value: doctorDetails?.gender ?? doctor.gender)
                 }
                 
                 Section(header: Text("Contact Information")) {
-                    profileRow(title: "Phone", value: doctor.phone_number)
-                    profileRow(title: "Email", value: doctor.email_address)
+                    profileRow(title: "Phone", value: doctorDetails?.phone_num ?? doctor.phone_num)
+                    profileRow(title: "Email", value: doctorDetails?.email_address ?? doctor.email_address)
                 }
                 
                 Section {
-                    NavigationLink(destination: updateFields(doctor: doctor)) {
+                    NavigationLink(destination: updateFields(doctor: doctorDetails ?? doctor)) {
                         Text("Edit Phone and Email")
                             .foregroundColor(AppConfig.buttonColor)
                             .fontWeight(.semibold)
@@ -48,7 +39,7 @@ struct DoctorProfileView: View {
                 }
                 
                 Section {
-                    NavigationLink(destination: updatePassword(doctor: doctor)) {
+                    NavigationLink(destination: updatePassword(doctor: doctorDetails ?? doctor)) {
                         Text("Update Password")
                             .foregroundColor(AppConfig.buttonColor)
                             .fontWeight(.semibold)
@@ -88,25 +79,51 @@ struct DoctorProfileView: View {
                 UserRoleScreen()
             }
             .task {
-                if let departmentId = doctor.department_id {
-                    departmentDetails = await supabaseController.fetchDepartmentDetails(departmentId: departmentId)
-                    
+                await fetchDoctorDetails()
+            }
+            .onAppear {
+                Task {
+                    await fetchDoctorDetails()
                 }
             }
         }
     }
-}
-        
-        // Reusable Profile Row Component
-        private func profileRow(title: String, value: String) -> some View {
-            HStack {
-                Text(title).fontWeight(.none)
-                Spacer()
-                Text(value).foregroundColor(.gray)
+    
+    private func fetchDoctorDetails() async {
+        // Fetch updated doctor details
+        do {
+            let doctors: [Doctor] = try await supabaseController.client.database
+                .from("Doctor")
+                .select()
+                .eq("id", value: doctor.id.uuidString)
+                .execute()
+                .value
+            
+            if let updatedDoctor = doctors.first {
+                doctorDetails = updatedDoctor
             }
+            
+            // Fetch department details
+            if let departmentId = doctorDetails?.department_id ?? doctor.department_id {
+                departmentDetails = await supabaseController.fetchDepartmentDetails(departmentId: departmentId)
+            }
+        } catch {
+            print("Error fetching doctor details:", error)
         }
-
-// ✅ Preview
-#Preview {
-    DoctorProfileView(doctor: Doctor(id: UUID(), full_name: "Anubahv", experience: 10, qualifications: "Tumse Jayda", is_active: true, phone_number: "1234567898", email_address: "tumkopatanahihonichahiye@gmail.com", gender: "male", license_num: "123-456-789"))
+    }
+    
+    // ✅ Move these functions OUTSIDE the body
+    private func profileRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title).fontWeight(.none)
+            Spacer()
+            Text(value).foregroundColor(.gray)
+        }
+    }
+    
+    private func handleLogout() {
+        isLoggedOut = true
+    }
 }
+
+

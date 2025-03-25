@@ -38,7 +38,7 @@ struct DoctorDetailView: View {
             }
             
             Section("Contact Information") {
-                InfoRow(title: "Phone", value: doctor.phone_number, icon: "phone.fill", color: .green)
+                InfoRow(title: "Phone", value: doctor.phone_num, icon: "phone.fill", color: .green)
                     .textContentType(.telephoneNumber)
                 InfoRow(title: "Email", value: doctor.email_address, icon: "envelope.fill", color: .orange)
                     .textContentType(.emailAddress)

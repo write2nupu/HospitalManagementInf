@@ -8,8 +8,11 @@ struct DoctorLoginView: View {
     @State private var errorMessage = ""
     @State private var isLoggedIn = false // ✅ State for Navigation
     @State private var isPasswordVisible = false // ✅ Toggle password visibility
-    
-    var docUser: AuthData = AuthData(role: "doctor")
+    @State private var isLoading = false
+    @StateObject private var supabaseController = SupabaseController()
+    @State private var doctorUser: users? = nil
+    @AppStorage("currentUserId") private var currentUserId: String = ""
+    @AppStorage("isLoggedIn") private var isUserLoggedIn = false
     
 //    doctor to be deleted when Superbase function get integrated
     
@@ -18,7 +21,7 @@ struct DoctorLoginView: View {
         NavigationStack {
             VStack(spacing: 30) {
                 // **App Logo**
-                Image(systemName: "building.columns.fill")
+                Image(systemName: "stethoscope")
                     .resizable()
                     .frame(width: 100, height: 100)
                     .foregroundColor(.mint)
@@ -41,46 +44,152 @@ struct DoctorLoginView: View {
                 }
 
                 // **Login Button**
-                Button(action: handleLogin) {
-                    Text("Login")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(isValid() ? Color.mint : Color.gray) // ✅ Disable if invalid
-                        .cornerRadius(12)
-                        .shadow(color: .mint.opacity(0.3), radius: 4, x: 0, y: 2)
+                Button(action: {
+                    Task {
+                        await handleLogin()
+                    }
+                }) {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Text("Login")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
                 }
-                .disabled(!isValid()) // ✅ Disable button when inputs are invalid
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(isValid() ? Color.mint : Color.gray)
+                .cornerRadius(12)
+                .shadow(color: .mint.opacity(0.3), radius: 4, x: 0, y: 2)
+                .disabled(!isValid() || isLoading)
                 .padding(.horizontal)
                 .padding(.top, 20)
 
-                // **Navigation Trigger after Successful Login**
-                NavigationLink(destination: forcePasswordUpdate(user: docUser), isActive: $isLoggedIn) { EmptyView() }
-
-
-                Spacer() // Push content upward
+                Spacer()
             }
             .padding()
             .background(Color.mint.opacity(0.05))
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Login Failed"), message: Text(errorMessage), dismissButton: .default(Text("OK")))
             }
+            // ✅ Navigation only triggers when isLoggedIn becomes true
+            .navigationDestination(isPresented: $isLoggedIn) {
+                if let user = doctorUser {
+                    if user.is_first_login {
+                        forcePasswordUpdate(user: user)
+                    } else {
+                        mainBoard()
+                    }
+                }
+            }
         }
     }
 
     // MARK: - **Login Logic**
-    private func handleLogin() {
-        if isValid() {
-            isLoggedIn = true
-            
-//            Save token to Mobile Storage and update UUID to user.id
-            
-            print("Doctor Logged in successfully.")
-        } else {
+    private func handleLogin() async {
+        guard isValid() else {
+            errorMessage = "Please enter valid email and password"
             showAlert = true
-            errorMessage = "Invalid credentials. Please check your input."
+            return
         }
+
+        isLoading = true
+        do {
+            print("Attempting to login with email:", emailOrPhone)
+            
+            // First check if user exists in Doctor table
+            let doctors: [Doctor] = try await supabaseController.client.database
+                .from("Doctor")
+                .select()
+                .eq("email_address", value: emailOrPhone)
+                .execute()
+                .value
+            
+            print("Found \(doctors.count) doctor(s) with email:", emailOrPhone)
+            
+            if let doctor = doctors.first {
+                print("Found doctor in database, attempting authentication")
+                
+                // Then try to authenticate
+                do {
+                    let authResponse = try await supabaseController.client.auth.signIn(
+                        email: emailOrPhone,
+                        password: password
+                    )
+                    print("Authentication successful")
+                    
+                    // Store hospital and department IDs in UserDefaults
+                    if let hospitalId = doctor.hospital_id {
+                        UserDefaults.standard.set(hospitalId.uuidString, forKey: "hospitalId")
+                        print("Stored hospital ID in UserDefaults:", hospitalId.uuidString)
+                    }
+                    if let departmentId = doctor.department_id {
+                        UserDefaults.standard.set(departmentId.uuidString, forKey: "departmentId")
+                        print("Stored department ID in UserDefaults:", departmentId.uuidString)
+                    }
+                    
+                    // Check users table for existing user
+                    let existingUsers: [users] = try await supabaseController.client.database
+                        .from("users")
+                        .select()
+                        .eq("id", value: authResponse.user.id.uuidString)
+                        .execute()
+                        .value
+                    
+                    if let existingUser = existingUsers.first {
+                        // Use existing user's data
+                        doctorUser = existingUser
+                        currentUserId = existingUser.id.uuidString
+                        isUserLoggedIn = true
+                        isLoggedIn = true
+                        print("Found existing user, is_first_login:", existingUser.is_first_login)
+                    } else {
+                        // Create new user object for doctor
+                        let user = users(
+                            id: authResponse.user.id,
+                            email: doctor.email_address,
+                            full_name: doctor.full_name,
+                            phone_number: doctor.phone_num,
+                            role: "doctor",
+                            is_first_login: true,
+                            is_active: doctor.is_active,
+                            hospital_id: doctor.hospital_id,
+                            created_at: ISO8601DateFormatter().string(from: Date()),
+                            updated_at: ISO8601DateFormatter().string(from: Date())
+                        )
+                        
+                        // Create new user in users table
+                        try await supabaseController.client
+                            .from("users")
+                            .insert(user)
+                            .execute()
+                        print("Created new user record in users table")
+                        
+                        // Store user info
+                        doctorUser = user
+                        currentUserId = user.id.uuidString
+                        isUserLoggedIn = true
+                        isLoggedIn = true
+                    }
+                    print("Successfully logged in as Doctor")
+                } catch let authError {
+                    print("Authentication error:", authError.localizedDescription)
+                    errorMessage = "Invalid credentials. Please check your email and password."
+                    showAlert = true
+                }
+            } else {
+                errorMessage = "Access denied. You must be a Doctor to login."
+                showAlert = true
+                print("Access denied. Email not found in Doctor table")
+            }
+        } catch let dbError {
+            print("Database error:", dbError.localizedDescription)
+            errorMessage = "An error occurred. Please try again."
+            showAlert = true
+        }
+        isLoading = false
     }
 
     // MARK: - **Input Validation**
