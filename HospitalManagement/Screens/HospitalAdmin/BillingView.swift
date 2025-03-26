@@ -189,7 +189,7 @@ struct RecentPaymentRow: View {
     }
 }
 
-private let dateFormatter: DateFormatter = {
+private let dateFormatter1: DateFormatter = {
     let formatter = DateFormatter()
     formatter.dateStyle = .medium
     return formatter

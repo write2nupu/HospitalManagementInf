@@ -92,7 +92,7 @@ struct PaymentTableCell: View {
     }
 }
 
-private let dateFormatter: DateFormatter = {
+private let dateFormatter2: DateFormatter = {
     let formatter = DateFormatter()
     formatter.dateFormat = "dd MMM yyyy 'at' hh:mm a"
     return formatter
