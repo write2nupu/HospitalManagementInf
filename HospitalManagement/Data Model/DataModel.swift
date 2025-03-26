@@ -150,7 +150,22 @@ struct PatientDetails: Identifiable, Codable {
     var emergency_contact : String?
 }
 
-
+enum BloodGroup: String, Codable, CaseIterable {
+    case APositive = "A+"
+    case ANegative = "A-"
+    case BPositive = "B+"
+    case BNegative = "B-"
+    case ABPositive = "AB+"
+    case ABNegative = "AB-"
+    case OPositive = "O+"
+    case ONegative = "O-"
+    case Unknown = "Unknown"
+    
+    /// Returns the raw value of the blood group as a string
+    var id: String {
+        self.rawValue
+    }
+}
 
 struct Appointment: Codable {
     let id: UUID
@@ -158,7 +173,13 @@ struct Appointment: Codable {
     let doctorId: UUID
     let date: Date
     var status: AppointmentStatus
-    // Add any other needed properties
+    let createdAt: Date
+    let type : AppointmentType
+}
+
+enum AppointmentType : String, Codable {
+    case Consultation
+    case Emergency
 }
 
 enum AppointmentStatus: String, Codable {
