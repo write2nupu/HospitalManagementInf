@@ -11,15 +11,13 @@ struct mainBoard: View {
     @State private var errorMessage: String?
 
     enum Tab {
-        case appointments, patients, dashBoard
+        case appointments, dashBoard
     }
     
     var heading: String {
         switch selectedTab {
         case .appointments:
             return "Appointments"
-        case .patients:
-            return "Patients"
         case .dashBoard:
             return "Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")"
         }
@@ -48,8 +46,6 @@ struct mainBoard: View {
                         Group {
                             if selectedTab == .appointments {
                                 AppointmentView()
-                            } else if selectedTab == .patients {
-                                patientView()
                             } else if selectedTab == .dashBoard {
                                 DoctorDashBoard()
                             }
