@@ -8,10 +8,11 @@
 import SwiftUI
 
 struct CurrentBedBookingView: View {
-    @State private var bookedBeds: [BedBooking] = [
-        BedBooking(id: UUID(), price: 100, type: .General),
-        BedBooking(id: UUID(), price: 300, type: .ICU)
-    ]
+    @State private var bookedBeds: [Bed] = [
+
+        Bed(id: UUID(), hospitalId: nil, price: 1000, type: .General, isAvailable: nil),
+        Bed(id: UUID(), hospitalId: nil, price: 3000, type: .ICU, isAvailable: nil)
+        ]
     
     var body: some View {
         NavigationStack {
@@ -79,6 +80,7 @@ struct CurrentBedBookingView: View {
                     .padding(.top, 8)
                 }
             }
+
             .navigationTitle("Bed Booking")
             .navigationBarTitleDisplayMode(.inline)
         }
