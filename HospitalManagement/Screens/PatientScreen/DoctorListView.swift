@@ -2,9 +2,22 @@ import SwiftUI
 
 struct DoctorListView: View {
     let doctors: [Doctor]
-    @State private var selectedDoctor: Doctor?  // For modal presentation
+    @State private var selectedDoctor: Doctor?
+    @State private var showAppointmentBookingModal = false
+    @State private var selectedDate = Date()
+    @State private var selectedTimeSlot: String?
     @StateObject private var supabaseController = SupabaseController()
     @State private var departmentDetails: [UUID: Department] = [:]
+    @State private var isBookingAppointment = false
+    @State private var bookingError: Error?
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedAppointmentType: AppointmentBookingView.AppointmentType?
+    
+    // Time slots for demonstration
+    private let timeSlots = [
+        "09:00 AM", "10:00 AM", "11:00 AM", 
+        "02:00 PM", "03:00 PM", "04:00 PM"
+    ]
     
     var body: some View {
         ScrollView {
@@ -12,6 +25,7 @@ struct DoctorListView: View {
                 ForEach(doctors) { doctor in
                     Button(action: {
                         selectedDoctor = doctor
+                        showAppointmentBookingModal = true
                     }) {
                         doctorCard(doctor: doctor)
                     }
@@ -21,11 +35,6 @@ struct DoctorListView: View {
         }
         .navigationTitle("Select Doctor")
         .background(Color.mint.opacity(0.05))
-        
-        // ✅ Modal Presentation for Doctor Profile
-        .sheet(item: $selectedDoctor) { doctor in
-            DoctorProfileForPatient(doctor: doctor)
-        }
         .task {
             // Fetch department details for each doctor
             for doctor in doctors {
@@ -36,8 +45,70 @@ struct DoctorListView: View {
                 }
             }
         }
+        .sheet(isPresented: $showAppointmentBookingModal) {
+            if let doctor = selectedDoctor {
+                AppointmentBookingView(
+                    doctor: doctor,
+                    selectedDate: $selectedDate,
+                    selectedTimeSlot: $selectedTimeSlot,
+                    isBookingAppointment: $isBookingAppointment,
+                    bookingError: $bookingError,
+                    selectedAppointmentType: $selectedAppointmentType,
+                    onBookAppointment: bookAppointment
+                )
+            }
+        }
+        .alert(isPresented: Binding.constant(bookingError != nil)) {
+            Alert(
+                title: Text("Booking Error"),
+                message: Text(bookingError?.localizedDescription ?? "Unknown error"),
+                dismissButton: .default(Text("OK")) {
+                    bookingError = nil
+                }
+            )
+        }
     }
-
+    
+    private func bookAppointment() {
+        guard let doctor = selectedDoctor,
+              let appointmentType = selectedAppointmentType else {
+            return
+        }
+        
+        // Validate time slot based on appointment type
+        if appointmentType == .consultation {
+            guard let timeSlot = selectedTimeSlot else { return }
+            // Additional validation for consultation
+        } else if appointmentType == .emergency {
+            // For emergency, ensure time slot is "NOW"
+            guard selectedTimeSlot == "NOW" else { return }
+        }
+        
+        isBookingAppointment = true
+        
+        Task {
+            do {
+                // TODO: Replace with actual appointment booking method from Supabase controller
+                // Simulating an async booking process
+                try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+                
+                // Reset and dismiss
+                DispatchQueue.main.async {
+                    isBookingAppointment = false
+                    showAppointmentBookingModal = false
+                    selectedTimeSlot = nil
+                    selectedAppointmentType = nil
+                    dismiss()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    isBookingAppointment = false
+                    bookingError = error
+                }
+            }
+        }
+    }
+    
     // MARK: - Doctor Card UI
     private func doctorCard(doctor: Doctor) -> some View {
         HStack(spacing: 15) {
@@ -76,5 +147,196 @@ struct DoctorListView: View {
         .background(Color.white)
         .cornerRadius(12)
         .shadow(color: .mint.opacity(0.3), radius: 4, x: 0, y: 2)
+    }
+}
+
+// MARK: - Appointment Booking Modal View
+struct AppointmentBookingView: View {
+    let doctor: Doctor
+    @Binding var selectedDate: Date
+    @Binding var selectedTimeSlot: String?
+    @Binding var isBookingAppointment: Bool
+    @Binding var bookingError: Error?
+    @Binding var selectedAppointmentType: AppointmentType?
+    var onBookAppointment: () -> Void
+    
+    // Appointment Types
+    enum AppointmentType: String, CaseIterable {
+        case consultation = "Consultation"
+        case emergency = "Emergency"
+    }
+    
+    // Time slots for demonstration
+    private let timeSlots = [
+        "09:00 AM", "10:00 AM", "11:00 AM", 
+        "02:00 PM", "03:00 PM", "04:00 PM"
+    ]
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                // Doctor Information Section
+                Section(header: Text("Doctor Details")) {
+                    HStack {
+                        Image(systemName: "person.fill")
+                            .foregroundColor(.mint)
+                        VStack(alignment: .leading) {
+                            Text(doctor.full_name)
+                                .font(.headline)
+                            Text("Consultation Fee: ₹20")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                
+                // Appointment Type Section
+                Section(header: Text("Appointment Type")) {
+                    VStack(spacing: 15) {
+                        ForEach(AppointmentType.allCases, id: \.self) { type in
+                            Button(action: {
+                                selectedAppointmentType = type
+                                // Reset date and time slot when changing type
+                                if type == .emergency {
+                                    selectedDate = Date()
+                                    selectedTimeSlot = "NOW"
+                                } else {
+                                    selectedTimeSlot = nil
+                                }
+                            }) {
+                                HStack {
+                                    // Different icons for each appointment type
+                                    Image(systemName: type == .emergency ? "cross.case.fill" : "stethoscope")
+                                        .foregroundColor(.white)
+                                        .frame(width: 30, height: 30)
+                                        .background(
+                                            Circle()
+                                                .fill(iconBackgroundColor(type))
+                                        )
+                                    
+                                    VStack(alignment: .leading) {
+                                        Text(type.rawValue)
+                                            .font(.headline)
+                                            .foregroundColor(.primary)
+                                        
+                                        Text(type == .emergency ? 
+                                             "Immediate medical attention required" : 
+                                             "Regular consultation with the doctor")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    // Selection indicator
+                                    if selectedAppointmentType == type {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(type == .emergency ? .red : .mint)
+                                    }
+                                }
+                                .padding()
+                                .background(backgroundColorForAppointmentType(type))
+                                .overlay(
+                                    overlayForAppointmentType(type)
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    .padding(.vertical, 10)
+                }
+                
+                // Conditional Date and Time Selection
+                if selectedAppointmentType == .consultation {
+                    // Date Selection Section
+                    Section(header: Text("Select Date")) {
+                        DatePicker("Appointment Date", 
+                                   selection: $selectedDate, 
+                                   in: Date()..., 
+                                   displayedComponents: .date)
+                            .datePickerStyle(GraphicalDatePickerStyle())
+                    }
+                    
+                    // Time Slot Selection Section
+                    Section(header: Text("Select Time Slot")) {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(timeSlots, id: \.self) { slot in
+                                    Button(action: {
+                                        selectedTimeSlot = (selectedTimeSlot == slot) ? nil : slot
+                                    }) {
+                                        Text(slot)
+                                            .padding(10)
+                                            .background(
+                                                selectedTimeSlot == slot ? 
+                                                Color.mint : Color.gray.opacity(0.2)
+                                            )
+                                            .foregroundColor(
+                                                selectedTimeSlot == slot ? 
+                                                .white : .primary
+                                            )
+                                            .cornerRadius(10)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .stroke(selectedTimeSlot == slot ? Color.mint : Color.gray, lineWidth: 2)
+                                            )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if selectedAppointmentType == .emergency {
+                    // Emergency Section
+                    Section(header: Text("Emergency Appointment")) {
+                        HStack {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundColor(.red)
+                            Text("Immediate Assistance")
+                                .font(.headline)
+                                .foregroundColor(.red)
+                        }
+                        Text("You will be connected to the nearest available doctor immediately.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .navigationTitle("Book Appointment")
+            .navigationBarItems(
+                trailing: Button(isBookingAppointment ? "Booking..." : "Book") {
+                    onBookAppointment()
+                }
+                .disabled(
+                    (selectedAppointmentType == .consultation && 
+                     (selectedTimeSlot == nil || selectedDate == nil)) ||
+                    (selectedAppointmentType == .emergency && selectedTimeSlot != "NOW") ||
+                    isBookingAppointment
+                )
+            )
+        }
+    }
+    
+    private func backgroundColorForAppointmentType(_ type: AppointmentType) -> Color {
+        guard selectedAppointmentType == type else {
+            return Color.gray.opacity(0.1)
+        }
+        
+        switch type {
+        case .consultation:
+            return Color.mint.opacity(0.1)
+        case .emergency:
+            return Color.red.opacity(0.1)
+        }
+    }
+    
+    private func overlayForAppointmentType(_ type: AppointmentType) -> some View {
+        RoundedRectangle(cornerRadius: 12)
+            .stroke(selectedAppointmentType == type ? 
+                    (type == .emergency ? Color.red : Color.mint) : Color.gray.opacity(0.3), 
+                    lineWidth: 2)
+    }
+    
+    private func iconBackgroundColor(_ type: AppointmentType) -> Color {
+        return type == .emergency ? Color.red : Color.mint
     }
 }

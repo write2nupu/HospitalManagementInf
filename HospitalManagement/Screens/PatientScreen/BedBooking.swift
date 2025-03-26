@@ -6,9 +6,10 @@ struct BedBookingView: View {
     @State private var availableBeds: [BedType: Int] = [
         .General: 5,
         .ICU: 2,
-        .personal: 1
+        .Personal: 1
     ]
-    @State private var showActionSheet = false
+    @State private var fromDate = Date()
+    @State private var toDate = Date()
     
     var body: some View {
         NavigationView {
@@ -20,14 +21,14 @@ struct BedBookingView: View {
                         Picker("Bed Type", selection: $selectedBedType) {
                             Text("General").tag(BedType.General)
                             Text("ICU").tag(BedType.ICU)
-                            Text("Personal").tag(BedType.personal)
+                            Text("Personal").tag(BedType.Personal)
                         }
                         .pickerStyle(SegmentedPickerStyle())
                         .onChange(of: selectedBedType) { newValue in
                             switch newValue {
-                            case .General: price = 100
-                            case .ICU: price = 300
-                            case .personal: price = 500
+                            case .General: price = 1000
+                            case .ICU: price = 3000
+                            case .Personal: price = 4000
                             }
                         }
                         
@@ -46,42 +47,53 @@ struct BedBookingView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(Color.mint.opacity(0.1))
                             .cornerRadius(8)
+                        
+                        VStack(spacing: 16) {
+                            HStack {
+                                Text("From Date")
+                                    .font(.body)
+                                Spacer()
+                                DatePicker("", selection: $fromDate, in: Date()..., displayedComponents: .date)
+                                    .labelsHidden()
+                            }
+                            .padding()
+                            .background(Color.mint.opacity(0.1))
+                            .cornerRadius(8)
+                            
+                            HStack {
+                                Text("To Date")
+                                    .font(.body)
+                                Spacer()
+                                DatePicker("", selection: $toDate, in: fromDate..., displayedComponents: .date)
+                                    .labelsHidden()
+                            }
+                            .padding()
+                            .background(Color.mint.opacity(0.1))
+                            .cornerRadius(8)
+                        }
                     }
                     .padding()
                 }
                 
-                Button(action: { showActionSheet = true }) {
-                    Text("Proceed")
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.mint)
-                        .cornerRadius(10)
-                        .padding(.horizontal)
+                VStack(spacing: 10) {
+                    Button(action: bookBed) {
+                        Text("Book Bed")
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.mint)
+                            .cornerRadius(10)
+                            .padding(.horizontal)
+                    }
                 }
                 .padding(.bottom)
-                .actionSheet(isPresented: $showActionSheet) {
-                    ActionSheet(
-                        title: Text("Confirm Action"),
-                        message: Text("Do you want to book the bed immediately or request it in advance?"),
-                        buttons: [
-                            .default(Text("Book Bed")) { bookBed() },
-                            .default(Text("Request Bed")) { requestBed() },
-                            .cancel()
-                        ]
-                    )
-                }
             }
             .navigationTitle("Book Bed")
         }
     }
     
     func bookBed() {
-        print("Bed Booked: \(selectedBedType.rawValue) with price: $\(price)")
-    }
-    
-    func requestBed() {
-        print("Bed Requested: \(selectedBedType.rawValue) with price: $\(price)")
+        print("Bed Booked: \(selectedBedType.rawValue) with price: $\(price) from \(fromDate) to \(toDate)")
     }
 }
 
