@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AddBedView: View {
     @EnvironmentObject private var viewModel: HospitalManagementViewModel
+    @StateObject private var supabaseController = SupabaseController()
     @Environment(\.dismiss) private var dismiss
     
     // Form state
@@ -21,6 +22,7 @@ struct AddBedView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var isSuccess = false
+    @State private var isLoading = false
     
     // Manually define available bed types since BedType doesn't conform to CaseIterable
     private let bedTypes: [BedType] = [.General, .ICU, .Personal]
@@ -77,9 +79,21 @@ struct AddBedView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Add") {
-                        addBed()
+                        Task {
+                            await addBed()
+                        }
                     }
                     .foregroundColor(AppConfig.buttonColor)
+                    .disabled(isLoading)
+                }
+            }
+            .overlay {
+                if isLoading {
+                    ProgressView("Adding beds...")
+                        .padding()
+                        .background(Color(.systemBackground))
+                        .cornerRadius(8)
+                        .shadow(radius: 10)
                 }
             }
             .alert(isPresented: $showAlert) {
@@ -102,7 +116,7 @@ struct AddBedView: View {
         }
     }
     
-    private func addBed() {
+    private func addBed() async {
         // Validate inputs
         guard let priceValue = Int(price), priceValue > 0 else {
             alertMessage = "Please enter a valid price"
@@ -118,26 +132,35 @@ struct AddBedView: View {
             return
         }
         
-        // Create beds
-        for _ in 1...numberOfBeds {
-            let newBed = Bed(
-                id: UUID(),
-                hospitalId: nil, // Replace with actual hospital ID when implemented
-                price: priceValue,
-                type: selectedType,
-                isAvailable: isAvailable
-            )
+        isLoading = true
+        
+        do {
+            // Create beds array
+            var beds: [Bed] = []
+            for _ in 1...numberOfBeds {
+                let newBed = Bed(
+                    id: UUID(),
+                    hospitalId: nil, // This should be set based on the hospital context
+                    price: priceValue,
+                    type: selectedType,
+                    isAvailable: isAvailable
+                )
+                beds.append(newBed)
+            }
             
-            // Add bed to viewModel (you'll need to implement this function in your viewModel)
-            // viewModel.addBed(newBed)
+            // Add beds to Supabase
+            try await supabaseController.addBeds(beds: beds)
             
-            print("New bed created: \(newBed)")
+            // Show success alert
+            isSuccess = true
+            let unitText = numberOfBeds == 1 ? "bed" : "beds"
+            alertMessage = "\(numberOfBeds) \(unitText) added successfully"
+        } catch {
+            isSuccess = false
+            alertMessage = "Failed to add beds: \(error.localizedDescription)"
         }
         
-        // Show success alert
-        isSuccess = true
-        let unitText = numberOfBeds == 1 ? "bed" : "beds"
-        alertMessage = "\(numberOfBeds) \(unitText) added successfully"
+        isLoading = false
         showAlert = true
     }
 }

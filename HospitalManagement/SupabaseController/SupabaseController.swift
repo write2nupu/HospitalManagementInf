@@ -102,7 +102,7 @@ class SupabaseController: ObservableObject {
         print("Attempting to sign in with email:", email)
         
         // First check if user exists in Admin table
-        let admins: [Admin] = try await client.database
+        let admins: [Admin] = try await client
             .from("Admin")
             .select()
             .eq("email", value: email)
@@ -123,7 +123,7 @@ class SupabaseController: ObservableObject {
                 print("Authentication successful for admin")
                 
                 // Check if user exists in Users table
-                let existingUsers: [users] = try await client.database
+                let existingUsers: [users] = try await client
                     .from("users")
                     .select()
                     .eq("email", value: email)
@@ -138,7 +138,7 @@ class SupabaseController: ObservableObject {
                     if existingUser.role != "admin" {
                         var updatedUser = existingUser
                         updatedUser.role = "admin"
-                        try await client.database
+                        try await client
                             .from("users")
                             .update(updatedUser)
                             .eq("id", value: existingUser.id)
@@ -163,7 +163,7 @@ class SupabaseController: ObservableObject {
                     updated_at: ISO8601DateFormatter().string(from: Date())
                 )
                 
-                try await client.database
+                try await client
                     .from("users")
                     .insert(adminUser)
                     .execute()
@@ -664,5 +664,221 @@ func signInPatient(email: String, password: String) async throws -> Patient {
     
     print("Patient found:", patient.fullname)
     return patient
+}
+
+// MARK: - Bed Management Functions
+func fetchAllBeds(hospitalId: UUID? = nil) async throws -> [Bed] {
+    var query = client
+        .from("Bed")
+        .select("""
+            id,
+            hospitalId,
+            price,
+            type,
+            isAvailable,
+            BedBooking (
+                id,
+                patientId,
+                startDate,
+                endDate,
+                isAvailable
+            )
+        """)
+    
+    if let hospitalId = hospitalId {
+        query = query.eq("hospitalId", value: hospitalId.uuidString)
+    }
+    
+    let beds: [Bed] = try await query
+        .execute()
+        .value
+    
+    return beds
+}
+
+func addBeds(beds: [Bed]) async throws {
+    // Convert beds to match schema
+    let bedData = beds.map { bed -> [String: AnyJSON] in
+        return [
+            "id": .string(bed.id.uuidString),
+            "hospitalId": bed.hospitalId.map { .string($0.uuidString) } ?? .null,
+            "price": .double(Double(bed.price)),
+            "type": .string(bed.type.rawValue),
+            "isAvailable": .bool(bed.isAvailable!)
+        ]
+    }
+    
+    try await client
+        .from("Bed")
+        .insert(bedData)
+        .execute()
+}
+
+func updateBedAvailability(bedId: UUID, isAvailable: Bool) async throws {
+    try await client
+        .from("Bed")
+        .update(["isAvailable": isAvailable])
+        .eq("id", value: bedId.uuidString)
+        .execute()
+}
+
+func getRecentBedBookings(hospitalId: UUID? = nil, limit: Int = 10) async throws -> [BedBookingWithDetails] {
+    var query = client
+        .from("BedBooking")
+        .select("""
+            id,
+            patientId,
+            bedId,
+            startDate,
+            endDate,
+            isAvailable,
+            Patient (
+                id,
+                fullname
+            ),
+            Bed (
+                id,
+                type,
+                price,
+                hospitalId
+            )
+        """)
+        
+    if let hospitalId = hospitalId {
+        query = query.eq("hospitalId", value: hospitalId.uuidString)
+    }
+    
+    let bookings: [BedBooking] = try await query
+        .order("startDate", ascending: false)
+        .limit(limit)
+        .execute()
+        .value
+    
+    // Convert raw bookings to BedBookingWithDetails
+    var bookingsWithDetails: [BedBookingWithDetails] = []
+    for booking in bookings {
+        if let patient = try await fetchPatientDetails(patientId: booking.patientId),
+           let bed = try await fetchBedDetails(bedId: booking.bedId) {
+            let bookingWithDetails = BedBookingWithDetails(
+                booking: booking,
+                patient: patient,
+                bed: bed
+            )
+            bookingsWithDetails.append(bookingWithDetails)
+        }
+    }
+    
+    return bookingsWithDetails
+}
+
+private func fetchBedDetails(bedId: UUID) async throws -> Bed? {
+    let beds: [Bed] = try await client
+        .from("Bed")
+        .select("""
+            id,
+            hospitalId,
+            price,
+            type,
+            isAvailable
+        """)
+        .eq("id", value: bedId.uuidString)
+        .execute()
+        .value
+    return beds.first
+}
+
+// Add function to create a bed booking
+func createBedBooking(patientId: UUID, bedId: UUID, startDate: Date, endDate: Date) async throws {
+    let booking: [String: AnyJSON] = [
+        "id": .string(UUID().uuidString),
+        "patientId": .string(patientId.uuidString),
+        "bedId": .string(bedId.uuidString),
+        "startDate": .string(ISO8601DateFormatter().string(from: startDate)),
+        "endDate": .string(ISO8601DateFormatter().string(from: endDate)),
+        "isAvailable": .bool(false)
+    ]
+    
+    try await client
+        .from("BedBooking")
+        .insert(booking)
+        .execute()
+    
+    // Update bed availability
+    try await updateBedAvailability(bedId: bedId, isAvailable: false)
+}
+
+// Add function to end a bed booking
+func endBedBooking(bookingId: UUID) async throws {
+    let booking: [BedBooking] = try await client
+        .from("BedBooking")
+        .select("bedId")
+        .eq("id", value: bookingId.uuidString)
+        .execute()
+        .value
+    
+    if let bedId = booking.first?.bedId {
+        // Update the booking
+        try await client
+            .from("BedBooking")
+            .update(["isAvailable": true])
+            .eq("id", value: bookingId.uuidString)
+            .execute()
+        
+        // Make the bed available again
+        try await updateBedAvailability(bedId: bedId, isAvailable: true)
+    }
+}
+
+// Add function to get available beds by type
+func getAvailableBedsByType(type: BedType, hospitalId: UUID? = nil) async throws -> [Bed] {
+    var query = client
+        .from("Bed")
+        .select()
+        .eq("type", value: type.rawValue)
+        .eq("isAvailable", value: true)
+    
+    if let hospitalId = hospitalId {
+        query = query.eq("hospitalId", value: hospitalId.uuidString)
+    }
+    
+    let beds: [Bed] = try await query
+        .execute()
+        .value
+    
+    return beds
+}
+
+func getBedStatistics(hospitalId: UUID? = nil) async throws -> (total: Int, available: Int, byType: [BedType: (total: Int, available: Int)]) {
+    var query = client
+        .from("Bed")
+        .select("""
+            id,
+            hospitalId,
+            type,
+            isAvailable
+        """)
+    
+    if let hospitalId = hospitalId {
+        query = query.eq("hospitalId", value: hospitalId.uuidString)
+    }
+    
+    let beds: [Bed] = try await query
+        .execute()
+        .value
+    
+    let total = beds.count
+    let available = beds.filter { $0.isAvailable ?? false }.count
+    
+    var statsByType: [BedType: (total: Int, available: Int)] = [:]
+    
+    // Initialize stats for all bed types
+    for type in [BedType.General, BedType.ICU, BedType.Personal] {
+        let bedsOfType = beds.filter { $0.type == type }
+        let totalOfType = bedsOfType.count
+        let availableOfType = bedsOfType.filter { $0.isAvailable ?? false }.count
+        statsByType[type] = (total: totalOfType, available: availableOfType)
+    }
+    
+    return (total: total, available: available, byType: statsByType)
 }
 }
