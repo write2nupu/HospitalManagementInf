@@ -17,9 +17,6 @@ struct AppConfig {
     static let shadowColor = Color.black.opacity(0.1) // Shadow Color
     
     
-    static let greenColor = Color(hex: "93d41c") // Shadow Color
-    static let redColor = Color(hex: "cc1f1f") // Shadow Color
-    static let yellowColor = Color(hex: "d9c61c") // Shadow Color
 }
 
 // MARK: - Hex Color Extension 

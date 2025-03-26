@@ -5,7 +5,7 @@ struct AppointmentDetailView: View {
     
     @Environment(\.presentationMode) var presentationMode
     
-    let appointment: DummyAppointment // to be changed after Fetch
+    let appointment: Appointment // to be changed after Fetch
 
     @State private var selectedImage: UIImage?
     @State private var diagnosticTests: String = ""
@@ -29,10 +29,11 @@ struct AppointmentDetailView: View {
             List {
                 // **Appointment Details Section**
                 Section(header: Text("Appointment Details").font(.headline)) {
-                    InfoRowAppointment(label: "Patient Name", value: appointment.patientName)
-                    InfoRowAppointment(label: "Appointment Type", value: appointment.visitType)
-                    InfoRowAppointment(label: "Date & Time", value: appointment.dateTime)
-                    InfoRowAppointment(label: "Status", value: appointment.status)
+//                    InfoRowAppointment(label: "Patient Name", value: appointment.patientName)  to be fetched by patient ID
+                    InfoRowAppointment(label: "Appointment Type", value: appointment.type.rawValue)
+                    InfoRowAppointment(label: "Date & Time", value: formatDate(appointment.date))
+
+                    InfoRowAppointment(label: "Status", value: appointment.status.rawValue)
                 }
 
                 // **Patient's Medical Information**
@@ -60,6 +61,13 @@ struct AppointmentDetailView: View {
             })
         }
     }
+    
+    func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy - h:mm a" // Example: "Mar 26, 2025 - 10:30 AM"
+        return formatter.string(from: date)
+    }
+
 
     // **Image Picker Function**
     func pickImage() {
@@ -88,10 +96,7 @@ struct InfoRowAppointment: View {
     }
 }
 
-// **Preview**
-#Preview {
-    AppointmentDetailView(appointment: DummyAppointment(patientName: "John Doe", visitType: "In Person Visit", description: "Chest pain and irregular heartbeat concerns.", dateTime: "March 22, 2025 | 2:00 pm", status: "Upcoming"))
-}
+
 
 
 

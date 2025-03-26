@@ -2,18 +2,39 @@ import SwiftUI
 
 struct AppointmentView: View {
     
-    let appointments: [DummyAppointment] = [
-        DummyAppointment(patientName: "Anubhav Dubey", visitType: "In Person Visit", description: "Frequent headaches, dizziness, and occasional shortness of breath.", dateTime: "March 20, 2025 | 10:55 am", status: "Upcoming"),
-        DummyAppointment(patientName: "Neha Sharma", visitType: "Virtual Consultation", description: "Experiencing fatigue and mild fever.", dateTime: "March 21, 2025 | 12:30 pm", status: "Upcoming"),
-        DummyAppointment(patientName: "Rahul Verma", visitType: "In Person Visit", description: "Chest pain and irregular heartbeat concerns.", dateTime: "March 22, 2025 | 2:00 pm", status: "Upcoming"),
-        DummyAppointment(patientName: "Priya Singh", visitType: "Follow-Up", description: "Post-surgery recovery check-up.", dateTime: "March 23, 2025 | 4:15 pm", status: "Completed"),
-        DummyAppointment(patientName: "Amit Patel", visitType: "In Person Visit", description: "High blood pressure management.", dateTime: "March 24, 2025 | 9:00 am", status: "Cancelled")
+    let appointments: [Appointment] = [
+        Appointment(
+            id: UUID(),
+            patientId: UUID(),
+            doctorId: UUID(),
+            hospitalId: UUID(),
+            departmentId: UUID(),
+            date: Date(),
+            status: .scheduled,
+            createdAt: Date(),
+            type: .Consultation
+        ),
+        Appointment(
+            id: UUID(),
+            patientId: UUID(),
+            doctorId: UUID(),
+            hospitalId: UUID(),
+            departmentId: UUID(),
+            date: Date().addingTimeInterval(86400), // Tomorrow
+            status: .completed,
+            createdAt: Date(),
+            type: .Emergency
+        )
     ]
     
     let screenWidth = UIScreen.main.bounds.width
     
     @State private var selectedDate = Date() // ✅ Date Picker
-    @State private var selectedAppointment: DummyAppointment? // ✅ Track selected appointment
+    @State private var selectedAppointment: Appointment? // ✅ Track selected appointment
+    
+    var filteredAppointments: [Appointment] {
+        appointments.filter { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }
+    }
     
     var body: some View {
         NavigationStack {
@@ -22,102 +43,107 @@ struct AppointmentView: View {
                 DatePicker("Select Date", selection: $selectedDate, displayedComponents: .date)
                     .datePickerStyle(.compact)
                     .padding(.horizontal)
-                
-                // Scrollable Vertical List of Appointments with Padding
+
+                // Scrollable List of Appointments
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 2) {
-                        ForEach(appointments) { appointment in
-                            upcomingAppointmentCard(appointment: appointment)
-                                .onTapGesture {
-                                    selectedAppointment = appointment
-                                }
+                        if filteredAppointments.isEmpty {
+                            Text("No appointments on this date.")
+                                .foregroundColor(.gray)
+                                .padding()
+                        } else {
+                            ForEach(filteredAppointments) { appointment in
+                                upcomingAppointmentCard(appointment: appointment)
+                                    .onTapGesture {
+                                        selectedAppointment = appointment
+                                    }
+                            }
                         }
                     }
-                    .padding(.horizontal, 16) // Added padding around the list
-                    .padding(.top, 3) // Extra padding at the top
+                    .padding(.horizontal, 16)
+                    .padding(.top, 3)
                 }
             }
-            .background(AppConfig.backgroundColor)
+            .background(Color(UIColor.systemGray6))
             .sheet(item: $selectedAppointment) { appointment in
-                AppointmentDetailView(appointment: appointment) // ✅ Present as a modal
+                AppointmentDetailView(appointment: appointment) // ✅ Pass correct instance
             }
         }
     }
     
     // ✅ Appointment Card View
-    func upcomingAppointmentCard(appointment: DummyAppointment) -> some View {
+    func upcomingAppointmentCard(appointment: Appointment) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "person.fill")
                     .foregroundColor(AppConfig.buttonColor)
                     .font(.title2)
                 
-                Text(appointment.patientName)
+                Text("Patient ID: \(appointment.patientId.uuidString.prefix(6))") // Dummy representation should be replace by patient Name
                     .font(.headline)
-                    .foregroundColor(AppConfig.fontColor)
+                    .foregroundColor(.black)
                 
                 Spacer()
                 
-                Text(appointment.status)
+                Text(appointment.status.rawValue.capitalized)
                     .font(.subheadline)
-                    .foregroundColor(AppConfig.fontColor)
+                    .foregroundColor(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(
-                        Capsule()
-                            .fill(statusBackgroundColor(appointment.status))
-                    )
                     .clipShape(RoundedRectangle(cornerRadius: 15))
             }
             
-            Text(appointment.description)
+            Text("Type: \(appointment.type.rawValue)")
                 .font(.footnote)
                 .foregroundColor(.black)
-                .multilineTextAlignment(.leading)
-                .frame(height: 40)
-                .lineLimit(2)
 
             HStack {
-                HStack {
-                    Image(systemName: "calendar")
-                        .foregroundColor(AppConfig.buttonColor)
-                    Text(appointment.visitType)
-                        .font(.footnote)
-                        .fontWeight(.bold)
-                }
+                Image(systemName: "calendar")
+                    .foregroundColor(AppConfig.buttonColor)
+                Text(formatDate(appointment.date))
+                    .font(.footnote)
+                    .fontWeight(.bold)
                 
                 Spacer()
                 
-                HStack {
-                    Image(systemName: "clock.fill")
-                        .foregroundColor(AppConfig.buttonColor)
-                    Text(appointment.dateTime)
-                        .font(.footnote)
-                        .foregroundColor(.black)
-                }
+                Image(systemName: "clock.fill")
+                    .foregroundColor(AppConfig.buttonColor)
+                Text(formatTime(appointment.date))
+                    .font(.footnote)
+                    .foregroundColor(.black)
             }
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 15)
-                .fill(AppConfig.cardColor)
-                .shadow(color: AppConfig.shadowColor.opacity(0.3), radius: 8, x: 0, y: 6)
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 6)
         )
         .frame(width: screenWidth * 0.87)
         .frame(height: 150)
         .padding(.vertical, 8)
     }
+    
+    
 
-    func statusBackgroundColor(_ status: String) -> Color {
-        switch status {
-        case "Upcoming": return AppConfig.yellowColor
-        case "Completed": return AppConfig.greenColor
-        case "Cancelled": return AppConfig.redColor
-        default: return Color.gray
-        }
+    // Function to format Date
+    func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: date)
+    }
+    
+    // Function to format Time
+    func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 
-#Preview(body: {
-    AppointmentView()
-})
+// Preview
+struct AppointmentView_Previews: PreviewProvider {
+    static var previews: some View {
+        AppointmentView()
+    }
+}
