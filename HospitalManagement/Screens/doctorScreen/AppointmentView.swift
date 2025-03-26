@@ -44,6 +44,7 @@ struct AppointmentView: View {
             HStack {
                 Label(appointment.patientName, systemImage: "person.fill")
                     .font(.headline)
+                    .foregroundColor(AppConfig.fontColor)
                 
                 Spacer()
                 
@@ -62,6 +63,7 @@ struct AppointmentView: View {
                 Text(appointment.visitType)
                     .font(.footnote)
                     .fontWeight(.bold)
+                    .foregroundColor(AppConfig.fontColor)
                 
                 Spacer()
                 

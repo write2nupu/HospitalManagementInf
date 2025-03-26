@@ -2,14 +2,17 @@ import SwiftUI
 import PhotosUI
 
 struct AppointmentDetailView: View {
-    let appointment: DummyAppointment
+    
+    @Environment(\.presentationMode) var presentationMode
+    
+    let appointment: DummyAppointment // to be changed after Fetch
 
     @State private var selectedImage: UIImage?
     @State private var diagnosticTests: String = ""
     @State private var medicines: [String] = []
     @State private var newMedicine: String = ""
     
-    @Environment(\.presentationMode) var presentationMode
+    
 
     // Patient's Medical Information (Static) access threw id
     let bloodGroup = "O+"
@@ -43,81 +46,12 @@ struct AppointmentDetailView: View {
                 }
 
                 // **Doctor's Actions**
-                Section(header: Text("Doctor’s Actions").font(.headline)) {
-                    
-                    // **Prescription Upload**
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Upload Prescription Photo")
-                            .font(.subheadline)
-                            .bold()
-
-                        if let image = selectedImage {
-                            Image(uiImage: image)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 150)
-                                .cornerRadius(10)
-                                .shadow(radius: 4)
-                        }
-
-                        Button(action: pickImage) {
-                            Label("Upload Image", systemImage: "photo.on.rectangle")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                                .shadow(radius: 3)
-                        }
-                    }
-                    .padding(.vertical, 8)
-
-                    // **Prescribed Medicines Entry**
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Prescribed Medicines")
-                            .font(.subheadline)
-                            .bold()
-
-                        HStack {
-                            TextField("Enter medicine name", text: $newMedicine)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-
-                            Button(action: {
-                                if !newMedicine.isEmpty {
-                                    medicines.append(newMedicine)
-                                    newMedicine = ""
-                                }
-                            }) {
-                                Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(.blue)
-                                    .font(.title2)
-                            }
-                        }
-
-                        if !medicines.isEmpty {
-                            ForEach(medicines, id: \.self) { medicine in
-                                Text("• \(medicine)")
-                                    .font(.body)
-                            }
-                        }
-                    }
-                    .padding(.vertical, 8)
-
-                    // **Diagnostic Tests Recommendation**
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Recommend Diagnostic Tests")
-                            .font(.subheadline)
-                            .bold()
-
-                        TextEditor(text: $diagnosticTests)
-                            .frame(height: 80)
-                            .padding(8)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(8)
-                            .shadow(radius: 3)
-                    }
-                    .padding(.vertical, 8)
-                }
+                
+                
+                
+                
+                
+                
             }
             .navigationTitle("Appointment Details")
             .navigationBarItems(trailing: Button("Save") {
@@ -158,3 +92,7 @@ struct InfoRowAppointment: View {
 #Preview {
     AppointmentDetailView(appointment: DummyAppointment(patientName: "John Doe", visitType: "In Person Visit", description: "Chest pain and irregular heartbeat concerns.", dateTime: "March 22, 2025 | 2:00 pm", status: "Upcoming"))
 }
+
+
+
+
