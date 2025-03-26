@@ -1,13 +1,13 @@
 import SwiftUI
 
 struct AdminProfile: Codable {
-    var id: String = "ADM-2025-001"
-    var name: String = "Dr. Admin"
-    var hospitalName: String = "City General Hospital"
-    var email: String = "admin@hospital.com"
-    var phone: String = "9876543210"
-    var password: String = "••••••••"
-    let role: String = "Hospital Administrator"
+    var id: String = ""
+    var name: String = ""
+    var hospitalName: String = ""
+    var email: String = ""
+    var phone: String = ""
+    var password: String = ""
+    let role: String = ""
 }
 
 struct EditContactSheet: View {
@@ -189,111 +189,298 @@ struct ContactInfoSheet: View {
 struct AdminProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var viewModel: HospitalManagementViewModel
-    @State private var profile = AdminProfile()
-    @State private var showingContactSheet = false
-    @State private var showingLogoutAlert = false
+    @StateObject private var supabaseController = SupabaseController()
+    @State private var admin: Admin?
+    @State private var hospital: Hospital?
+    @State private var showingPhoneEdit = false
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var isEditing = false
+    @State private var editedHospital: Hospital?
+    
+    // Logout related states
+    @State private var isLoggedOut = false
+    @State private var showLogoutAlert = false
     @AppStorage("isLoggedIn") private var isLoggedIn = true
     @AppStorage("userRole") private var userRole: String?
-    
+
     var body: some View {
         NavigationView {
-            Form {
-                Section("Admin Information") {
-                    HStack {
-                        Text("Admin ID")
-                        Spacer()
-                        Text(profile.id)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Name")
-                        Spacer()
-                        Text(profile.name)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Hospital")
-                        Spacer()
-                        Text(profile.hospitalName)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Role")
-                        Spacer()
-                        Text(profile.role)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                Section("Contact Information") {
-                    HStack {
-                        Text("Email")
-                        Spacer()
-                        Text(profile.email)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Phone")
-                        Spacer()
-                        Text(profile.phone)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                Section {
-                    Button(action: { showingContactSheet = true }) {
-                        Text("Edit Contact Information")
-                    }
-                    .foregroundColor(.blue)
-                }
-                
-                Section {
-                    Button(action: { showingLogoutAlert = true }) {
-                        Text("Logout")
-                            .foregroundColor(.red)
+            Group {
+                if isLoading {
+                    ProgressView("Loading profile...")
+                } else if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
+                } else {
+                    Form {
+                        if let admin = admin, let hospital = hospital {
+                            Section("Admin Information") {
+                                ProfileDetailRow(title: "Name", value: admin.full_name)
+                                ProfileDetailRow(title: "Hospital", value: hospital.name)
+                                ProfileDetailRow(title: "Role", value: "Hospital Administrator")
+                            }
+                            
+                            Section("Contact Information") {
+                                ProfileDetailRow(title: "Email", value: admin.email)
+                                Button(action: { showingPhoneEdit = true }) {
+                                    HStack {
+                                        Text("Phone")
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Text(admin.phone_number)
+                                            .foregroundColor(.primary)
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                            }
+                            
+                            Section("Hospital Information") {
+                                if isEditing {
+                                    TextField("Address", text: Binding(
+                                        get: { editedHospital?.address ?? hospital.address },
+                                        set: { editedHospital?.address = $0 }
+                                    ))
+                                    TextField("City", text: Binding(
+                                        get: { editedHospital?.city ?? hospital.city },
+                                        set: { editedHospital?.city = $0 }
+                                    ))
+                                    TextField("State", text: Binding(
+                                        get: { editedHospital?.state ?? hospital.state },
+                                        set: { editedHospital?.state = $0 }
+                                    ))
+                                    TextField("Pin Code", text: Binding(
+                                        get: { editedHospital?.pincode ?? hospital.pincode },
+                                        set: { editedHospital?.pincode = $0 }
+                                    ))
+                                    TextField("License Number", text: Binding(
+                                        get: { editedHospital?.license_number ?? hospital.license_number },
+                                        set: { editedHospital?.license_number = $0 }
+                                    ))
+                                    Toggle("Active", isOn: Binding(
+                                        get: { editedHospital?.is_active ?? hospital.is_active },
+                                        set: { editedHospital?.is_active = $0 }
+                                    ))
+                                } else {
+                                    ProfileDetailRow(title: "Address", value: hospital.address)
+                                    ProfileDetailRow(title: "City", value: hospital.city)
+                                    ProfileDetailRow(title: "State", value: hospital.state)
+                                    ProfileDetailRow(title: "Pin Code", value: hospital.pincode)
+                                    ProfileDetailRow(title: "License Number", value: hospital.license_number)
+                                    ProfileDetailRow(title: "Status", value: hospital.is_active ? "Active" : "Inactive")
+                                }
+                            }
+                            
+                            Section {
+                                Button(action: {
+                                    showLogoutAlert = true
+                                }) {
+                                    Text("Logout")
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.red)
+                                        .frame(maxWidth: .infinity, alignment: .center)
+                                }
+                            }
+                        }
                     }
                 }
             }
             .navigationTitle("Profile")
-            .navigationBarItems(trailing: Button("Done") { dismiss() })
-            .sheet(isPresented: $showingContactSheet) {
-                ContactInfoSheet(profile: $profile)
-            }
-            .alert("Logout", isPresented: $showingLogoutAlert) {
+            .navigationBarItems(
+                leading: Button("Done") { dismiss() },
+                trailing: Button(isEditing ? "Save" : "Edit") {
+                    if isEditing {
+                        saveHospitalChanges()
+                    } else {
+                        startEditing()
+                    }
+                }
+            )
+            .alert("Logout", isPresented: $showLogoutAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Logout", role: .destructive) {
-                    logout()
+                    handleLogout()
                 }
             } message: {
                 Text("Are you sure you want to logout?")
             }
+            .fullScreenCover(isPresented: .constant(isLoggedOut)) {
+                UserRoleScreen()
+            }
+            .sheet(isPresented: $showingPhoneEdit) {
+                EditPhoneSheet(admin: $admin, supabaseController: supabaseController) {
+                    Task {
+                        await loadProfile()
+                    }
+                }
+            }
             .onAppear {
-                loadProfile()
+                Task {
+                    await loadProfile()
+                }
             }
         }
     }
     
-    private func loadProfile() {
-        if let data = UserDefaults.standard.data(forKey: "adminProfile"),
-           let decoded = try? JSONDecoder().decode(AdminProfile.self, from: data) {
-            profile = decoded
+    private func loadProfile() async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            if let (fetchedAdmin, fetchedHospital) = try await supabaseController.fetchAdminProfile() {
+                await MainActor.run {
+                    self.admin = fetchedAdmin
+                    self.hospital = fetchedHospital
+                    isLoading = false
+                }
+            } else {
+                await MainActor.run {
+                    errorMessage = "Could not find admin profile"
+                    isLoading = false
+                }
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = "Error loading profile: \(error.localizedDescription)"
+                isLoading = false
+            }
         }
     }
     
-    private func logout() {
-        // Clear all user data
-        UserDefaults.standard.removeObject(forKey: "adminProfile")
-        userRole = nil  // Clear the user role
+    private func handleLogout() {
+        userRole = nil
         isLoggedIn = false
-        
-        // Post notification to trigger app-level navigation
         NotificationCenter.default.post(name: .init("LogoutNotification"), object: nil)
+        isLoggedOut = true
+    }
+    
+    private func startEditing() {
+        editedHospital = hospital
+        isEditing = true
+    }
+    
+    private func saveHospitalChanges() {
+        guard let updatedHospital = editedHospital else { return }
         
-        dismiss()
+        Task {
+            do {
+                try await supabaseController.updateHospital(updatedHospital)
+                await MainActor.run {
+                    self.hospital = updatedHospital
+                    isEditing = false
+                }
+            } catch {
+                print("Error updating hospital: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+struct EditPhoneSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var admin: Admin?
+    let supabaseController: SupabaseController
+    let onUpdate: () -> Void
+    @State private var phoneNumber: String = ""
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+    
+    var isPhoneNumberValid: Bool {
+        let phoneRegex = "^[0-9]{10}$"
+        let phonePredicate = NSPredicate(format: "SELF MATCHES %@", phoneRegex)
+        return phonePredicate.evaluate(with: phoneNumber)
+    }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section {
+                    HStack {
+                        TextField("Phone Number", text: $phoneNumber)
+                            .keyboardType(.numberPad)
+                            .textContentType(.telephoneNumber)
+                        
+                        if !phoneNumber.isEmpty {
+                            Image(systemName: isPhoneNumberValid ? "checkmark.circle.fill" : "x.circle.fill")
+                                .foregroundColor(isPhoneNumberValid ? .green : .red)
+                        }
+                    }
+                } header: {
+                    Text("Edit Phone Number")
+                }
+                
+                Section {
+                    Button("Save Changes") {
+                        saveChanges()
+                    }
+                    .disabled(!isPhoneNumberValid)
+                }
+            }
+            .navigationTitle("Edit Phone")
+            .navigationBarItems(
+                leading: Button("Cancel") { dismiss() }
+            )
+            .alert("Update Status", isPresented: $showAlert) {
+                Button("OK") {
+                    if alertMessage.contains("successfully") {
+                        if var updatedAdmin = admin {
+                            updatedAdmin.phone_number = phoneNumber
+                            admin = updatedAdmin
+                        }
+                        onUpdate()
+                        dismiss()
+                    }
+                }
+            } message: {
+                Text(alertMessage)
+            }
+            .onAppear {
+                phoneNumber = admin?.phone_number ?? ""
+            }
+        }
+    }
+    
+    private func saveChanges() {
+        guard isPhoneNumberValid else {
+            alertMessage = "Please enter a valid 10-digit phone number"
+            showAlert = true
+            return
+        }
+        
+        guard var updatedAdmin = admin else { return }
+        updatedAdmin.phone_number = phoneNumber
+        
+        Task {
+            do {
+                try await supabaseController.updateAdmin(updatedAdmin)
+                await MainActor.run {
+                    alertMessage = "Phone number updated successfully"
+                    showAlert = true
+                }
+            } catch {
+                await MainActor.run {
+                    alertMessage = "Failed to update phone number: \(error.localizedDescription)"
+                    showAlert = true
+                }
+            }
+        }
+    }
+}
+
+struct ProfileDetailRow: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Text(title)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value)
+                .foregroundColor(.primary)
+        }
     }
 }
 

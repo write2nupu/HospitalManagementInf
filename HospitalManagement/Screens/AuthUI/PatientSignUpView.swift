@@ -5,12 +5,16 @@ struct PatientSignupView: View {
     @State private var patientDetails: Patient?
     @State private var showMedicalInfo = false
     @State private var showDashboard = false
+    var patient: Patient = Patient(id: UUID(), fullName: "Ram", gender: "male", dateOfBirth: Date(), contactNo: "1234567890", email: "ram@mail.com")
 
     var body: some View {
         NavigationStack {
             PersonalInfoView(showMedicalInfo: $showMedicalInfo, patientDetails: $patientDetails)
                 .navigationDestination(isPresented: $showMedicalInfo) {
                     MedicalInfoView(patientDetails: $patientDetails, showDashboard: showDashboard)
+                }
+                .navigationDestination(isPresented: $showDashboard) {
+                    PatientDashboard(patient: patient )
                 }
         }
     }
@@ -30,7 +34,6 @@ struct PersonalInfoView: View {
     @State private var password = ""
     @State private var confirmPassword = ""
     @State private var isPasswordVisible = false
-    @State private var isConfirmPasswordVisible = false
 
     @State private var showAlert = false
     @State private var alertMessage = ""
@@ -52,11 +55,10 @@ struct PersonalInfoView: View {
 
             GenderPickerView(gender: $gender, genders: genders)
 
-            DatePicker("Date of Birth", selection: $dateOfBirth, in: ...Calendar.current.date(byAdding: .day, value: -1, to: Date())!, displayedComponents: .date)
+            DatePicker("Date of Birth", selection: $dateOfBirth, displayedComponents: .date)
                 .padding()
                 .background(Color.mint.opacity(0.2))
                 .cornerRadius(8)
-
 
             TextField("Contact Number", text: $contactNumber)
                 .keyboardType(.phonePad)
@@ -69,37 +71,34 @@ struct PersonalInfoView: View {
                 .padding()
                 .background(Color.mint.opacity(0.2))
                 .cornerRadius(8)
-
-            // Password fields with independent eye buttons
-            HStack {
-                if isPasswordVisible {
-                    TextField("Password", text: $password)
-                } else {
-                    SecureField("Password", text: $password)
-                }
-                Button(action: { isPasswordVisible.toggle() }) {
-                    Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
-                        .foregroundColor(.gray)
-                }
+                
+            // Password fields
+            if isPasswordVisible {
+                TextField("Password", text: $password)
+                    .padding()
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(8)
+                
+                TextField("Confirm Password", text: $confirmPassword)
+                    .padding()
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(8)
+            } else {
+                SecureField("Password", text: $password)
+                    .padding()
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(8)
+                
+                SecureField("Confirm Password", text: $confirmPassword)
+                    .padding()
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(8)
             }
-            .padding()
-            .background(Color.mint.opacity(0.2))
-            .cornerRadius(8)
-
-            HStack {
-                if isConfirmPasswordVisible {
-                    TextField("Confirm Password", text: $confirmPassword)
-                } else {
-                    SecureField("Confirm Password", text: $confirmPassword)
-                }
-                Button(action: { isConfirmPasswordVisible.toggle() }) {
-                    Image(systemName: isConfirmPasswordVisible ? "eye.slash.fill" : "eye.fill")
-                        .foregroundColor(.gray)
-                }
+            
+            Button(action: { isPasswordVisible.toggle() }) {
+                Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                    .foregroundColor(.gray)
             }
-            .padding()
-            .background(Color.mint.opacity(0.2))
-            .cornerRadius(8)
 
             Spacer()
 
@@ -134,15 +133,15 @@ struct PersonalInfoView: View {
             showAlert = true
             return
         }
-
+        
         if password != confirmPassword {
             alertMessage = "Passwords do not match."
             showAlert = true
             return
         }
-
+        
         isLoading = true
-
+        
         do {
             let newPatient = Patient(
                 id: UUID(),
@@ -152,20 +151,20 @@ struct PersonalInfoView: View {
                 contactNo: contactNumber,
                 email: email
             )
-
+            
             let registeredPatient = try await supabaseController.signUpPatient(
                 email: email,
                 password: password,
                 userData: newPatient
             )
-
+            
             patientDetails = registeredPatient
             showMedicalInfo = true
         } catch {
             alertMessage = error.localizedDescription
             showAlert = true
         }
-
+        
         isLoading = false
     }
 }
@@ -181,7 +180,7 @@ struct GenderPickerView: View {
                 .foregroundColor(.black)
             Spacer()
             Picker("Gender", selection: $gender) {
-                ForEach(genders, id: \.self) { gender in
+                ForEach(genders, id: \ .self) { gender in
                     Text(gender).foregroundColor(.black)
                 }
             }
@@ -195,6 +194,8 @@ struct GenderPickerView: View {
 }
 
 // MARK: - Medical Info View
+import SwiftUI
+
 struct MedicalInfoView: View {
     @Binding var patientDetails: Patient?
     @State var showDashboard: Bool = false
@@ -205,6 +206,9 @@ struct MedicalInfoView: View {
 
     @State private var showAlert = false
     @State private var alertMessage = ""
+    
+    var patient: Patient = Patient(id: UUID(), fullName: "Ram", gender: "male", dateOfBirth: Date(), contactNo: "1234567890", email: "ram@mail.com")
+
 
     var body: some View {
         NavigationView {
@@ -213,24 +217,24 @@ struct MedicalInfoView: View {
                     .font(.title)
                     .fontWeight(.bold)
                     .foregroundColor(.mint)
-
+                
                 TextField("Blood Group", text: $bloodGroup)
                     .padding()
                     .background(Color.mint.opacity(0.2))
                     .cornerRadius(8)
-
+                
                 TextField("Allergies", text: $allergies)
                     .padding()
                     .background(Color.mint.opacity(0.2))
                     .cornerRadius(8)
-
+                
                 TextField("Medical Conditions", text: $medicalConditions)
                     .padding()
                     .background(Color.mint.opacity(0.2))
                     .cornerRadius(8)
-
+                
                 Spacer()
-
+                
                 Button(action: { submitDetails() }) {
                     Text("Submit")
                         .frame(maxWidth: .infinity)
@@ -239,8 +243,13 @@ struct MedicalInfoView: View {
                         .foregroundColor(.white)
                         .cornerRadius(10)
                 }
-                .navigationDestination(isPresented: $showDashboard) {
-                    PatientLoginSignupView()
+
+                // Navigation trigger
+                NavigationLink(
+                    destination: PatientLoginSignupView(),
+                    isActive: $showDashboard
+                ) {
+                    EmptyView()
                 }
             }
             .padding()
@@ -260,6 +269,7 @@ struct MedicalInfoView: View {
         }
     }
 }
+
 
 // MARK: - Preview
 struct PatientSignupView_Previews: PreviewProvider {

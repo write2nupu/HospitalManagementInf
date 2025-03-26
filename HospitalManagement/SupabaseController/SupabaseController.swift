@@ -18,10 +18,10 @@ class SupabaseController: ObservableObject {
             supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxzanhvc2x4cm11YnJjcHpnbnJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDQwOTgsImV4cCI6MjA1ODI4MDA5OH0.wxc_rk_L_9R08wyjuoTX8KyYUJ71LDxdZ9n7RFNkzwE"
         )
         self.encoder = JSONEncoder()
-                self.encoder.keyEncodingStrategy = .convertToSnakeCase
-                
-                self.decoder = JSONDecoder()
-                self.decoder.keyDecodingStrategy = .convertFromSnakeCase
+        self.encoder.keyEncodingStrategy = .convertToSnakeCase
+        
+        self.decoder = JSONDecoder()
+        self.decoder.keyDecodingStrategy = .convertFromSnakeCase
     }
     func signUp(email: String, password: String, userData: [String: Any]) async throws -> users {
         print("Attempting to sign up with email:", email)
@@ -416,23 +416,23 @@ class SupabaseController: ObservableObject {
             return []
         }
     }
-
+    
 //    // MARK: - Fetch Hospital Departments
 //    func fetchHospitalDepartments(hospitalId: UUID) async -> [Department] {
-//        do {
+    //        do {
 //            let departments: [Department] = try await client
 //                .from("Department")
-//                .select()
+    //                .select()
 //                .eq("hospitalId", value: hospitalId)
-//                .execute()
-//                .value
+    //                .execute()
+    //                .value
 //            return departments
-//        } catch {
+    //        } catch {
 //            print("Error fetching hospital departments: \(error)")
-//            return []
-//        }
-//    }
-//    
+    //            return []
+    //        }
+    //    }
+    
     // MARK: - Fetch Patient Details
     func fetchPatientDetails(patientId: UUID) async -> Patient? {
         do {
@@ -665,4 +665,137 @@ func signInPatient(email: String, password: String) async throws -> Patient {
     print("Patient found:", patient.fullname)
     return patient
 }
+
+// Add this function to the SupabaseController class
+func fetchHospitalAndAdmin() async throws -> (Hospital, String)? {
+    print("Fetching hospital and admin details")
+    
+    // First get all hospitals with their assigned admins
+    let hospitals: [Hospital] = try await client
+        .from("Hospital")
+        .select("*")
+        .execute()
+        .value
+    
+    guard let hospital = hospitals.first else {
+        print("No hospital found")
+        return nil
+    }
+    
+    // Get admin details using assigned_admin_id from hospital
+    if let assignedAdminId = hospital.assigned_admin_id {
+        let admins: [Admin] = try await client
+            .from("Admin")
+            .select("*")
+            .eq("id", value: assignedAdminId.uuidString)
+            .execute()
+            .value
+        
+        if let admin = admins.first {
+            print("Found hospital: \(hospital.name) with admin: \(admin.full_name)")
+            return (hospital, admin.full_name)
+        }
+    }
+    
+    return nil
 }
+
+// Add function to sign in admin and store their ID
+func signInAdmin(email: String, password: String) async throws -> Admin {
+    print("Attempting to sign in admin with email:", email)
+    
+    let authResponse = try await client.auth.signIn(
+        email: email,
+        password: password
+    )
+    
+    let adminId = authResponse.user.id.uuidString
+    print("Storing admin ID in UserDefaults:", adminId)
+    UserDefaults.standard.set(adminId, forKey: "currentAdminId")
+    // Verify it was stored
+    print("Verifying stored admin ID:", UserDefaults.standard.string(forKey: "currentAdminId") ?? "Not found")
+    
+    // Fetch admin details
+    let admins: [Admin] = try await client
+        .from("Admin")
+        .select()
+        .eq("id", value: authResponse.user.id.uuidString)
+        .execute()
+        .value
+    
+    guard let admin = admins.first else {
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Admin account not found."])
+    }
+    
+    return admin
+}
+
+func fetchAdminProfile() async throws -> (Admin, Hospital)? {
+    print("Fetching admin profile details")
+    
+    // First get the hospital with assigned admin
+    let hospitals: [Hospital] = try await client
+        .from("Hospital")
+        .select("*")
+        .execute()
+        .value
+    
+    guard let hospital = hospitals.first else {
+        print("No hospital found")
+        return nil
+    }
+    
+    // Get admin details using assigned_admin_id from hospital
+    if let assignedAdminId = hospital.assigned_admin_id {
+        let admins: [Admin] = try await client
+            .from("Admin")
+            .select("*")
+            .eq("id", value: assignedAdminId.uuidString)
+            .execute()
+            .value
+        
+        if let admin = admins.first {
+            print("Found admin profile with hospital details")
+            return (admin, hospital)
+        }
+    }
+    
+    return nil
+}
+
+func updateAdmin(_ admin: Admin) async throws {
+    try await client
+        .from("Admin")
+        .update(admin)
+        .eq("id", value: admin.id)
+        .execute()
+    print("Admin updated successfully!")
+}
+
+func fetchSuperAdminProfile() async throws -> users? {
+    print("Attempting to fetch super admin profile")
+    let superAdmins: [users] = try await client
+        .from("users")
+        .select("*")  // Make sure we're selecting all fields
+        .eq("role", value: "super_admin")
+        .execute()
+        .value
+    
+    if let superAdmin = superAdmins.first {
+        print("Found super admin: \(superAdmin.full_name)")
+        return superAdmin
+    }
+    print("No super admin found")
+    return nil
+}
+
+func updateHospital(_ hospital: Hospital) async throws {
+    try await client
+        .from("Hospital")
+        .update(hospital)
+        .eq("id", value: hospital.id)
+        .execute()
+    print("Hospital updated successfully!")
+}
+}
+
