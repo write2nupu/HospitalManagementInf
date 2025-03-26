@@ -6,7 +6,7 @@ struct BedBookingView: View {
     @State private var availableBeds: [BedType: Int] = [
         .General: 5,
         .ICU: 2,
-        .personal: 1
+        .Personal: 1
     ]
     @State private var showActionSheet = false
     
@@ -20,14 +20,14 @@ struct BedBookingView: View {
                         Picker("Bed Type", selection: $selectedBedType) {
                             Text("General").tag(BedType.General)
                             Text("ICU").tag(BedType.ICU)
-                            Text("Personal").tag(BedType.personal)
+                            Text("Personal").tag(BedType.Personal)
                         }
                         .pickerStyle(SegmentedPickerStyle())
                         .onChange(of: selectedBedType) { newValue in
                             switch newValue {
-                            case .General: price = 100
-                            case .ICU: price = 300
-                            case .personal: price = 500
+                            case .General: price = 1000
+                            case .ICU: price = 3000
+                            case .Personal: price = 4000
                             }
                         }
                         
