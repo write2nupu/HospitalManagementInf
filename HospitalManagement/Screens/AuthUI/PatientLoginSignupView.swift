@@ -1,22 +1,12 @@
-//
-//  PatientLoginSignupView.swift
-//  HospitalManagement
-//
-//  Created by Shivani Verma on 21/03/25.
-//
-
 import SwiftUI
 
 struct PatientLoginSignupView: View {
-    @State private var selectedSegment = 0
     @State private var email = ""
     @State private var password = ""
-    @State private var confirmPassword = ""
     @State private var isPasswordVisible = false
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var navigateToDashboard = false
-    @State private var navigateToSignUp = false
     @State private var isLoading = false
     @AppStorage("isLoggedIn") private var isUserLoggedIn = false
     @StateObject private var supabaseController = SupabaseController()
@@ -26,41 +16,30 @@ struct PatientLoginSignupView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 30) {
-                
                 // Title
                 VStack(spacing: 5) {
-                    Text("Patient Portal")
+                    Image(systemName: "person.fill")
+                        .resizable()
+                        .frame(width: 100, height: 100)
+                        .foregroundColor(.mint)
+                        .padding(.bottom, 10)
+
+                    // **Title**
+                    Text("Patient")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.mint)
-                    
-                    Text("Welcome! Please \(selectedSegment == 0 ? "Login" : "Sign Up")")
-                        .font(.body)
-                        .foregroundColor(.gray)
                 }
                 .padding(.top, 40)
-
-                // Segmented Control
-                Picker("Mode", selection: $selectedSegment) {
-                    Text("Login").tag(0)
-                    Text("Signup").tag(1)
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal)
                 
                 // Form Fields
                 VStack(spacing: 20) {
                     customTextField(icon: "envelope.fill", placeholder: "Enter Email", text: $email, keyboardType: .emailAddress)
-
-                    passwordField(icon: "lock.fill", placeholder: selectedSegment == 0 ? "Enter Password" : "Create Password", text: $password)
-
-                    if selectedSegment == 1 {
-                        passwordField(icon: "lock.fill", placeholder: "Confirm Password", text: $confirmPassword)
-                    }
+                    passwordField(icon: "lock.fill", placeholder: "Enter Password", text: $password)
                 }
                 .padding(.top, 20)
-
-                // Submit Button
+                
+                // Login Button
                 Button(action: {
                     Task {
                         await handleSubmit()
@@ -70,7 +49,7 @@ struct PatientLoginSignupView: View {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                     } else {
-                        Text(selectedSegment == 0 ? "Login" : "Sign Up")
+                        Text("Login")
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
                     }
@@ -81,7 +60,22 @@ struct PatientLoginSignupView: View {
                 .cornerRadius(12)
                 .padding(.horizontal)
                 .disabled(isLoading)
-
+                
+                // Signup Button
+                NavigationLink(destination: PatientSignupView()) {
+                    HStack(spacing: 0) {
+                        Text("Don't have an account? ")
+                            .font(.body)
+                            .foregroundColor(.black)
+                        
+                        Text("Sign Up")
+                            .font(.headline)
+                            .foregroundColor(.mint)
+                    }
+                    .padding(.top, 10)
+                    .background(Color.clear)
+                }
+                
                 Spacer()
             }
             .padding()
@@ -94,22 +88,13 @@ struct PatientLoginSignupView: View {
                     PatientDashboard(patient: patient)
                 }
             }
-            .navigationDestination(isPresented: $navigateToSignUp) {
-                PatientSignupView()
-            }
         }
     }
-
+    
     // MARK: - Submission Logic
     func handleSubmit() async {
-        if email.isEmpty || password.isEmpty || (selectedSegment == 1 && confirmPassword.isEmpty) {
+        if email.isEmpty || password.isEmpty {
             alertMessage = "Please fill in all required fields."
-            showAlert = true
-            return
-        }
-        
-        if selectedSegment == 1 && password != confirmPassword {
-            alertMessage = "Passwords do not match."
             showAlert = true
             return
         }
@@ -117,13 +102,9 @@ struct PatientLoginSignupView: View {
         isLoading = true
         
         do {
-            if selectedSegment == 0 { // Login
-                currentPatient = try await supabaseController.signInPatient(email: email, password: password)
-                isUserLoggedIn = true
-                navigateToDashboard = true
-            } else { // Sign Up
-                navigateToSignUp = true
-            }
+            currentPatient = try await supabaseController.signInPatient(email: email, password: password)
+            isUserLoggedIn = true
+            navigateToDashboard = true
         } catch {
             alertMessage = error.localizedDescription
             showAlert = true
@@ -131,7 +112,7 @@ struct PatientLoginSignupView: View {
         
         isLoading = false
     }
-
+    
     // MARK: - Helper Views
     func customTextField(icon: String, placeholder: String, text: Binding<String>, keyboardType: UIKeyboardType = .default) -> some View {
         HStack {
@@ -146,7 +127,7 @@ struct PatientLoginSignupView: View {
         .cornerRadius(12)
         .padding(.horizontal)
     }
-
+    
     func passwordField(icon: String, placeholder: String, text: Binding<String>) -> some View {
         HStack {
             Image(systemName: icon)
@@ -173,9 +154,8 @@ struct PatientLoginSignupView: View {
 }
 
 // MARK: - Preview
-struct PatientLoginSignupView_Previews: PreviewProvider {
+struct PatientLoginView_Previews: PreviewProvider {
     static var previews: some View {
         PatientLoginSignupView()
     }
 }
-
