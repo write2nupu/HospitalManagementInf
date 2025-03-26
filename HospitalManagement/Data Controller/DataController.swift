@@ -169,6 +169,10 @@ final class HospitalManagementViewModel: ObservableObject {
         return departments.filter { $0.hospital_id == hospitalId }
     }
     
+    func getAdminByHospital(hospitalId: UUID) -> Admin? {
+        return admins.first { $0.hospital_id == hospitalId }
+    }
+    
     // MARK: - Data Persistence
     
     private func loadAllData() {
