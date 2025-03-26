@@ -99,7 +99,7 @@ struct AdminLoginViewS: View {
             print("Attempting to login with email:", emailOrPhone)
             
             // First check if user exists in Admin table
-            let admins: [Admin] = try await supabaseController.client.database
+            let admins: [Admin] = try await supabaseController.client
                 .from("Admin")
                 .select()
                 .eq("email", value: emailOrPhone)
@@ -128,7 +128,7 @@ struct AdminLoginViewS: View {
                     }
                     
                     // Check users table for existing user
-                    let existingUsers: [users] = try await supabaseController.client.database
+                    let existingUsers: [users] = try await supabaseController.client
                         .from("users")
                         .select()
                         .eq("id", value: authResponse.user.id.uuidString)

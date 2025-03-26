@@ -8,9 +8,10 @@
 import SwiftUI
 
 struct CurrentBedBookingView: View {
-    @State private var bookedBeds: [BedBooking] = [
-            BedBooking(id: UUID(), price: 100, type: .General),
-            BedBooking(id: UUID(), price: 300, type: .ICU)
+    @State private var bookedBeds: [Bed] = [
+
+        Bed(id: UUID(), hospitalId: nil, price: 1000, type: .General, isAvailable: nil),
+        Bed(id: UUID(), hospitalId: nil, price: 3000, type: .ICU, isAvailable: nil)
         ]
         
         var body: some View {
@@ -92,7 +93,7 @@ struct CurrentBedBookingView: View {
             print("Book Now Pressed")
         }
         
-        func getDischarged(_ bed: BedBooking) {
+        func getDischarged(_ bed: Bed) {
             print("Discharged: \(bed.type.rawValue)")
         }
     }
