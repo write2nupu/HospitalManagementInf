@@ -219,7 +219,7 @@ struct Bed: Codable {
 enum BedType: String, Codable {
     case General
     case ICU
-    case personal
+    case Personal
 }
 
 struct BedBooking: Codable {
@@ -232,3 +232,14 @@ struct BedBooking: Codable {
     let isAvailbale: Bool?
    
 }
+enum PaymentOption: String, Codable {
+    case applePay
+    case card
+    case upi
+}
+
+ var paymentMethods: [(icon: String, name: String, type: PaymentOption)] = [
+    ("applelogo", "Apple Pay", .applePay),
+    ("creditcard.fill", "Debit/Credit Card", .card),
+    ("qrcode", "UPI", .upi)
+]

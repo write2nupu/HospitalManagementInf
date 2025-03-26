@@ -21,7 +21,7 @@ struct BedView: View {
             // Sample data for preview
             Bed(id: UUID(), hospitalId: nil, price: 1000, type: .General, isAvailable: true),
             Bed(id: UUID(), hospitalId: nil, price: 2000, type: .ICU, isAvailable: true),
-            Bed(id: UUID(), hospitalId: nil, price: 3000, type: .personal, isAvailable: false)
+            Bed(id: UUID(), hospitalId: nil, price: 3000, type: .Personal, isAvailable: false)
         ]
     }
     
@@ -125,8 +125,8 @@ struct BedView: View {
                                 // Personal Beds Card
                                 BedCategoryCard(
                                     title: "Personal",
-                                    total: bedsByType[.personal]?.count ?? 0,
-                                    available: bedsByType[.personal]?.filter { $0.isAvailable == true }.count ?? 0,
+                                    total: bedsByType[.Personal]?.count ?? 0,
+                                    available: bedsByType[.Personal]?.filter { $0.isAvailable == true }.count ?? 0,
                                     iconName: "person.fill",
                                     iconColor: .purple
                                 )

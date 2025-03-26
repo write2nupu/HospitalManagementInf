@@ -23,7 +23,7 @@ struct AddBedView: View {
     @State private var isSuccess = false
     
     // Manually define available bed types since BedType doesn't conform to CaseIterable
-    private let bedTypes: [BedType] = [.General, .ICU, .personal]
+    private let bedTypes: [BedType] = [.General, .ICU, .Personal]
     
     var body: some View {
         NavigationStack {
@@ -61,9 +61,9 @@ struct AddBedView: View {
                 }
                 
                 // Availability Section
-                Section(header: Text("Status")) {
-                    Toggle("Available for Booking", isOn: $isAvailable)
-                }
+//                Section(header: Text("Status")) {
+//                    Toggle("Available for Booking", isOn: $isAvailable)
+//                }
             }
             .navigationTitle("Add New Bed")
             .navigationBarTitleDisplayMode(.inline)
@@ -72,14 +72,14 @@ struct AddBedView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(AppConfig.buttonColor)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Add") {
                         addBed()
                     }
-                    .fontWeight(.bold)
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
                 }
             }
             .alert(isPresented: $showAlert) {
