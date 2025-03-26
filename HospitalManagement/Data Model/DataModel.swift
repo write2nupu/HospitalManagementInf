@@ -166,3 +166,59 @@ enum AppointmentStatus: String, Codable {
     case completed
     case cancelled
 }
+
+struct Invoice: Identifiable, Codable {
+    let id: UUID
+    let createdAt: Date
+    let patientid : UUID
+    var amount: Int
+    var paymentType: PaymentType
+    var status: PaymentStatus
+}
+
+enum PaymentStatus: String, Codable {
+    case paid
+    case pending
+}
+
+enum PaymentType: String, Codable {
+    case appointment
+    case labTest
+    case bed
+}
+
+struct Bed: Codable {
+    let id: UUID
+    let hospitalId: UUID?
+    let price: Int
+    let type: BedType
+    let isAvailable : Bool?
+}
+
+enum BedType: String, Codable {
+    case General
+    case ICU
+    case Personal
+}
+
+struct BedBooking: Codable {
+    let id: UUID
+    let patientId: UUID
+    let hospitalId: UUID?
+    let bedId: UUID
+    let startDate: Date
+    let endDate: Date
+    let isAvailbale: Bool?
+   
+}
+enum PaymentOption: String, Codable {
+    case applePay
+    case card
+    case upi
+}
+
+ var paymentMethods: [(icon: String, name: String, type: PaymentOption)] = [
+    ("applelogo", "Apple Pay", .applePay),
+    ("creditcard.fill", "Debit/Credit Card", .card),
+    ("qrcode", "UPI", .upi)
+]

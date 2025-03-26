@@ -30,7 +30,7 @@ struct HospitalManagementApp: App {
                 Task {
                     do {
                         try await supabaseController.createDefaultSuperAdmin()
-                        print("created default super admin")
+                        
                     } catch {
                         print("Error creating default super admin: \(error)")
                     }
