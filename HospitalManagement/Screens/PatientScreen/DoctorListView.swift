@@ -92,6 +92,20 @@ struct DoctorListView: View {
                 // Simulating an async booking process
                 try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
                 
+                // Prepare appointment details
+                let appointmentDetails: [String: Any] = [
+                    "doctorName": doctor.full_name,
+                    "appointmentType": appointmentType.rawValue,
+                    "date": selectedDate,
+                    "timeSlot": selectedTimeSlot ?? "NOW",
+                    "timestamp": Date()
+                ]
+                
+                // Save appointment details to UserDefaults
+                var savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
+                savedAppointments.append(appointmentDetails)
+                UserDefaults.standard.set(savedAppointments, forKey: "savedAppointments")
+                
                 // Reset and dismiss
                 DispatchQueue.main.async {
                     isBookingAppointment = false

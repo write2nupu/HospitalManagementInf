@@ -49,6 +49,7 @@ struct PatientDashboard: View {
             }
             .navigationBarBackButtonHidden(true)
             .navigationTitle(selectedTab == 0 ? "Hi, \(patient.fullname)" : selectedTab == 1 ? "Appointments" : "Medical Records")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 // Profile Picture in the Top Right
                 ToolbarItem(placement: .topBarTrailing) {
@@ -84,22 +85,21 @@ struct PatientDashboard: View {
     
     // MARK: - Home Tab View
     private var homeTabView: some View {
-        ScrollView {
-            VStack(alignment: .leading) {
-                
+        VStack(alignment: .leading, spacing: 0) {
                 // MARK: - Subtitle Section
                 Text("Let's take care of your health.")
                     .font(.body)
                     .foregroundColor(AppConfig.fontColor)
                     .padding(.horizontal)
+                .padding(.top)
                 
                 // MARK: - Quick Actions Section
+            VStack(alignment: .leading, spacing: 15) {
                 Text("Quick Action")
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(AppConfig.fontColor)
                     .padding(.horizontal)
-                    .padding(.top)
                 
                 NavigationLink(destination: HospitalListView()) {
                     VStack(spacing: 12) {
@@ -136,14 +136,18 @@ struct PatientDashboard: View {
                             }
                         } else {
                             // No Hospital Selected View
-                            Image(systemName: "building.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(AppConfig.buttonColor)
-                            
-                            Text("Select Hospital")
-                                .font(.title3)
-                                .foregroundColor(AppConfig.fontColor)
-                                .fontWeight(.regular)
+                            HStack {
+                        Image(systemName: "building.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(AppConfig.buttonColor)
+                        
+                        Text("Select Hospital")
+                            .font(.title3)
+                            .foregroundColor(AppConfig.fontColor)
+                            .fontWeight(.regular)
+                                
+                                Spacer()
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -155,16 +159,18 @@ struct PatientDashboard: View {
                     )
                     .padding(.horizontal)
                 }
-                
-                // Only show Services and Departments if a hospital is selected
-                if let hospital = selectedHospital {
-                    // MARK: - Services Section
+            }
+            
+            // Only show Services and Departments if a hospital is selected
+            if let hospital = selectedHospital {
+                // MARK: - Services Section
+                VStack(alignment: .leading, spacing: 15) {
                     Text("Services")
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(AppConfig.fontColor)
                         .padding(.horizontal)
-                        .padding(.top, 20)
+                        .padding(.top, 15)
                     
                     HStack(spacing: 15) {
                         // Book Appointment Card
@@ -217,8 +223,8 @@ struct PatientDashboard: View {
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(AppConfig.fontColor)
-                        
-                        Spacer()
+                
+                Spacer()
                         
                         NavigationLink(destination: DepartmentListView()) {
                             Text("View All")
@@ -227,7 +233,7 @@ struct PatientDashboard: View {
                         }
                     }
                     .padding(.horizontal)
-                    .padding(.top, 20)
+                    .padding(.top, 15)
                     
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 15) {
@@ -259,54 +265,96 @@ struct PatientDashboard: View {
                         .padding(.horizontal)
                     }
                 }
-                
-                Spacer(minLength: 20)
             }
+            
+            Spacer()
         }
         .background(AppConfig.backgroundColor)
     }
     
     // MARK: - Appointments Tab View
     private var appointmentsTabView: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                if selectedHospitalId.isEmpty {
-                    noHospitalSelectedView
-                } else {
-                    // Upcoming Appointments Section
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("Upcoming Appointments")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(AppConfig.fontColor)
-                            .padding(.horizontal)
-                        
-                        // Placeholder for upcoming appointments
-                        Text("No upcoming appointments")
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 30)
+        Group {
+            if let savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]], !savedAppointments.isEmpty {
+                List {
+                    Section(header: Text("Upcoming Appointments").textCase(.uppercase).font(.caption).foregroundColor(.secondary)) {
+                        ForEach(savedAppointments.indices, id: \.self) { index in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(savedAppointments[index]["doctorName"] as? String ?? "")
+                                        .font(.headline)
+                                    
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "calendar")
+                                            .foregroundColor(.gray)
+                                        Text(formatAppointmentDate(savedAppointments[index]["date"] as? Date))
+                                            .font(.subheadline)
+                                        
+                                        Image(systemName: "clock")
+                                            .foregroundColor(.gray)
+                                        Text(savedAppointments[index]["timeSlot"] as? String ?? "")
+                                            .font(.subheadline)
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                Text(savedAppointments[index]["appointmentType"] as? String ?? "")
+                                    .font(.subheadline)
+                                    .foregroundColor(
+                                        (savedAppointments[index]["appointmentType"] as? String) == "Emergency" ? 
+                                        .red : .mint
+                                    )
+                            }
+                            .padding(.vertical, 8)
+                        }
+                        .onDelete(perform: deleteAppointment)
                     }
+                }
+                .listStyle(InsetGroupedListStyle())
+            } else {
+                VStack(spacing: 15) {
+                    Image(systemName: "calendar.badge.exclamationmark")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 100, height: 100)
+                        .foregroundColor(.gray)
                     
-                    // Past Appointments Section
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("Past Appointments")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(AppConfig.fontColor)
-                            .padding(.horizontal)
-                        
-                        // Placeholder for past appointments
-                        Text("No past appointments")
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 30)
+                    Text("No Appointments")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Book your first appointment to see it here")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    NavigationLink(destination: DepartmentListView()) {
+                        Text("Book Appointment")
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.mint)
+                            .cornerRadius(10)
                     }
                 }
             }
-            .padding(.vertical)
         }
-        .background(AppConfig.backgroundColor)
+    }
+    
+    // Helper function to format appointment date
+    private func formatAppointmentDate(_ date: Date?) -> String {
+        guard let date = date else { return "N/A" }
+        
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+    
+    // Function to delete an appointment
+    private func deleteAppointment(at offsets: IndexSet) {
+        var savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
+        savedAppointments.remove(atOffsets: offsets)
+        UserDefaults.standard.set(savedAppointments, forKey: "savedAppointments")
     }
     
     // MARK: - Records Tab View
@@ -334,8 +382,8 @@ struct PatientDashboard: View {
                 }
             }
             .padding(.vertical)
-        }
-        .background(AppConfig.backgroundColor)
+            }
+            .background(AppConfig.backgroundColor)
     }
     
     // MARK: - Helper Views
