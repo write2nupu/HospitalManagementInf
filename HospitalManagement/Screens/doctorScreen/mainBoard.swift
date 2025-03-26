@@ -44,43 +44,34 @@ struct mainBoard: View {
                     }
                 } else if let doctor = doctor {
                     VStack {
-                        // **Top Bar with Profile Button & Welcome Message**
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(heading)
-                                    .font(.largeTitle)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.primary)
-                            }
-                            
-                            Spacer()
-                            
-                            Button(action: {
-                                showProfile = true
-                            }) {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .resizable()
-                                    .frame(width: 40, height: 40)
-                                    .foregroundColor(AppConfig.buttonColor)
+                        // **Content Area (Switches Based on Selected Tab)**
+                        Group {
+                            if selectedTab == .appointments {
+                                AppointmentView()
+                            } else if selectedTab == .patients {
+                                patientView()
+                            } else if selectedTab == .dashBoard {
+                                DoctorDashBoard()
                             }
                         }
-                        .padding(.horizontal)
-                        .padding(.top, 10)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         
-                        VStack(spacing: 0) {
-                            // **Content Area (Switches Based on Selected Tab)**
-                            Group {
-                                if selectedTab == .appointments {
-                                    AppointmentView()
-                                } else if selectedTab == .patients {
-                                    patientView()
-                                } else if selectedTab == .dashBoard {
-                                    DoctorDashBoard()
-                                }
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        }
-                        .ignoresSafeArea(.keyboard, edges: .bottom)
+                        TabBarView(selectedTab: $selectedTab)
+                    }
+                    .ignoresSafeArea(.keyboard, edges: .bottom)
+                }
+            }
+            .navigationTitle(heading) // ✅ Title now appears properly
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showProfile = true
+                    }) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .frame(width: 40, height: 40)
+                            .foregroundColor(AppConfig.buttonColor)
+                            .padding(.top, 10)
                     }
                 }
             }
@@ -133,4 +124,6 @@ struct mainBoard: View {
     }
 }
 
-
+#Preview {
+    mainBoard()
+}
