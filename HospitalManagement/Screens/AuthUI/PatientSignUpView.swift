@@ -37,7 +37,16 @@ struct PersonalInfoView: View {
     @State private var isLoading = false
 
     let genders = ["Select Gender", "Male", "Female", "Other"]
-
+    
+    private var isPhoneNumberValid: Bool {
+        contactNumber.count == 10 && contactNumber.allSatisfy { $0.isNumber }
+    }
+    private var isEmailValid: Bool {
+        let emailRegex = #"^[A-Za-z0-9!#$%&'*+/=?^_`{|}~.-]+@(gmail|yahoo|outlook)\.com$"#
+        let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
+        return emailPredicate.evaluate(with: email)
+    }
+    
     var body: some View {
         VStack(spacing: 20) {
             Text("Personal Information")
@@ -57,18 +66,46 @@ struct PersonalInfoView: View {
                 .background(Color.mint.opacity(0.2))
                 .cornerRadius(8)
 
+            HStack {
+                TextField("Contact Number", text: $contactNumber)
+                    .keyboardType(.phonePad)
+                    .padding(.trailing, 30) // Space for the icon
+                    .padding()
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(8)
+                    .overlay(
+                        Group {
+                            if !contactNumber.isEmpty {
+                                Image(systemName: isPhoneNumberValid ? "checkmark.circle.fill" : "x.circle.fill")
+                                    .foregroundColor(isPhoneNumberValid ? .green : .red)
+                                    .padding(.trailing, 8)
+                                    .offset(x: -5) // Adjust position if needed
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                        }
+                    )
+            }
 
-            TextField("Contact Number", text: $contactNumber)
-                .keyboardType(.phonePad)
-                .padding()
-                .background(Color.mint.opacity(0.2))
-                .cornerRadius(8)
-
-            TextField("Email", text: $email)
-                .keyboardType(.emailAddress)
-                .padding()
-                .background(Color.mint.opacity(0.2))
-                .cornerRadius(8)
+            
+            HStack {
+                TextField("Email", text: $email)
+                    .keyboardType(.emailAddress)
+                    .padding(.trailing, 30) // Space for the icon
+                    .padding()
+                    .background(Color.mint.opacity(0.2))
+                    .cornerRadius(8)
+                    .overlay(
+                        Group {
+                            if !email.isEmpty {
+                                Image(systemName: isEmailValid ? "checkmark.circle.fill" : "x.circle.fill")
+                                    .foregroundColor(isEmailValid ? .green : .red)
+                                    .padding(.trailing, 8)
+                                    .offset(x: -5) // Adjust position if needed
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                        }
+                    )
+            }
 
             // Password fields with independent eye buttons
             HStack {
