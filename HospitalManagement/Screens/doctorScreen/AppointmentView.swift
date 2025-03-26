@@ -1,7 +1,5 @@
 import SwiftUI
 
-
-
 struct AppointmentView: View {
     
     let appointments: [DummyAppointment] = [
@@ -12,29 +10,32 @@ struct AppointmentView: View {
         DummyAppointment(patientName: "Amit Patel", visitType: "In Person Visit", description: "High blood pressure management.", dateTime: "March 24, 2025 | 9:00 am", status: "Upcoming")
     ]
     
-    @State private var selectedAppointment: DummyAppointment? // ✅ Track selected appointment
+    let screenWidth = UIScreen.main.bounds.width
+    
     @State private var selectedDate = Date() // ✅ Added Date Picker
-
+    
     var body: some View {
-        VStack {
-            // ✅ Date Picker to filter appointments
-            DatePicker("Select Date", selection: $selectedDate, displayedComponents: .date)
-                .datePickerStyle(.compact)
-                .padding()
-            
-            // ✅ Scrollable Vertical List of Appointments
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 16) {
-                    ForEach(appointments) { appointment in
-                        upcomingAppointmentCard(appointment: appointment)
-                            .onTapGesture {
-                                selectedAppointment = appointment // ✅ Open details when tapped
+        NavigationStack {
+            VStack {
+                // ✅ Date Picker to filter appointments
+                DatePicker("Select Date", selection: $selectedDate, displayedComponents: .date)
+                    .datePickerStyle(.compact)
+                    .padding(.horizontal)
+                
+                // ✅ Scrollable Vertical List of Appointments with Padding
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 16) {
+                        ForEach(appointments) { appointment in
+                            NavigationLink(destination: AppointmentDetailView(appointment: appointment)) {
+                                upcomingAppointmentCard(appointment: appointment)
                             }
+                        }
                     }
+                    .padding(.horizontal, 16) // ✅ Added padding around the list
+                    .padding(.top, 8) // ✅ Extra padding at the top
                 }
             }
         }
-        .navigationTitle("Appointments")
     }
     
     // ✅ Appointment Card View
@@ -54,6 +55,8 @@ struct AppointmentView: View {
             Text(appointment.description)
                 .font(.footnote)
                 .foregroundColor(.black)
+                .multilineTextAlignment(.leading)
+            Spacer()
             
             HStack {
                 Text(appointment.visitType)
@@ -68,17 +71,13 @@ struct AppointmentView: View {
             }
         }
         .padding()
-        .frame(maxWidth: .infinity, minHeight: 140, alignment: .leading)
-        .background(Color.white) // ✅ Card Background
+        .frame(maxWidth: .infinity, minHeight: 140) // ✅ Ensure card stretches to the full width
+        .background(AppConfig.cardColor)
         .cornerRadius(12)
-        .shadow(color: Color.gray.opacity(0.4), radius: 6, x: 0, y: 4) // ✅ Light Shadow
-        .padding(.horizontal)
+        .shadow(color: AppConfig.shadowColor, radius: 6, x: 0, y: 8) // ✅ Bottom shadow
     }
 }
 
-// ✅ Preview
-struct AppointmentView_Previews: PreviewProvider {
-    static var previews: some View {
-        AppointmentView()
-    }
-}
+#Preview(body: {
+    AppointmentView()
+})

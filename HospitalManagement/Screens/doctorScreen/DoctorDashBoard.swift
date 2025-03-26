@@ -125,46 +125,47 @@ struct DoctorDashBoard: View {
     
     // **Upcoming Appointment Card**
     func upcomingAppointmentCard(appointment: DummyAppointment) -> some View {
-       VStack(alignment: .leading, spacing: 8) {
-           HStack {
-               Label(appointment.patientName, systemImage: "person.fill")
-                   .font(.headline)
-               
-               Spacer()
-               
-               Text(appointment.status)
-                   .font(.subheadline)
-                   .foregroundColor(.gray)
-           }
-           
-           Spacer()
-           
-           Text(appointment.description)
-               .font(.footnote)
-               .foregroundColor(.black)
-           
-           Spacer()
-           
-           HStack {
-               Text(appointment.visitType)
-                   .font(.footnote)
-                   .fontWeight(.bold)
-               
-               Spacer()
-               
-               Text(appointment.dateTime)
-                   .font(.footnote)
-                   .foregroundColor(.black)
-           }
-       }
-       .padding()
-       .frame(width: screenWidth * 0.8)
-       .frame(minHeight: 140)
-       .background(AppConfig.cardColor)
-       .cornerRadius(12)
-       .shadow(color: AppConfig.shadowColor, radius: 6, x: 0, y: 8) // ✅ Bottom shadow
-       .padding(.vertical, 8) // ✅ Added vertical margin
-   }
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label(appointment.patientName, systemImage: "person.fill")
+                    .font(.headline)
+                
+                Spacer()
+                
+                Text(appointment.status)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+            }
+            
+            Spacer()
+            
+            Text(appointment.description)
+                .font(.footnote)
+                .foregroundColor(.black)
+            
+            Spacer()
+            
+            HStack {
+                Text(appointment.visitType)
+                    .font(.footnote)
+                    .fontWeight(.bold)
+                
+                Spacer()
+                
+                Text(appointment.dateTime)
+                    .font(.footnote)
+                    .foregroundColor(.black)
+            }
+        }
+        .padding()
+        .frame(width: screenWidth * 0.8)
+        .frame(minHeight: 140)
+        .background(AppConfig.cardColor)
+        .cornerRadius(12)
+        .shadow(color: AppConfig.shadowColor, radius: 6, x: 0, y: 8) // ✅ Bottom shadow
+        .padding(.vertical, 8) // ✅ Added vertical margin
+    }
+    
 }
 
 
