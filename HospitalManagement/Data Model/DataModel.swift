@@ -171,8 +171,6 @@ struct Appointment: Codable {
     let id: UUID
     let patientId: UUID
     let doctorId: UUID
-    let hospitalId: UUID
-    let departmentId: UUID
     let date: Date
     var status: AppointmentStatus
     let createdAt: Date
@@ -210,14 +208,27 @@ enum PaymentType: String, Codable {
     case bed
 }
 
-struct BedBooking: Codable {
+struct Bed: Codable {
     let id: UUID
+    let hospitalId: UUID?
     let price: Int
     let type: BedType
+    let isAvailable : Bool?
 }
 
 enum BedType: String, Codable {
     case General
     case ICU
     case personal
+}
+
+struct BedBooking: Codable {
+    let id: UUID
+    let patientId: UUID
+    let hospitalId: UUID?
+    let bedId: UUID
+    let startDate: Date
+    let endDate: Date
+    let isAvailbale: Bool?
+   
 }

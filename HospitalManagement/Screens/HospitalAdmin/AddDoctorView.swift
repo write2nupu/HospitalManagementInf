@@ -150,13 +150,14 @@ struct AddDoctorView: View {
                 Button("Cancel") {
                     dismiss()
                 }
+                .foregroundColor(AppConfig.buttonColor)
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {
                     saveDoctor()
                 }
                 .disabled(!isFormValid)
-                .foregroundColor(.blue)
+                .foregroundColor(AppConfig.buttonColor)
             }
         }
         .alert("Message", isPresented: $showAlert) {
