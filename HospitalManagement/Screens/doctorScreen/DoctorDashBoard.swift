@@ -80,17 +80,20 @@ struct DoctorDashBoard: View {
                     .padding(.horizontal)
                 
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 16) {
+                    LazyHStack(spacing: 16) { // Use LazyHStack for better performance
                         ForEach(appointments) { appointment in
                             upcomingAppointmentCard(appointment: appointment)
-                                .frame(width: screenWidth * 0.8)
+                                .frame(width: screenWidth * 0.87) // Ensure fixed width for each card
+                                .frame(height: 150)
+                                .padding(.vertical, 8) // Add vertical padding for spacing
                                 .onTapGesture {
-                                    selectedAppointment = appointment // ✅ Open details when tapped
+                                    selectedAppointment = appointment
                                 }
                         }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 16) // Proper left & right padding for alignment
                 }
+
             }
             .padding(.top, 10)
         }
@@ -125,47 +128,84 @@ struct DoctorDashBoard: View {
     
     // **Upcoming Appointment Card**
     func upcomingAppointmentCard(appointment: DummyAppointment) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label(appointment.patientName, systemImage: "person.fill")
+                //  Patient Icon
+                Image(systemName: "person.fill")
+                    .foregroundColor(AppConfig.buttonColor)
+                    .font(.title2)
+                
+                // Patient Name
+                Text(appointment.patientName)
                     .font(.headline)
+                    .foregroundColor(AppConfig.fontColor)
+                
+                
                 
                 Spacer()
                 
+                // Appointment Status (with rounded background)
                 Text(appointment.status)
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(AppConfig.fontColor)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(statusBackgroundColor(appointment.status))
+                    .clipShape(RoundedRectangle(cornerRadius: 15))
+
             }
             
-            Spacer()
-            
+            // Appointment Description
             Text(appointment.description)
                 .font(.footnote)
                 .foregroundColor(.black)
+                .multilineTextAlignment(.leading)
+                .frame(height: 40) // Ensures consistent height
+                .lineLimit(2) // Limits text to 2 lines to avoid overflow
+
             
-            Spacer()
-            
+            // Visit Type & Date
             HStack {
-                Text(appointment.visitType)
-                    .font(.footnote)
-                    .fontWeight(.bold)
+                HStack {
+                    Image(systemName: "calendar")
+                        .foregroundColor(AppConfig.buttonColor)
+                    Text(appointment.visitType)
+                        .font(.footnote)
+                        .fontWeight(.bold)
+                }
                 
                 Spacer()
                 
-                Text(appointment.dateTime)
-                    .font(.footnote)
-                    .foregroundColor(.black)
+                HStack {
+                    Image(systemName: "clock.fill")
+                        .foregroundColor(AppConfig.buttonColor)
+                    Text(appointment.dateTime)
+                        .font(.footnote)
+                        .foregroundColor(.black)
+                }
             }
         }
         .padding()
-        .frame(width: screenWidth * 0.8)
-        .frame(minHeight: 140)
-        .background(AppConfig.cardColor)
-        .cornerRadius(12)
-        .shadow(color: AppConfig.shadowColor, radius: 6, x: 0, y: 8) // ✅ Bottom shadow
-        .padding(.vertical, 8) // ✅ Added vertical margin
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor.opacity(0.3), radius: 8, x: 0, y: 6)
+        )
+        .frame(width: screenWidth * 0.87) // Fixed width
+        .frame(height: 150) // Adjust height
+        .padding(.vertical, 8) // Add spacing between cards
     }
-    
+
+    // 🎨 Function to dynamically set background color for status
+    func statusBackgroundColor(_ status: String) -> Color {
+        switch status {
+        case "Upcoming": return AppConfig.yellowColor
+        case "Completed": return AppConfig.greenColor
+        case "Cancelled": return AppConfig.redColor
+        default: return Color.gray
+        }
+    }
+
 }
 
 

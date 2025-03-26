@@ -9,12 +9,17 @@ import SwiftUI
 
 // MARK: - App Configuration
 struct AppConfig {
-    static let backgroundColor = Color(.white) // BackGroundColor
+    static let backgroundColor = Color(.systemGroupedBackground) // BackGroundColor
     static let primaryColor = Color(.mint.opacity(0.2)) // PrimaryColor
     static let buttonColor = Color(.mint) // PrimaryColor
     static let fontColor = Color(.black)
     static let cardColor = Color(.white)
     static let shadowColor = Color.black.opacity(0.1) // Shadow Color
+    
+    
+    static let greenColor = Color("93d41c") // Shadow Color
+    static let redColor = Color("cc1f1f") // Shadow Color
+    static let yellowColor = Color("d9c61c") // Shadow Color
 }
 
 // MARK: - Hex Color Extension 

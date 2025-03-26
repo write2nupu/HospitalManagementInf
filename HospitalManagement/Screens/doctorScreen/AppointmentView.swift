@@ -12,7 +12,8 @@ struct AppointmentView: View {
     
     let screenWidth = UIScreen.main.bounds.width
     
-    @State private var selectedDate = Date() // ✅ Added Date Picker
+    @State private var selectedDate = Date() // ✅ Date Picker
+    @State private var selectedAppointment: DummyAppointment? // ✅ Track selected appointment
     
     var body: some View {
         NavigationStack {
@@ -22,27 +23,36 @@ struct AppointmentView: View {
                     .datePickerStyle(.compact)
                     .padding(.horizontal)
                 
-                // ✅ Scrollable Vertical List of Appointments with Padding
+                // Scrollable Vertical List of Appointments with Padding
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 16) {
+                    VStack(spacing: 2) {
                         ForEach(appointments) { appointment in
-                            NavigationLink(destination: AppointmentDetailView(appointment: appointment)) {
-                                upcomingAppointmentCard(appointment: appointment)
-                            }
+                            upcomingAppointmentCard(appointment: appointment)
+                                .onTapGesture {
+                                    selectedAppointment = appointment
+                                }
                         }
                     }
-                    .padding(.horizontal, 16) // ✅ Added padding around the list
-                    .padding(.top, 8) // ✅ Extra padding at the top
+                    .padding(.horizontal, 16) // Added padding around the list
+                    .padding(.top, 3) // Extra padding at the top
                 }
+            }
+            .background(AppConfig.backgroundColor)
+            .sheet(item: $selectedAppointment) { appointment in
+                AppointmentDetailView(appointment: appointment) // ✅ Present as a modal
             }
         }
     }
     
     // ✅ Appointment Card View
     func upcomingAppointmentCard(appointment: DummyAppointment) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label(appointment.patientName, systemImage: "person.fill")
+                Image(systemName: "person.fill")
+                    .foregroundColor(AppConfig.buttonColor)
+                    .font(.title2)
+                
+                Text(appointment.patientName)
                     .font(.headline)
                     .foregroundColor(AppConfig.fontColor)
                 
@@ -50,33 +60,61 @@ struct AppointmentView: View {
                 
                 Text(appointment.status)
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(AppConfig.fontColor)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(statusBackgroundColor(appointment.status))
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 15))
             }
             
             Text(appointment.description)
                 .font(.footnote)
                 .foregroundColor(.black)
                 .multilineTextAlignment(.leading)
-            Spacer()
-            
+                .frame(height: 40)
+                .lineLimit(2)
+
             HStack {
-                Text(appointment.visitType)
-                    .font(.footnote)
-                    .fontWeight(.bold)
-                    .foregroundColor(AppConfig.fontColor)
+                HStack {
+                    Image(systemName: "calendar")
+                        .foregroundColor(AppConfig.buttonColor)
+                    Text(appointment.visitType)
+                        .font(.footnote)
+                        .fontWeight(.bold)
+                }
                 
                 Spacer()
                 
-                Text(appointment.dateTime)
-                    .font(.footnote)
-                    .foregroundColor(.black)
+                HStack {
+                    Image(systemName: "clock.fill")
+                        .foregroundColor(AppConfig.buttonColor)
+                    Text(appointment.dateTime)
+                        .font(.footnote)
+                        .foregroundColor(.black)
+                }
             }
         }
         .padding()
-        .frame(maxWidth: .infinity, minHeight: 140) // ✅ Ensure card stretches to the full width
-        .background(AppConfig.cardColor)
-        .cornerRadius(12)
-        .shadow(color: AppConfig.shadowColor, radius: 6, x: 0, y: 8) // ✅ Bottom shadow
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor.opacity(0.3), radius: 8, x: 0, y: 6)
+        )
+        .frame(width: screenWidth * 0.87)
+        .frame(height: 150)
+        .padding(.vertical, 8)
+    }
+
+    func statusBackgroundColor(_ status: String) -> Color {
+        switch status {
+        case "Upcoming": return AppConfig.yellowColor
+        case "Completed": return AppConfig.greenColor
+        case "Cancelled": return AppConfig.redColor
+        default: return Color.gray
+        }
     }
 }
 
