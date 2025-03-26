@@ -5,13 +5,14 @@
 //  Created by Shivani Verma on 26/03/25.
 //
 
-
 import SwiftUI
 
 struct BedPaymentView: View {
     @Environment(\.dismiss) var dismiss
     let bedBooking: BedBooking
+    let bed: Bed  // Now passing Bed separately
     let hospital: Hospital
+    
     @State private var selectedPaymentMethod: PaymentOption = .applePay
     @State private var cardNumber = ""
     @State private var expiryDate = ""
@@ -19,7 +20,6 @@ struct BedPaymentView: View {
     @State private var upiId = ""
     @State private var showingConfirmation = false
 
-   
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -75,7 +75,7 @@ struct BedPaymentView: View {
             HStack {
                 Text("Bed Type:")
                 Spacer()
-                Text(bedBooking.type.rawValue.capitalized)
+                Text(bed.type.rawValue.capitalized)
                     .fontWeight(.medium)
             }
 
@@ -84,7 +84,7 @@ struct BedPaymentView: View {
             HStack {
                 Text("Total Amount:")
                 Spacer()
-                Text("₹\(bedBooking.price)") // Dynamic price
+                Text("₹\(bed.price)") // Fetch price from Bed
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(.mint)
@@ -163,7 +163,7 @@ struct BedPaymentView: View {
         }) {
             HStack {
                 Image(systemName: "lock.fill")
-                Text("Pay ₹\(bedBooking.price)")
+                Text("Pay ₹\(bed.price)")
             }
             .fontWeight(.semibold)
             .foregroundColor(.white)
@@ -176,7 +176,6 @@ struct BedPaymentView: View {
         .padding(.top)
     }
 }
-
 
 // MARK: - Preview
 struct BedPaymentView_Previews: PreviewProvider {
@@ -191,18 +190,32 @@ struct BedPaymentView_Previews: PreviewProvider {
             mobile_number: "9876543210",
             email: "contact@apollo.com",
             license_number: "HOSP12345",
-            is_active: true
+            is_active: true,
+            assigned_admin_id: nil
+        )
+
+        let sampleBed = Bed(
+            id: UUID(),
+            hospitalId: sampleHospital.id,
+            price: 5000,
+            type: .ICU,
+            isAvailable: true
         )
 
         let sampleBedBooking = BedBooking(
             id: UUID(),
-            price: 5000, // Dynamic pricing
-            type: .ICU
+            patientId: UUID(),
+            hospitalId: sampleHospital.id,
+            bedId: sampleBed.id,
+            startDate: Date(),
+            endDate: Calendar.current.date(byAdding: .day, value: 5, to: Date())!,
+            isAvailbale: true
         )
 
         NavigationView {
             BedPaymentView(
                 bedBooking: sampleBedBooking,
+                bed: sampleBed,  // Passing Bed separately
                 hospital: sampleHospital
             )
         }

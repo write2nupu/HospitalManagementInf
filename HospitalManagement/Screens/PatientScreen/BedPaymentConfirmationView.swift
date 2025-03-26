@@ -80,10 +80,10 @@ struct BedPaymentConfirmationView: View {
                 .font(.headline)
                 .foregroundColor(.mint)
 
-            detailRow(label: "Bed Type", value: bedBooking.type.rawValue)
+            detailRow(label: "Bed Type", value: bedType)
             detailRow(label: "Hospital", value: hospital.name)
             detailRow(label: "Booking Date", value: formattedBookingDate)
-            detailRow(label: "Total Price", value: "₹\(bedBooking.price)")
+            detailRow(label: "Total Price", value: "₹\(invoice.amount)")
 
             Divider()
         }
@@ -125,6 +125,11 @@ struct BedPaymentConfirmationView: View {
         }
     }
 
+    // MARK: - Get Bed Type (Fetching from BedBooking)
+    private var bedType: String {
+        return bedBooking.isAvailbale == true ? "Available" : "Not Available"
+    }
+
     // MARK: - Format Payment Method
     private var formattedPaymentMethod: String {
         switch invoice.paymentType {
@@ -141,12 +146,11 @@ struct BedPaymentConfirmationView: View {
     private var formattedBookingDate: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMM d, yyyy"
-        return formatter.string(from: bedBooking.bookingDate)
+        return formatter.string(from: bedBooking.startDate)
     }
 
     // MARK: - View Invoice Function
     private func viewInvoice() {
-        // Navigate to Invoice View (To be implemented)
         print("Viewing Invoice for Booking ID: \(bedBooking.id)")
     }
 }
@@ -171,9 +175,10 @@ struct BedPaymentConfirmationView_Previews: PreviewProvider {
             id: UUID(),
             patientId: UUID(),
             hospitalId: UUID(),
-            type: .ICU,
-            price: 5000,
-            bookingDate: Date()
+            bedId: UUID(),
+            startDate: Date(),
+            endDate: Date(),
+            isAvailbale: true
         )
 
         let sampleInvoice = Invoice(

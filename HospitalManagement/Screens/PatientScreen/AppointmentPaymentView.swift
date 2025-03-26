@@ -229,8 +229,6 @@ struct PaymentView_Previews: PreviewProvider {
             id: UUID(),
             patientId: UUID(),
             doctorId: UUID(),
-            hospitalId: UUID(),
-            departmentId: UUID(),
             date: Date(),
             status: .scheduled,
             createdAt: Date(),
