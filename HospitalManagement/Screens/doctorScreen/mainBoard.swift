@@ -4,24 +4,10 @@ import SwiftUI
 struct mainBoard: View {
     @StateObject private var supabaseController = SupabaseController()
     @AppStorage("currentUserId") private var currentUserId: String = ""
-    @State private var selectedTab: Tab = .dashBoard
     @State private var showProfile = false
     @State private var doctor: Doctor?
     @State private var isLoading = true
     @State private var errorMessage: String?
-
-    enum Tab {
-        case appointments, dashBoard
-    }
-    
-    var heading: String {
-        switch selectedTab {
-        case .appointments:
-            return "Appointments"
-        case .dashBoard:
-            return "Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")"
-        }
-    }
     
     var body: some View {
         NavigationStack {
@@ -41,23 +27,21 @@ struct mainBoard: View {
                         }
                     }
                 } else if let doctor = doctor {
-                    VStack {
-                        // **Content Area (Switches Based on Selected Tab)**
-                        Group {
-                            if selectedTab == .appointments {
-                                AppointmentView()
-                            } else if selectedTab == .dashBoard {
-                                DoctorDashBoard()
+                    TabView {
+                        DoctorDashBoard()
+                            .tabItem {
+                                Label("Dashboard", systemImage: "house.fill")
                             }
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         
-                        TabBarView(selectedTab: $selectedTab)
+                        AppointmentView()
+                            .tabItem {
+                                Label("Appointments", systemImage: "calendar")
+                            }
                     }
-                    .ignoresSafeArea(.keyboard, edges: .bottom)
+                    .accentColor(AppConfig.buttonColor) // ✅ Tab bar icon color
                 }
             }
-            .navigationTitle(heading) // ✅ Title now appears properly
+            .navigationTitle("Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -96,7 +80,6 @@ struct mainBoard: View {
                 return
             }
             
-            // Fetch doctor details from Supabase
             let doctors: [Doctor] = try await supabaseController.client.database
                 .from("Doctor")
                 .select()
