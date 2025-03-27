@@ -32,13 +32,30 @@ struct HospitalDetailView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(hospital.name)
-                                .font(.title2)
-                                .bold()
-                                .foregroundColor(.black)
-                            Text("License: \(hospital.license_number)")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                            if isEditing {
+                                TextField("Hospital Name", text: $editedHospital.name)
+                                    .font(.title2)
+                                    .bold()
+                                    .padding(.horizontal)
+                                    .foregroundColor(.gray)
+                            } else {
+                                Text(hospital.name)
+                                    .font(.title2)
+                                    .bold()
+                                    .foregroundColor(.mint)
+                                    .padding(.horizontal)
+                            }
+                            if isEditing {
+                                TextField("License Number", text: $editedHospital.license_number)
+                                    .font(.subheadline)
+                                    .padding(.horizontal)
+                                    .foregroundColor(.gray)
+                            } else {
+                                Text("License: \(hospital.license_number)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.mint)
+                                    .padding(.horizontal)
+                            }
                         }
                         Spacer()
                         StatusBadge(isActive: hospital.is_active)
@@ -48,35 +65,75 @@ struct HospitalDetailView: View {
                     
                     // Location Details
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(hospital.address)
-                            .font(.body)
-                            .foregroundColor(.black)
-                        
-                        Text("\(hospital.city), \(hospital.state) \(hospital.pincode)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                        if isEditing {
+                            TextField("Address", text: $editedHospital.address)
+                                .padding(.horizontal)
+                                .foregroundColor(.gray)
+                            TextField("City", text: $editedHospital.city)
+                                .padding(.horizontal)
+                                .foregroundColor(.gray)
+                            TextField("State", text: $editedHospital.state)
+                                .padding(.horizontal)
+                                .foregroundColor(.gray)
+                            TextField("Pincode", text: $editedHospital.pincode)
+                                .padding(.horizontal)
+                                .foregroundColor(.gray)
+                        } else {
+                            Text(hospital.address)
+                                .font(.body)
+                                .foregroundColor(.mint)
+                                .padding(.horizontal)
+                            
+                            Text("\(hospital.city), \(hospital.state) \(hospital.pincode)")
+                                .font(.subheadline)
+                                .foregroundColor(.mint)
+                                .padding(.horizontal)
+                        }
                     }
                 }
-                .listRowInsets(EdgeInsets())
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                 .padding(.vertical, 8)
             }
             
             // Contact Information
             Section {
-                LabeledContent("Phone") {
-                    Button(hospital.mobile_number) {
-                        guard let url = URL(string: "tel:\(hospital.mobile_number)") else { return }
-                        UIApplication.shared.open(url)
+                if isEditing {
+                    LabeledContent("Mobile Number") {
+                        TextField("Mobile Number", text: $editedHospital.mobile_number)
+                            .padding(.horizontal)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.trailing)
                     }
-                    .foregroundColor(.mint)
-                }
-                
-                LabeledContent("Email") {
-                    Button(hospital.email) {
-                        guard let url = URL(string: "mailto:\(hospital.email)") else { return }
-                        UIApplication.shared.open(url)
+                    LabeledContent("Email") {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            TextField("Email", text: $editedHospital.email)
+                                .padding(.horizontal)
+                                .foregroundColor(.gray)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .multilineTextAlignment(.trailing)
+                        }
                     }
-                    .foregroundColor(.mint)
+                } else {
+                    LabeledContent("Phone") {
+                        Button(hospital.mobile_number) {
+                            guard let url = URL(string: "tel:\(hospital.mobile_number)") else { return }
+                            UIApplication.shared.open(url)
+                        }
+                        .foregroundColor(.mint)
+                    }
+                    
+                    LabeledContent("Email") {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            Button(hospital.email) {
+                                guard let url = URL(string: "mailto:\(hospital.email)") else { return }
+                                UIApplication.shared.open(url)
+                            }
+                            .foregroundColor(.mint)
+                            .lineLimit(1)
+                        }
+                        .padding(.leading, 8)
+                    }
                 }
             } header: {
                 Text("Contact Information")
@@ -86,7 +143,10 @@ struct HospitalDetailView: View {
             // Admin Details
             Section {
                 if let admin = adminDetails {
-                    Text("Name: \(admin.full_name)")
+                    LabeledContent("Name") {
+                        Text(admin.full_name)
+                            .foregroundColor(.mint)
+                    }
                     
                     LabeledContent("Phone") {
                         Button(admin.phone_number) {
@@ -97,14 +157,19 @@ struct HospitalDetailView: View {
                     }
                     
                     LabeledContent("Email") {
-                        Button(admin.email) {
-                            guard let url = URL(string: "mailto:\(admin.email)") else { return }
-                            UIApplication.shared.open(url)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            Button(admin.email) {
+                                guard let url = URL(string: "mailto:\(admin.email)") else { return }
+                                UIApplication.shared.open(url)
+                            }
+                            .foregroundColor(.mint)
+                            .lineLimit(1)
                         }
-                        .foregroundColor(.mint)
+                        .padding(.leading, 8)
                     }
                 } else {
                     Text("Admin not assigned")
+                        .foregroundColor(.mint)
                 }
             } header: {
                 Text("Admin Details")
@@ -122,25 +187,19 @@ struct HospitalDetailView: View {
                     }
                 ))
                 .tint(.mint)
-                
-                Button {
-                    editedHospital = hospital
-                    isEditing = true
-                } label: {
-                    Text("Edit")
-                        .foregroundColor(.mint)
-                }
             }
         }
-        .sheet(isPresented: $isEditing) {
-            NavigationView {
-                EditHospitalView(hospital: $editedHospital, isPresented: $isEditing) { updatedHospital in
-                    Task {
-                        await updateHospital(updatedHospital)
-                    }
+        .navigationTitle("Hospital Details")
+        .navigationBarItems(trailing: Button(isEditing ? "Save" : "Edit") {
+            if isEditing {
+                Task {
+                    await updateHospital(editedHospital)
                 }
+            } else {
+                editedHospital = hospital
+                isEditing = true
             }
-        }
+        })
         .alert("Error", isPresented: $showError) {
             Button("OK") {
                 showError = false
@@ -163,14 +222,9 @@ struct HospitalDetailView: View {
     
     private func updateHospital(_ updatedHospital: Hospital) async {
         do {
-            try await supabaseController.client
-                
-                .from("Hospitals")
-                .update(updatedHospital)
-                .eq("id", value: updatedHospital.id)
-                .execute()
-            
+            try await supabaseController.updateHospital(updatedHospital)
             hospital = updatedHospital
+            isEditing = false
         } catch {
             showError = true
             errorMessage = error.localizedDescription
