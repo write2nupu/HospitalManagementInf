@@ -10,208 +10,221 @@ import SwiftUI
 
 struct BedView: View {
     @EnvironmentObject private var viewModel: HospitalManagementViewModel
+    @StateObject private var supabaseController = SupabaseController()
     @State private var showAddBed = false
+    @State private var beds: [Bed] = []
+    @State private var recentBookings: [BedBookingWithDetails] = []
+    @State private var bedStats: (total: Int, available: Int, byType: [BedType: (total: Int, available: Int)]) = (0, 0, [:])
+    @State private var isLoading = true
+    @State private var errorMessage: String?
     
-    // Computed properties to get bed statistics - these should be updated
-    // when you implement the actual data storage in your view model
-    private var allBeds: [Bed] {
-        // Replace this with your actual beds data from viewModel
-        // Example: return viewModel.beds
-        return [
-            // Sample data for preview
-            Bed(id: UUID(), hospitalId: nil, price: 1000, type: .General, isAvailable: true),
-            Bed(id: UUID(), hospitalId: nil, price: 2000, type: .ICU, isAvailable: true),
-            Bed(id: UUID(), hospitalId: nil, price: 3000, type: .Personal, isAvailable: false)
-        ]
-    }
-    
-    private var availableBeds: [Bed] {
-        return allBeds.filter { $0.isAvailable == true }
-    }
-    
+    // Computed properties to get bed statistics
+    private var allBeds: [Bed] { beds }
+    private var availableBeds: [Bed] { beds.filter { $0.isAvailable! } }
     private var bedsByType: [BedType: [Bed]] {
-        Dictionary(grouping: allBeds) { $0.type }
-    }
-    
-    private var recentBookings: [BedBookingWithDetails] {
-        // Replace this with your actual bookings data
-        // Example: return viewModel.getBedBookingsWithDetails()
-        return [
-            // Sample data for preview
-            BedBookingWithDetails(
-                id: UUID(),
-                patientName: "John Doe",
-                bedType: .General,
-                amount: 1000
-            ),
-            BedBookingWithDetails(
-                id: UUID(),
-                patientName: "Jane Smith",
-                bedType: .ICU,
-                amount: 2500
-            )
-        ]
+        Dictionary(grouping: beds) { $0.type }
     }
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // MARK: - Beds Overview Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("Beds")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                            
-                            Spacer()
-                            
-                            Button {
-                                showAddBed = true
-                            } label: {
-                                Label("Add Bed", systemImage: "plus.circle.fill")
-                                    .font(.subheadline)
-                                    .foregroundColor(.mint)
+            Group {
+                if isLoading {
+                    ProgressView("Loading...")
+                } else if let error = errorMessage {
+                    VStack {
+                        Text(error)
+                            .foregroundColor(.red)
+                        Button("Retry") {
+                            Task {
+                                await loadData()
                             }
-                        }
-                        .padding(.horizontal)
-                        
-                        // Beds summary card
-                        HStack(spacing: 20) {
-                            BedStatCard(
-                                title: "Total Beds",
-                                count: allBeds.count,
-                                iconName: "bed.double.fill",
-                                iconColor: .mint
-                            )
-                            
-                            BedStatCard(
-                                title: "Available",
-                                count: availableBeds.count,
-                                iconName: "checkmark.circle.fill",
-                                iconColor: .green
-                            )
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    // MARK: - Categories Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Categories")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .padding(.horizontal)
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 16) {
-                                // General Beds Card
-                                BedCategoryCard(
-                                    title: "General",
-                                    total: bedsByType[.General]?.count ?? 0,
-                                    available: bedsByType[.General]?.filter { $0.isAvailable == true }.count ?? 0,
-                                    iconName: "bed.double",
-                                    iconColor: .blue
-                                )
-                                
-                                // ICU Beds Card
-                                BedCategoryCard(
-                                    title: "ICU",
-                                    total: bedsByType[.ICU]?.count ?? 0,
-                                    available: bedsByType[.ICU]?.filter { $0.isAvailable == true }.count ?? 0,
-                                    iconName: "waveform.path.ecg",
-                                    iconColor: .red
-                                )
-                                
-                                // Personal Beds Card
-                                BedCategoryCard(
-                                    title: "Personal",
-                                    total: bedsByType[.Personal]?.count ?? 0,
-                                    available: bedsByType[.Personal]?.filter { $0.isAvailable == true }.count ?? 0,
-                                    iconName: "person.fill",
-                                    iconColor: .purple
-                                )
-                            }
-                            .padding(.horizontal)
                         }
                     }
-                    
-                    // MARK: - Recent Bookings Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Recents")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .padding(.horizontal)
-                        
-                        if recentBookings.isEmpty {
-                            VStack(spacing: 12) {
-                                Image(systemName: "bed.double")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(.mint.opacity(0.3))
-                                Text("No recent bookings")
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                Text("Booked beds will appear here")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 30)
-                        } else {
-                            VStack(spacing: 12) {
-                                // Headers
+                } else {
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            // MARK: - Beds Overview Section
+                            VStack(alignment: .leading, spacing: 16) {
                                 HStack {
-                                    Text("Patient")
-                                        .fontWeight(.semibold)
-                                        .frame(width: 130, alignment: .leading)
-                                    
-                                    Text("Bed Type")
-                                        .fontWeight(.semibold)
-                                        .frame(width: 100, alignment: .leading)
+                                    Text("Beds")
+                                        .font(.title2)
+                                        .fontWeight(.bold)
                                     
                                     Spacer()
                                     
-                                    Text("Amount")
-                                        .fontWeight(.semibold)
-                                        .frame(width: 80, alignment: .trailing)
+                                    Button {
+                                        showAddBed = true
+                                    } label: {
+                                        Label("Add Bed", systemImage: "plus.circle.fill")
+                                            .font(.subheadline)
+                                            .foregroundColor(.mint)
+                                    }
                                 }
-                                .foregroundColor(.secondary)
-                                .font(.subheadline)
                                 .padding(.horizontal)
                                 
-                                // Bookings list
-                                ForEach(recentBookings) { booking in
-                                    HStack {
-                                        Text(booking.patientName)
-                                            .fontWeight(.medium)
-                                            .frame(width: 130, alignment: .leading)
-                                            .lineLimit(1)
+                                // Beds summary card
+                                HStack(spacing: 20) {
+                                    BedStatCard(
+                                        title: "Total Beds",
+                                        count: allBeds.count,
+                                        iconName: "bed.double.fill",
+                                        iconColor: .mint
+                                    )
+                                    
+                                    BedStatCard(
+                                        title: "Available",
+                                        count: availableBeds.count,
+                                        iconName: "checkmark.circle.fill",
+                                        iconColor: .green
+                                    )
+                                }
+                                .padding(.horizontal)
+                            }
+                            
+                            // MARK: - Categories Section
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Categories")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .padding(.horizontal)
+                                
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 16) {
+                                        // General Beds Card
+                                        BedCategoryCard(
+                                            title: "General",
+                                            total: bedsByType[.General]?.count ?? 0,
+                                            available: bedsByType[.General]?.filter { $0.isAvailable == true }.count ?? 0,
+                                            iconName: "bed.double",
+                                            iconColor: .blue
+                                        )
                                         
-                                        Text(booking.bedType.rawValue)
-                                            .frame(width: 100, alignment: .leading)
+                                        // ICU Beds Card
+                                        BedCategoryCard(
+                                            title: "ICU",
+                                            total: bedsByType[.ICU]?.count ?? 0,
+                                            available: bedsByType[.ICU]?.filter { $0.isAvailable == true }.count ?? 0,
+                                            iconName: "waveform.path.ecg",
+                                            iconColor: .red
+                                        )
                                         
-                                        Spacer()
-                                        
-                                        Text("₹\(booking.amount)")
-                                            .fontWeight(.medium)
-                                            .frame(width: 80, alignment: .trailing)
+                                        // Personal Beds Card
+                                        BedCategoryCard(
+                                            title: "Personal",
+                                            total: bedsByType[.Personal]?.count ?? 0,
+                                            available: bedsByType[.Personal]?.filter { $0.isAvailable == true }.count ?? 0,
+                                            iconName: "person.fill",
+                                            iconColor: .purple
+                                        )
                                     }
-                                    .padding()
-                                    .background(Color(.systemBackground))
-                                    .cornerRadius(10)
-                                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                                    .padding(.horizontal)
                                 }
                             }
-                            .padding(.horizontal)
+                            
+                            // MARK: - Recent Bookings Section
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Recents")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .padding(.horizontal)
+                                
+                                if recentBookings.isEmpty {
+                                    VStack(spacing: 12) {
+                                        Image(systemName: "bed.double")
+                                            .font(.system(size: 40))
+                                            .foregroundColor(.mint.opacity(0.3))
+                                        Text("No recent bookings")
+                                            .font(.headline)
+                                            .foregroundColor(.primary)
+                                        Text("Booked beds will appear here")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 30)
+                                } else {
+                                    VStack(spacing: 12) {
+                                        // Headers
+                                        HStack {
+                                            Text("Patient")
+                                                .fontWeight(.semibold)
+                                                .frame(width: 130, alignment: .leading)
+                                            
+                                            Text("Bed Type")
+                                                .fontWeight(.semibold)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Spacer()
+                                            
+                                            Text("Amount")
+                                                .fontWeight(.semibold)
+                                                .frame(width: 80, alignment: .trailing)
+                                        }
+                                        .foregroundColor(.secondary)
+                                        .font(.subheadline)
+                                        .padding(.horizontal)
+                                        
+                                        // Bookings list
+                                        ForEach(recentBookings) { booking in
+                                            HStack {
+                                                Text(booking.patientName)
+                                                    .fontWeight(.medium)
+                                                    .frame(width: 130, alignment: .leading)
+                                                    .lineLimit(1)
+                                                
+                                                Text(booking.bedType.rawValue)
+                                                    .frame(width: 100, alignment: .leading)
+                                                
+                                                Spacer()
+                                                
+                                                Text("₹\(booking.amount)")
+                                                    .fontWeight(.medium)
+                                                    .frame(width: 80, alignment: .trailing)
+                                            }
+                                            .padding()
+                                            .background(Color(.systemBackground))
+                                            .cornerRadius(10)
+                                            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
+                            }
                         }
+                        .padding(.vertical)
                     }
                 }
-                .padding(.vertical)
             }
             .navigationTitle("Bed Management")
             .sheet(isPresented: $showAddBed) {
                 AddBedView()
             }
+            .task {
+                await loadData()
+            }
         }
+    }
+    
+    
+    private func loadData() async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            async let bedsTask = supabaseController.fetchAllBeds()
+            async let bookingsTask = supabaseController.getRecentBedBookings()
+            async let statsTask = supabaseController.getBedStatistics()
+            
+            let (fetchedBeds, fetchedBookings, fetchedStats) = try await (bedsTask, bookingsTask, statsTask)
+            
+            beds = fetchedBeds
+            recentBookings = fetchedBookings
+            bedStats = fetchedStats
+        } catch {
+            errorMessage = "Failed to load data: \(error.localizedDescription)"
+        }
+        
+        isLoading = false
     }
 }
 
