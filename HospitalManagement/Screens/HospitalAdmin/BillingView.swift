@@ -164,7 +164,7 @@ struct RecentPaymentRow: View {
                 Text(invoice.paymentType.rawValue.capitalized)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                Text(invoice.createdAt, formatter: dateFormatter)
+                Text(invoice.createdAt, formatter: dateFormatter1)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

@@ -26,7 +26,9 @@ struct AdminTabView: View {
                     Label("Billing", systemImage: "indianrupeesign.gauge.chart.lefthalf.righthalf")
                 }
         }
+        .navigationBarBackButtonHidden(true)
     }
+      
 }
 
 

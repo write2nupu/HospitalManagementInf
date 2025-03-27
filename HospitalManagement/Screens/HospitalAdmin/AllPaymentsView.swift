@@ -65,7 +65,7 @@ struct PaymentTableCell: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Rahul - \(invoice.paymentType.rawValue.capitalized)")
                         .font(.system(size: 17, weight: .regular))
-                    Text(invoice.createdAt, formatter: dateFormatter)
+                    Text(invoice.createdAt, formatter: dateFormatter2)
                         .font(.system(size: 15))
                         .foregroundColor(.gray)
                 }
