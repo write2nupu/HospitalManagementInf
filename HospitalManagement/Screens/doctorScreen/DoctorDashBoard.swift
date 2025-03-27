@@ -1,30 +1,14 @@
 import SwiftUI
 
-
-//To be deleted
-struct DummyAppointment: Identifiable {
-    let id = UUID()
-    let patientName: String
-    let visitType: String
-    let description: String
-    let dateTime: String
-    let status: String
-}
-
 struct DoctorDashBoard: View {
     
     let screenWidth = UIScreen.main.bounds.width
     let screenHeight = UIScreen.main.bounds.height
     
-    @State private var selectedAppointment: DummyAppointment? // ✅ Track selected appointment
+    @State private var selectedAppointment: Appointment?
     
-    // ✅ Dummy data for appointments to be deleted when data fetched from db
-    let appointments: [DummyAppointment] = [
-        DummyAppointment(patientName: "Anubhav Dubey", visitType: "In Person Visit", description: "Frequent headaches, dizziness, and occasional shortness of breath.", dateTime: "March 20, 2025 | 10:55 am", status: "Upcoming"),
-        DummyAppointment(patientName: "Neha Sharma", visitType: "Virtual Consultation", description: "Experiencing fatigue and mild fever.", dateTime: "March 21, 2025 | 12:30 pm", status: "Upcoming"),
-        DummyAppointment(patientName: "Rahul Verma", visitType: "In Person Visit", description: "Chest pain and irregular heartbeat concerns.", dateTime: "March 22, 2025 | 2:00 pm", status: "Upcoming"),
-        DummyAppointment(patientName: "Priya Singh", visitType: "Follow-Up", description: "Post-surgery recovery check-up.", dateTime: "March 23, 2025 | 4:15 pm", status: "Upcoming"),
-        DummyAppointment(patientName: "Amit Patel", visitType: "In Person Visit", description: "High blood pressure management.", dateTime: "March 24, 2025 | 9:00 am", status: "Upcoming")
+    let appointments: [Appointment] = [
+        // Get Data here
     ]
     
     var body: some View {
@@ -55,7 +39,7 @@ struct DoctorDashBoard: View {
                         .font(.title)
                         .fontWeight(.regular)
                     
-                    Text("Urgent Need of psychologist")
+                    Text("Urgent Need of Psychologist")
                         .font(.subheadline)
                         .foregroundColor(.black)
                 }
@@ -64,8 +48,7 @@ struct DoctorDashBoard: View {
                 .background(AppConfig.cardColor)
                 .cornerRadius(12)
                 .padding(.horizontal)
-                .shadow(color: AppConfig.shadowColor, radius: 6, x: 0, y: 8) // ✅ Bottom shadow
-                
+                .shadow(color: AppConfig.shadowColor, radius: 6, x: 0, y: 8)
                 
                 // **Appointments & Patients Stats**
                 HStack(spacing: 16) {
@@ -80,16 +63,18 @@ struct DoctorDashBoard: View {
                     .padding(.horizontal)
                 
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 16) {
+                    LazyHStack(spacing: 16) {
                         ForEach(appointments) { appointment in
                             upcomingAppointmentCard(appointment: appointment)
-                                .frame(width: screenWidth * 0.8)
+                                .frame(width: screenWidth * 0.87)
+                                .frame(height: 150)
+                                .padding(.vertical, 8)
                                 .onTapGesture {
-                                    selectedAppointment = appointment // ✅ Open details when tapped
+                                    selectedAppointment = appointment
                                 }
                         }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 16)
                 }
             }
             .padding(.top, 10)
@@ -97,7 +82,7 @@ struct DoctorDashBoard: View {
         .background(AppConfig.backgroundColor.ignoresSafeArea())
         .frame(maxHeight: screenHeight)
         .sheet(item: $selectedAppointment) { appointment in
-            AppointmentDetailView(appointment: appointment) // ✅ Present modal when tapped
+            AppointmentDetailView(appointment: appointment)
         }
     }
     
@@ -124,50 +109,62 @@ struct DoctorDashBoard: View {
     }
     
     // **Upcoming Appointment Card**
-    func upcomingAppointmentCard(appointment: DummyAppointment) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+    func upcomingAppointmentCard(appointment: Appointment) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label(appointment.patientName, systemImage: "person.fill")
-                    .font(.headline)
+                Image(systemName: "person.fill")
+                    .foregroundColor(AppConfig.buttonColor)
+                    .font(.title2)
                 
                 Spacer()
                 
-                Text(appointment.status)
+                Text(appointment.status.rawValue) // ✅ Convert enum to String
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(AppConfig.fontColor)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .clipShape(RoundedRectangle(cornerRadius: 15))
             }
             
-            Spacer()
-            
-            Text(appointment.description)
-                .font(.footnote)
-                .foregroundColor(.black)
-            
-            Spacer()
-            
+            // Visit Type & Date
             HStack {
-                Text(appointment.visitType)
-                    .font(.footnote)
-                    .fontWeight(.bold)
+                HStack {
+                    Image(systemName: "calendar")
+                        .foregroundColor(AppConfig.buttonColor)
+                    Text(appointment.type.rawValue) // ✅ Convert enum to String
+                        .font(.footnote)
+                        .fontWeight(.bold)
+                }
                 
                 Spacer()
                 
-                Text(appointment.dateTime)
-                    .font(.footnote)
-                    .foregroundColor(.black)
+                HStack {
+                    Image(systemName: "clock.fill")
+                        .foregroundColor(AppConfig.buttonColor)
+                    Text(formatDate(appointment.date)) // ✅ Convert Date to String
+                        .font(.footnote)
+                        .foregroundColor(.black)
+                }
             }
         }
         .padding()
-        .frame(width: screenWidth * 0.8)
-        .frame(minHeight: 140)
-        .background(AppConfig.cardColor)
-        .cornerRadius(12)
-        .shadow(color: AppConfig.shadowColor, radius: 6, x: 0, y: 8) // ✅ Bottom shadow
-        .padding(.vertical, 8) // ✅ Added vertical margin
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor.opacity(0.3), radius: 8, x: 0, y: 6)
+        )
+        .frame(width: screenWidth * 0.87)
+        .frame(height: 150)
+        .padding(.vertical, 8)
     }
-    
-}
 
+    // ✅ Format Date Function
+    func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy - h:mm a" // Example: "Mar 26, 2025 - 10:30 AM"
+        return formatter.string(from: date)
+    }
+}
 
 #Preview {
     DoctorDashBoard()
