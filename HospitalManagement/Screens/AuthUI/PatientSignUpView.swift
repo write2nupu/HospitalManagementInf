@@ -304,3 +304,4 @@ struct PatientSignupView_Previews: PreviewProvider {
         PatientSignupView()
     }
 }
+
