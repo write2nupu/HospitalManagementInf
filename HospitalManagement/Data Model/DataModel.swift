@@ -202,10 +202,10 @@ enum PaymentStatus: String, Codable {
     case pending = "pending"
 }
 
-enum PaymentType: String, Codable {
-    case appointment = "appointment"
-    case labTest = "labTest"
-    case bed = "bed"
+enum PaymentType: String, Codable, CaseIterable {
+    case appointment
+    case labTest
+    case bed
 }
 
 struct Bed: Codable {
