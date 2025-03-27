@@ -211,6 +211,33 @@ class SupabaseController: ObservableObject {
         }
     }
     
+    func fetchPatientDetails() async -> [PatientDetails] {
+        do {
+            let patientDetails: [PatientDetails] = try await client
+                .from("Patientdetails")
+                .select()
+                .execute()
+                .value
+            return patientDetails
+            
+        } catch {
+            print("Error fetching patient Details: \(error)")
+            return[]
+        }
+    }
+    
+    func addPatientDetails(patientDetails: PatientDetails) async {
+        do {
+            try await client
+            
+                .from("Patientdetails")
+                .insert(patientDetails)
+                .execute()
+            print("Patient Details added successfully!")
+        } catch {
+            print("Error adding patient Details: \(error)")
+        }
+    }
     // MARK: - Fetch Doctors
     func fetchDoctors() async -> [Doctor] {
         do {
