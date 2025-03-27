@@ -2,19 +2,7 @@ import SwiftUI
 import PhotosUI
 import PDFKit
 
-// Add this structure for prescription data
-struct PrescriptionData {
-    let id: UUID
-    let patientId: UUID
-    let doctorId: UUID
-    let diagnosis: String
-    let labTests: [String]?
-    let additionalNotes: String?
-
-}
-
 struct AppointmentDetailView: View {
-    
     @Environment(\.presentationMode) var presentationMode
     @StateObject private var supabase = SupabaseController()
     

@@ -347,3 +347,21 @@ enum PaymentOption: String, Codable {
     ("creditcard.fill", "Debit/Credit Card", .card),
     ("qrcode", "UPI", .upi)
 ]
+
+struct PrescriptionData: Codable {
+    let id: UUID
+    let patientId: UUID
+    let doctorId: UUID
+    let diagnosis: String
+    let labTests: [String]?
+    let additionalNotes: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case patientId
+        case doctorId
+        case diagnosis
+        case labTests
+        case additionalNotes
+    }
+}

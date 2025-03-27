@@ -15,6 +15,7 @@ struct DoctorDashBoard: View {
     @State private var activePatients = 0
     @State private var isLoading = true
     @State private var error: Error?
+    @State private var patientNames: [UUID: String] = [:]
     @AppStorage("currentUserId") private var currentUserId: String = ""
     
     var body: some View {
@@ -128,32 +129,40 @@ struct DoctorDashBoard: View {
                 return
             }
             
-            async let profileTask = supabase.fetchDoctorProfile(doctorId: doctorId)
-            async let appointmentsTask = supabase.fetchDoctorAppointments(doctorId: doctorId)
-            async let statsTask = supabase.fetchDoctorStats(doctorId: doctorId)
+            // Fetch doctor profile
+            doctorProfile = try await supabase.fetchDoctorProfile(doctorId: doctorId)
             
-            let (profile, appointments, stats) = try await (profileTask, appointmentsTask, statsTask)
-            
-            self.doctorProfile = profile
-            self.appointments = appointments
-            self.completedAppointments = stats.completedAppointments
-            self.activePatients = stats.activePatients
-            
-            // Fetch department details if we have a doctor profile
-            if let departmentId = profile.department_id {
-                self.department = try await supabase.fetchDepartmentDetails(departmentId: departmentId)
+            // Fetch department details if available
+            if let departmentId = doctorProfile?.department_id {
+                department = try await supabase.fetchDepartmentDetails(departmentId: departmentId)
             }
             
-            // Fetch hospital details if we have a doctor profile
-            if let hospitalId = profile.hospital_id {
-                let hospitals: [Hospital] = try await supabase.client
-                    .from("Hospital")
-                    .select()
-                    .eq("id", value: hospitalId.uuidString)
-                    .execute()
-                    .value
-                self.hospital = hospitals.first
+            // Fetch hospital details if available
+            if let hospitalId = doctorProfile?.hospital_id {
+                hospital = try await supabase.fetchHospitalById(hospitalId: hospitalId)
             }
+            
+            // Fetch appointments
+            appointments = try await supabase.fetchDoctorAppointments(doctorId: doctorId)
+            
+            // Fetch patient names for all appointments
+            for appointment in appointments {
+                if patientNames[appointment.patientId] == nil {
+                    do {
+                        let patient = try await supabase.fetchPatientById(patientId: appointment.patientId)
+                        patientNames[appointment.patientId] = patient.fullname
+                    } catch {
+                        print("Error fetching patient name:", error)
+                        patientNames[appointment.patientId] = "Unknown Patient"
+                    }
+                }
+            }
+            
+            // Fetch doctor stats
+            let stats = try await supabase.fetchDoctorStats(doctorId: doctorId)
+            completedAppointments = stats.completedAppointments
+            activePatients = stats.activePatients
+            
         } catch {
             self.error = error
             print("Error loading data:", error)
@@ -192,9 +201,13 @@ struct DoctorDashBoard: View {
                     .foregroundColor(AppConfig.buttonColor)
                     .font(.title2)
                 
+                Text(patientNames[appointment.patientId] ?? "Loading...")
+                    .font(.headline)
+                    .foregroundColor(.black)
+                
                 Spacer()
                 
-                Text(appointment.status.rawValue) // ✅ Convert enum to String
+                Text(appointment.status.rawValue)
                     .font(.subheadline)
                     .foregroundColor(AppConfig.fontColor)
                     .padding(.horizontal, 12)
@@ -207,7 +220,7 @@ struct DoctorDashBoard: View {
                 HStack {
                     Image(systemName: "calendar")
                         .foregroundColor(AppConfig.buttonColor)
-                    Text(appointment.type.rawValue) // ✅ Convert enum to String
+                    Text(appointment.type.rawValue)
                         .font(.footnote)
                         .fontWeight(.bold)
                 }
@@ -217,7 +230,7 @@ struct DoctorDashBoard: View {
                 HStack {
                     Image(systemName: "clock.fill")
                         .foregroundColor(AppConfig.buttonColor)
-                    Text(formatDate(appointment.date)) // ✅ Convert Date to String
+                    Text(formatDate(appointment.date))
                         .font(.footnote)
                         .foregroundColor(.black)
                 }

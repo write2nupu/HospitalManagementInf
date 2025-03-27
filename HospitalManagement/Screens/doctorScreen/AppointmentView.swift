@@ -7,6 +7,7 @@ struct AppointmentView: View {
     @State private var selectedAppointment: Appointment?
     @State private var isLoading = true
     @State private var error: Error?
+    @State private var patientNames: [UUID: String] = [:]
     @AppStorage("currentUserId") private var currentUserId: String = ""
     
     let screenWidth = UIScreen.main.bounds.width
@@ -88,6 +89,19 @@ struct AppointmentView: View {
             }
             
             appointments = try await supabase.fetchDoctorAppointments(doctorId: doctorId)
+            
+            // Fetch patient names for all appointments
+            for appointment in appointments {
+                if patientNames[appointment.patientId] == nil {
+                    do {
+                        let patient = try await supabase.fetchPatientById(patientId: appointment.patientId)
+                        patientNames[appointment.patientId] = patient.fullname
+                    } catch {
+                        print("Error fetching patient name:", error)
+                        patientNames[appointment.patientId] = "Unknown Patient"
+                    }
+                }
+            }
         } catch {
             self.error = error
             print("Error loading appointments:", error)
@@ -104,7 +118,7 @@ struct AppointmentView: View {
                     .foregroundColor(AppConfig.buttonColor)
                     .font(.title2)
                 
-                Text("Patient ID: \(appointment.patientId.uuidString.prefix(6))") // Dummy representation should be replace by patient Name
+                Text(patientNames[appointment.patientId] ?? "Loading...")
                     .font(.headline)
                     .foregroundColor(.black)
                 
