@@ -430,7 +430,7 @@ struct RequestCard: View {
                 .foregroundColor(.secondary)
         }
         .padding()
-        .frame(width: 180,height: 150 ,alignment: .leading)
+        .frame(width: 180,height: 140 ,alignment: .leading)
         .background(Color(.systemBackground))
         .cornerRadius(15)
         .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
