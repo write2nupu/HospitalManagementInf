@@ -198,14 +198,14 @@ struct Invoice: Identifiable, Codable {
 }
 
 enum PaymentStatus: String, Codable {
-    case paid
-    case pending
+    case paid = "paid"
+    case pending = "pending"
 }
 
 enum PaymentType: String, Codable {
-    case appointment
-    case labTest
-    case bed
+    case appointment = "appointment"
+    case labTest = "labTest"
+    case bed = "bed"
 }
 
 struct Bed: Codable {
