@@ -32,7 +32,15 @@ struct DoctorProfileView: View {
                 
                 Section {
                     NavigationLink(destination: updateFields(doctor: doctorDetails ?? doctor)) {
-                        Text("Edit Phone and Email")
+                        Text("Edit Contact Information")
+                            .foregroundColor(AppConfig.buttonColor)
+                            .fontWeight(.semibold)
+                    }
+                }
+                
+                Section {
+                    NavigationLink(destination: UpdateQualificationsView(doctor: doctorDetails ?? doctor)) {
+                        Text("Update Qualifications")
                             .foregroundColor(AppConfig.buttonColor)
                             .fontWeight(.semibold)
                     }
@@ -40,7 +48,7 @@ struct DoctorProfileView: View {
                 
                 Section {
                     NavigationLink(destination: updatePassword(doctor: doctorDetails ?? doctor)) {
-                        Text("Update Password")
+                        Text("Reset Password")
                             .foregroundColor(AppConfig.buttonColor)
                             .fontWeight(.semibold)
                     }
