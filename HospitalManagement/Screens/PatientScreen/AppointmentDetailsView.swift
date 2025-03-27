@@ -103,18 +103,18 @@ struct AppointmentDetailsView: View {
                         .foregroundColor(AppConfig.fontColor)
                     
                     VStack(spacing: 15) {
-                        DetailRow(icon: "calendar", title: "Date", value: Self.formatAppointmentDate(appointmentDetails["date"]))
+                        DetailRow1(icon: "calendar", title: "Date", value: Self.formatAppointmentDate(appointmentDetails["date"]))
                         Divider()
-                        DetailRow(icon: "clock", title: "Time Slot", value: appointmentDetails["timeSlot"] as? String ?? "N/A")
+                        DetailRow1(icon: "clock", title: "Time Slot", value: appointmentDetails["timeSlot"] as? String ?? "N/A")
                         
                         if let patientName = appointmentDetails["patientName"] as? String {
                             Divider()
-                            DetailRow(icon: "person", title: "Patient Name", value: patientName)
+                            DetailRow1(icon: "person", title: "Patient Name", value: patientName)
                         }
                         
                         if let patientAge = appointmentDetails["patientAge"] as? String {
                             Divider()
-                            DetailRow(icon: "number", title: "Patient Age", value: patientAge)
+                            DetailRow1(icon: "number", title: "Patient Age", value: patientAge)
                         }
                     }
                     .padding()
@@ -158,7 +158,7 @@ struct AppointmentDetailsView: View {
 }
 
 // MARK: - Detail Row View
-struct DetailRow: View {
+struct DetailRow1: View {
     let icon: String
     let title: String
     let value: String
