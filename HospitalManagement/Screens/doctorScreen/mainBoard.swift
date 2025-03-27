@@ -4,26 +4,10 @@ import SwiftUI
 struct mainBoard: View {
     @StateObject private var supabaseController = SupabaseController()
     @AppStorage("currentUserId") private var currentUserId: String = ""
-    @State private var selectedTab: Tab = .dashBoard
     @State private var showProfile = false
     @State private var doctor: Doctor?
     @State private var isLoading = true
     @State private var errorMessage: String?
-
-    enum Tab {
-        case appointments, patients, dashBoard
-    }
-    
-    var heading: String {
-        switch selectedTab {
-        case .appointments:
-            return "Appointments"
-        case .patients:
-            return "Patients"
-        case .dashBoard:
-            return "Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")"
-        }
-    }
     
     var body: some View {
         NavigationStack {
@@ -43,44 +27,31 @@ struct mainBoard: View {
                         }
                     }
                 } else if let doctor = doctor {
-                    VStack {
-                        // **Top Bar with Profile Button & Welcome Message**
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(heading)
-                                    .font(.largeTitle)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.primary)
+                    TabView {
+                        DoctorDashBoard()
+                            .tabItem {
+                                Label("Dashboard", systemImage: "house.fill")
                             }
-                            
-                            Spacer()
-                            
-                            Button(action: {
-                                showProfile = true
-                            }) {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .resizable()
-                                    .frame(width: 40, height: 40)
-                                    .foregroundColor(AppConfig.buttonColor)
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.top, 10)
                         
-                        VStack(spacing: 0) {
-                            // **Content Area (Switches Based on Selected Tab)**
-                            Group {
-                                if selectedTab == .appointments {
-                                    AppointmentView()
-                                } else if selectedTab == .patients {
-                                    patientView()
-                                } else if selectedTab == .dashBoard {
-                                    DoctorDashBoard()
-                                }
+                        AppointmentView()
+                            .tabItem {
+                                Label("Appointments", systemImage: "calendar")
                             }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        }
-                        .ignoresSafeArea(.keyboard, edges: .bottom)
+                    }
+                    .accentColor(AppConfig.buttonColor) // ✅ Tab bar icon color
+                }
+            }
+            .navigationTitle("Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showProfile = true
+                    }) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .frame(width: 40, height: 40)
+                            .foregroundColor(AppConfig.buttonColor)
+                            .padding(.top, 10)
                     }
                 }
             }
@@ -109,7 +80,6 @@ struct mainBoard: View {
                 return
             }
             
-            // Fetch doctor details from Supabase
             let doctors: [Doctor] = try await supabaseController.client.database
                 .from("Doctor")
                 .select()
@@ -133,4 +103,6 @@ struct mainBoard: View {
     }
 }
 
-
+#Preview {
+    mainBoard()
+}
