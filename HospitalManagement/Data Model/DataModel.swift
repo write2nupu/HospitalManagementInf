@@ -167,7 +167,7 @@ enum BloodGroup: String, Codable, CaseIterable {
     }
 }
 
-struct Appointment: Codable {
+struct Appointment: Codable, Identifiable {
     let id: UUID
     let patientId: UUID
     let doctorId: UUID
