@@ -7,24 +7,12 @@ struct AppointmentView: View {
             id: UUID(),
             patientId: UUID(),
             doctorId: UUID(),
-            hospitalId: UUID(),
-            departmentId: UUID(),
             date: Date(),
             status: .scheduled,
             createdAt: Date(),
             type: .Consultation
         ),
-        Appointment(
-            id: UUID(),
-            patientId: UUID(),
-            doctorId: UUID(),
-            hospitalId: UUID(),
-            departmentId: UUID(),
-            date: Date().addingTimeInterval(86400), // Tomorrow
-            status: .completed,
-            createdAt: Date(),
-            type: .Emergency
-        )
+
     ]
     
     let screenWidth = UIScreen.main.bounds.width
@@ -66,7 +54,7 @@ struct AppointmentView: View {
             }
             .background(Color(UIColor.systemGray6))
             .sheet(item: $selectedAppointment) { appointment in
-                AppointmentDetailView(appointment: appointment) // ✅ Pass correct instance
+                AppointmentDetailView(appointment: filteredAppointments[0]) // ✅ Pass correct instance
             }
         }
     }
