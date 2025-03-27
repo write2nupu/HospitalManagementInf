@@ -1,3 +1,15 @@
+// THIS FILE IS DEPRECATED
+// The contents of this file have been split into separate files for better organization and maintainability.
+// Please use the following files instead:
+// - PatientDashboardView.swift
+// - EmergencyAssistanceView.swift
+// - HomeTabView.swift
+// - AppointmentsTabView.swift
+// - RecordsTabView.swift
+// - InvoicesTabView.swift
+// - AppointmentDetailsView.swift
+// - TextEditorPlaceholder.swift
+
 import SwiftUI
 
 class HospitalManagementTestViewModel: ObservableObject {
