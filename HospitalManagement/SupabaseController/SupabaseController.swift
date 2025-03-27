@@ -18,10 +18,10 @@ class SupabaseController: ObservableObject {
             supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxzanhvc2x4cm11YnJjcHpnbnJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDQwOTgsImV4cCI6MjA1ODI4MDA5OH0.wxc_rk_L_9R08wyjuoTX8KyYUJ71LDxdZ9n7RFNkzwE"
         )
         self.encoder = JSONEncoder()
-                self.encoder.keyEncodingStrategy = .convertToSnakeCase
-                
-                self.decoder = JSONDecoder()
-                self.decoder.keyDecodingStrategy = .convertFromSnakeCase
+        self.encoder.keyEncodingStrategy = .convertToSnakeCase
+        
+        self.decoder = JSONDecoder()
+        self.decoder.keyDecodingStrategy = .convertFromSnakeCase
     }
     func signUp(email: String, password: String, userData: [String: Any]) async throws -> users {
         print("Attempting to sign up with email:", email)
@@ -416,23 +416,23 @@ class SupabaseController: ObservableObject {
             return []
         }
     }
-
+    
 //    // MARK: - Fetch Hospital Departments
 //    func fetchHospitalDepartments(hospitalId: UUID) async -> [Department] {
-//        do {
+    //        do {
 //            let departments: [Department] = try await client
 //                .from("Department")
-//                .select()
+    //                .select()
 //                .eq("hospitalId", value: hospitalId)
-//                .execute()
-//                .value
+    //                .execute()
+    //                .value
 //            return departments
-//        } catch {
+    //        } catch {
 //            print("Error fetching hospital departments: \(error)")
-//            return []
-//        }
-//    }
-//    
+    //            return []
+    //        }
+    //    }
+    
     // MARK: - Fetch Patient Details
     func fetchPatientDetails(patientId: UUID) async -> Patient? {
         do {
@@ -666,186 +666,137 @@ func signInPatient(email: String, password: String) async throws -> Patient {
     return patient
 }
 
-// MARK: - Bed Management Functions
-func fetchAllBeds(hospitalId: UUID? = nil) async throws -> [Bed] {
-    var query = client
-        .from("Bed")
-        .select("""
-            id,
-            hospitalId,
-            price,
-            type,
-            isAvailable,
-            BedBooking (
-                id,
-                patientId,
-                startDate,
-                endDate,
-                isAvailable
-            )
-        """)
+// Add this function to the SupabaseController class
+func fetchHospitalAndAdmin() async throws -> (Hospital, String)? {
+    print("Fetching hospital and admin details")
     
-    if let hospitalId = hospitalId {
-        query = query.eq("hospitalId", value: hospitalId.uuidString)
-    }
-    
-    let beds: [Bed] = try await query
+    // First get all hospitals with their assigned admins
+    let hospitals: [Hospital] = try await client
+        .from("Hospital")
+        .select("*")
         .execute()
         .value
     
-    return beds
-}
-
-func addBeds(beds: [Bed]) async throws {
-    // Convert beds to match schema
-    let bedData = beds.map { bed -> [String: AnyJSON] in
-        return [
-            "id": .string(bed.id.uuidString),
-            "hospitalId": bed.hospitalId.map { .string($0.uuidString) } ?? .null,
-            "price": .double(Double(bed.price)),
-            "type": .string(bed.type.rawValue),
-            "isAvailable": .bool(bed.isAvailable!)
-        ]
+    guard let hospital = hospitals.first else {
+        print("No hospital found")
+        return nil
     }
     
-    try await client
-        .from("Bed")
-        .insert(bedData)
-        .execute()
-}
-
-func updateBedAvailability(bedId: UUID, isAvailable: Bool) async throws {
-    try await client
-        .from("Bed")
-        .update(["isAvailable": isAvailable])
-        .eq("id", value: bedId.uuidString)
-        .execute()
-}
-
-func getRecentBedBookings(hospitalId: UUID? = nil, limit: Int = 10) async throws -> [BedBookingWithDetails] {
-    var query = client
-        .from("BedBooking")
-        .select("""
-            id,
-            patientId,
-            bedId,
-            startDate,
-            endDate,
-            isAvailable,
-            Patient (
-                id,
-                fullname
-            ),
-            Bed (
-                id,
-                type,
-                price,
-                hospitalId
-            )
-        """)
+    // Get admin details using assigned_admin_id from hospital
+    if let assignedAdminId = hospital.assigned_admin_id {
+        let admins: [Admin] = try await client
+            .from("Admin")
+            .select("*")
+            .eq("id", value: assignedAdminId.uuidString)
+            .execute()
+            .value
         
-    if let hospitalId = hospitalId {
-        query = query.eq("hospitalId", value: hospitalId.uuidString)
-    }
-    
-    let bookings: [BedBooking] = try await query
-        .order("startDate", ascending: false)
-        .limit(limit)
-        .execute()
-        .value
-    
-    // Convert raw bookings to BedBookingWithDetails
-    var bookingsWithDetails: [BedBookingWithDetails] = []
-    for booking in bookings {
-        if let patient = try await fetchPatientDetails(patientId: booking.patientId),
-           let bed = try await fetchBedDetails(bedId: booking.bedId) {
-            let bookingWithDetails = BedBookingWithDetails(
-                booking: booking,
-                patient: patient,
-                bed: bed
-            )
-            bookingsWithDetails.append(bookingWithDetails)
+        if let admin = admins.first {
+            print("Found hospital: \(hospital.name) with admin: \(admin.full_name)")
+            return (hospital, admin.full_name)
         }
     }
     
-    return bookingsWithDetails
+    return nil
 }
 
-private func fetchBedDetails(bedId: UUID) async throws -> Bed? {
-    let beds: [Bed] = try await client
-        .from("Bed")
-        .select("""
-            id,
-            hospitalId,
-            price,
-            type,
-            isAvailable
-        """)
-        .eq("id", value: bedId.uuidString)
-        .execute()
-        .value
-    return beds.first
-}
-
-// Add function to create a bed booking
-func createBedBooking(patientId: UUID, bedId: UUID, startDate: Date, endDate: Date) async throws {
-    let booking: [String: AnyJSON] = [
-        "id": .string(UUID().uuidString),
-        "patientId": .string(patientId.uuidString),
-        "bedId": .string(bedId.uuidString),
-        "startDate": .string(ISO8601DateFormatter().string(from: startDate)),
-        "endDate": .string(ISO8601DateFormatter().string(from: endDate)),
-        "isAvailable": .bool(false)
-    ]
+// Add function to sign in admin and store their ID
+func signInAdmin(email: String, password: String) async throws -> Admin {
+    print("Attempting to sign in admin with email:", email)
     
-    try await client
-        .from("BedBooking")
-        .insert(booking)
-        .execute()
+    let authResponse = try await client.auth.signIn(
+        email: email,
+        password: password
+    )
     
-    // Update bed availability
-    try await updateBedAvailability(bedId: bedId, isAvailable: false)
-}
-
-// Add function to end a bed booking
-func endBedBooking(bookingId: UUID) async throws {
-    let booking: [BedBooking] = try await client
-        .from("BedBooking")
-        .select("bedId")
-        .eq("id", value: bookingId.uuidString)
-        .execute()
-        .value
+    let adminId = authResponse.user.id.uuidString
+    print("Storing admin ID in UserDefaults:", adminId)
+    UserDefaults.standard.set(adminId, forKey: "currentAdminId")
+    // Verify it was stored
+    print("Verifying stored admin ID:", UserDefaults.standard.string(forKey: "currentAdminId") ?? "Not found")
     
-    if let bedId = booking.first?.bedId {
-        // Update the booking
-        try await client
-            .from("BedBooking")
-            .update(["isAvailable": true])
-            .eq("id", value: bookingId.uuidString)
-            .execute()
-        
-        // Make the bed available again
-        try await updateBedAvailability(bedId: bedId, isAvailable: true)
-    }
-}
-
-// Add function to get available beds by type
-func getAvailableBedsByType(type: BedType, hospitalId: UUID? = nil) async throws -> [Bed] {
-    var query = client
-        .from("Bed")
+    // Fetch admin details
+    let admins: [Admin] = try await client
+        .from("Admin")
         .select()
-        .eq("type", value: type.rawValue)
-        .eq("isAvailable", value: true)
-    
-    if let hospitalId = hospitalId {
-        query = query.eq("hospitalId", value: hospitalId.uuidString)
-    }
-    
-    let beds: [Bed] = try await query
+        .eq("id", value: authResponse.user.id.uuidString)
         .execute()
         .value
     
-    return beds
+    guard let admin = admins.first else {
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Admin account not found."])
+    }
+    
+    return admin
+}
+
+func fetchAdminProfile() async throws -> (Admin, Hospital)? {
+    print("Fetching admin profile details")
+    
+    // First get the hospital with assigned admin
+    let hospitals: [Hospital] = try await client
+        .from("Hospital")
+        .select("*")
+        .execute()
+        .value
+    
+    guard let hospital = hospitals.first else {
+        print("No hospital found")
+        return nil
+    }
+    
+    // Get admin details using assigned_admin_id from hospital
+    if let assignedAdminId = hospital.assigned_admin_id {
+        let admins: [Admin] = try await client
+            .from("Admin")
+            .select("*")
+            .eq("id", value: assignedAdminId.uuidString)
+            .execute()
+            .value
+        
+        if let admin = admins.first {
+            print("Found admin profile with hospital details")
+            return (admin, hospital)
+        }
+    }
+    
+    return nil
+}
+
+func updateAdmin(_ admin: Admin) async throws {
+    try await client
+        .from("Admin")
+        .update(admin)
+        .eq("id", value: admin.id)
+        .execute()
+    print("Admin updated successfully!")
+}
+
+func fetchSuperAdminProfile() async throws -> users? {
+    print("Attempting to fetch super admin profile")
+    let superAdmins: [users] = try await client
+        .from("users")
+        .select("*")  // Make sure we're selecting all fields
+        .eq("role", value: "super_admin")
+        .execute()
+        .value
+    
+    if let superAdmin = superAdmins.first {
+        print("Found super admin: \(superAdmin.full_name)")
+        return superAdmin
+    }
+    print("No super admin found")
+    return nil
+}
+
+func updateHospital(_ hospital: Hospital) async throws {
+    try await client
+        .from("Hospital")
+        .update(hospital)
+        .eq("id", value: hospital.id)
+        .execute()
+    print("Hospital updated successfully!")
+}
 }
 
 func getBedStatistics(hospitalId: UUID? = nil) async throws -> (total: Int, available: Int, byType: [BedType: (total: Int, available: Int)]) {

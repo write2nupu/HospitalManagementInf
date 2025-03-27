@@ -9,6 +9,8 @@ import SwiftUI
 struct AdminHomeView: View {
 
     @EnvironmentObject private var viewModel: HospitalManagementViewModel
+    @StateObject private var supabaseController = SupabaseController()
+    @State private var hospitalName: String = "Loading..."
     @State private var showAddDoctor = false
     @State private var showAdminProfile = false
     @State private var showAddDepartment = false
@@ -212,7 +214,7 @@ struct AdminHomeView: View {
                 }
                 .padding(.vertical)
             }
-            .navigationTitle("Hospital Staff")
+            .navigationTitle(hospitalName)
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -237,6 +239,32 @@ struct AdminHomeView: View {
             }
             .sheet(isPresented: $showAdminProfile) {
                 AdminProfileView()
+            }
+        }
+        .onAppear {
+            Task {
+                await fetchHospitalName()
+            }
+        }
+    }
+    
+    private func fetchHospitalName() async {
+        do {
+            if let (hospital, adminName) = try await supabaseController.fetchHospitalAndAdmin() {
+                print("Successfully fetched hospital:", hospital)
+                await MainActor.run {
+                    hospitalName = "Hi \(adminName)"
+                }
+            } else {
+                print("No hospital or admin found")
+                await MainActor.run {
+                    hospitalName = "No Hospital or Admin Found"
+                }
+            }
+        } catch {
+            print("Error fetching hospital and admin:", error.localizedDescription)
+            await MainActor.run {
+                hospitalName = "Error Loading Details"
             }
         }
     }

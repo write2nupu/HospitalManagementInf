@@ -202,7 +202,7 @@ enum PaymentStatus: String, Codable {
     case pending
 }
 
-enum PaymentType: String, Codable {
+enum PaymentType: String, Codable, CaseIterable {
     case appointment
     case labTest
     case bed
