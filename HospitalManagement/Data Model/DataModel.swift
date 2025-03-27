@@ -355,6 +355,10 @@ struct PrescriptionData: Codable {
     let diagnosis: String
     let labTests: [String]?
     let additionalNotes: String?
+    let medicineName: String?
+    let medicineDosage: DosageOption?
+    let medicineDuration: DurationOption?
+    
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -363,5 +367,27 @@ struct PrescriptionData: Codable {
         case diagnosis
         case labTests
         case additionalNotes
+        case medicineName
+        case medicineDosage
+        case medicineDuration
     }
 }
+enum DosageOption: String, CaseIterable, Codable {
+    case oneDaily = "Once Daily"
+    case twiceDaily = "Twice Daily"
+    case thriceDaily = "Thrice Daily"
+    case beforeMeal = "Before Meals"
+    case afterMeal = "After Meals"
+    case asNeeded = "As Needed"
+}
+
+enum DurationOption: String, CaseIterable, Codable {
+    case threeDays = "3 Days"
+    case fiveDays = "5 Days"
+    case sevenDays = "7 Days"
+    case tenDays = "10 Days"
+    case fifteenDays = "15 Days"
+    case thirtyDays = "30 Days"
+    case continuous = "Continuous"
+}
+
