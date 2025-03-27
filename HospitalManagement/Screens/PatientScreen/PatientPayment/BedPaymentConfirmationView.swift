@@ -187,7 +187,8 @@ struct BedPaymentConfirmationView_Previews: PreviewProvider {
             patientid: UUID(),
             amount: 5000,
             paymentType: .bed,
-            status: .paid
+            status: .paid,
+            hospitalId: UUID()
         )
 
         NavigationView {

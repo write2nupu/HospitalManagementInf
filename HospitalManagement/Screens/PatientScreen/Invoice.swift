@@ -9,10 +9,10 @@ import SwiftUI
 
 struct InvoiceListView: View {
     @State private var invoices: [Invoice] = [
-        Invoice(id: UUID(), createdAt: Date(), patientid: UUID(), amount: 599, paymentType: .appointment, status: .paid),
-        Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-86400), patientid: UUID(), amount: 499, paymentType: .labTest, status: .paid),
-        Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-172800), patientid: UUID(), amount: 699, paymentType: .bed, status: .paid),
-        Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-259200), patientid: UUID(), amount: 999, paymentType: .appointment, status: .paid)
+        Invoice(id: UUID(), createdAt: Date(), patientid: UUID(), amount: 599, paymentType: .appointment, status: .paid, hospitalId: UUID()),
+        Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-86400), patientid: UUID(), amount: 499, paymentType: .labTest, status: .paid, hospitalId: UUID()),
+        Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-172800), patientid: UUID(), amount: 699, paymentType: .bed, status: .paid, hospitalId: UUID()),
+        Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-259200), patientid: UUID(), amount: 999, paymentType: .appointment, status: .paid, hospitalId: UUID())
     ]
     
     @State private var selectedFilter: PaymentType? = nil

@@ -9,24 +9,10 @@ import Combine
 
 struct BillingView: View {
     @State private var invoices: [Invoice] = [
-        Invoice(id: UUID(), createdAt: Date(), patientid: UUID(), amount: 2000, paymentType: .appointment, status: .paid),
-        Invoice(id: UUID(), createdAt: Date(), patientid: UUID(), amount: 1500, paymentType: .labTest, status: .paid),
-        Invoice(id: UUID(), createdAt: Date(), patientid: UUID(), amount: 3000, paymentType: .bed, status: .paid),
-                Invoice(id: UUID(), createdAt: Date(), patientid: UUID(), amount: 599, paymentType: .appointment, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-1800), patientid: UUID(), amount: 499, paymentType: .appointment, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-3600), patientid: UUID(), amount: 599, paymentType: .appointment, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-7200), patientid: UUID(), amount: 499, paymentType: .appointment, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-14400), patientid: UUID(), amount: 599, paymentType: .appointment, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-28800), patientid: UUID(), amount: 599, paymentType: .appointment, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-43200), patientid: UUID(), amount: 499, paymentType: .labTest, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-86400), patientid: UUID(), amount: 599, paymentType: .labTest, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-172800), patientid: UUID(), amount: 499, paymentType: .bed, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-259200), patientid: UUID(), amount: 599, paymentType: .bed, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-345600), patientid: UUID(), amount: 499, paymentType: .appointment, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-432000), patientid: UUID(), amount: 599, paymentType: .appointment, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-518400), patientid: UUID(), amount: 499, paymentType: .labTest, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-604800), patientid: UUID(), amount: 599, paymentType: .bed, status: .paid),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-691200), patientid: UUID(), amount: 499, paymentType: .appointment, status: .paid)
+        Invoice(id: UUID(), createdAt: Date(), patientid: UUID(), amount: 2000, paymentType: .appointment, status: .paid, hospitalId: UUID()),
+        Invoice(id: UUID(), createdAt: Date(), patientid: UUID(), amount: 1500, paymentType: .labTest, status: .paid, hospitalId: UUID()),
+        Invoice(id: UUID(), createdAt: Date(), patientid: UUID(), amount: 3000, paymentType: .bed, status: .paid, hospitalId: UUID())
+             
     ]
     
     var totalRevenue: Double {

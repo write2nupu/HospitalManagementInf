@@ -195,6 +195,7 @@ struct Invoice: Identifiable, Codable {
     var amount: Int
     var paymentType: PaymentType
     var status: PaymentStatus
+    let hospitalId: UUID?
 }
 
 enum PaymentStatus: String, Codable {
