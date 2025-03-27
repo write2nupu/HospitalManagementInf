@@ -174,18 +174,122 @@ struct Appointment: Codable, Identifiable {
     let date: Date
     var status: AppointmentStatus
     let createdAt: Date
-    let type : AppointmentType
+    let type: AppointmentType
+    let prescriptionId: UUID
+    
+    // Memberwise initializer
+    init(id: UUID, patientId: UUID, doctorId: UUID, date: Date, status: AppointmentStatus, createdAt: Date, type: AppointmentType, prescriptionId: UUID) {
+        self.id = id
+        self.patientId = patientId
+        self.doctorId = doctorId
+        self.date = date
+        self.status = status
+        self.createdAt = createdAt
+        self.type = type
+        self.prescriptionId = prescriptionId
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case patientId
+        case doctorId
+        case date
+        case status
+        case createdAt
+        case type
+        case prescriptionId
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        id = try container.decode(UUID.self, forKey: .id)
+        patientId = try container.decode(UUID.self, forKey: .patientId)
+        doctorId = try container.decode(UUID.self, forKey: .doctorId)
+        status = try container.decode(AppointmentStatus.self, forKey: .status)
+        type = try container.decode(AppointmentType.self, forKey: .type)
+        prescriptionId = try container.decode(UUID.self, forKey: .prescriptionId)
+        
+        // Handle date decoding with multiple formats
+        let dateString = try container.decode(String.self, forKey: .date)
+        let createdAtString = try container.decode(String.self, forKey: .createdAt)
+        
+        // Try parsing with DateFormatter first (more flexible)
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = TimeZone.current
+        
+        // Array of possible date formats to try
+        let dateFormats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSZ",  // With milliseconds and timezone
+            "yyyy-MM-dd'T'HH:mm:ssZ",      // With timezone
+            "yyyy-MM-dd'T'HH:mm:ss",       // Without timezone
+            "yyyy-MM-dd'T'HH:mm"           // Without seconds and timezone
+        ]
+        
+        func parseDate(_ dateString: String, formats: [String]) -> Date? {
+            for format in formats {
+                dateFormatter.dateFormat = format
+                if let date = dateFormatter.date(from: dateString) {
+                    return date
+                }
+            }
+            return nil
+        }
+        
+        // Try to parse the date
+        if let parsedDate = parseDate(dateString, formats: dateFormats) {
+            date = parsedDate
+        } else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .date,
+                in: container,
+                debugDescription: "Invalid date format: \(dateString)"
+            )
+        }
+        
+        // Try to parse the createdAt date
+        if let parsedCreatedAt = parseDate(createdAtString, formats: dateFormats) {
+            createdAt = parsedCreatedAt
+        } else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .createdAt,
+                in: container,
+                debugDescription: "Invalid date format: \(createdAtString)"
+            )
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(id, forKey: .id)
+        try container.encode(patientId, forKey: .patientId)
+        try container.encode(doctorId, forKey: .doctorId)
+        try container.encode(status, forKey: .status)
+        try container.encode(type, forKey: .type)
+        try container.encode(prescriptionId, forKey: .prescriptionId)
+        
+        // Format dates using DateFormatter
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        dateFormatter.timeZone = TimeZone.current
+        
+        try container.encode(dateFormatter.string(from: date), forKey: .date)
+        try container.encode(dateFormatter.string(from: createdAt), forKey: .createdAt)
+    }
 }
 
 enum AppointmentType : String, Codable {
-    case Consultation
-    case Emergency
+    case Consultation = "Consultation"
+    case Emergency = "Emergency"
 }
 
 enum AppointmentStatus: String, Codable {
-    case scheduled
-    case completed
-    case cancelled
+    case scheduled = "Scheduled"
+    case completed = "Completed"
+    case cancelled = "Cancelled"
 }
 
 struct Invoice: Identifiable, Codable {

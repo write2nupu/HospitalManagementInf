@@ -4,35 +4,29 @@ import PDFKit
 
 // Add this structure for prescription data
 struct PrescriptionData {
-    let id: String
-    let date: String
-    let doctorName: String
-    let doctorQualification: String
-    let doctorRegNo: String
-    let clinicName: String
-    let clinicAddress: String
-    let patientName: String
-    let patientAddress: String
+    let id: UUID
+    let patientId: UUID
+    let doctorId: UUID
     let diagnosis: String
-    let labTests: [String]
-    let additionalNotes: String
+    let labTests: [String]?
+    let additionalNotes: String?
 
 }
 
 struct AppointmentDetailView: View {
     
     @Environment(\.presentationMode) var presentationMode
-    
-    
-    
+    @StateObject private var supabase = SupabaseController()
     
     let appointment: Appointment
-     // to be changed after Fetch
     
     @State private var selectedImage: UIImage?
     @State private var diagnosticTests: String = ""
     @State private var medicines: [String] = []
     @State private var newMedicine: String = ""
+    @State private var existingPrescription: PrescriptionData?
+    @State private var isLoadingPrescription = true
+    @State private var prescriptionError: Error?
     
     // Add new state variables for prescription
     @State private var diagnosis: String = ""
@@ -86,65 +80,77 @@ struct AppointmentDetailView: View {
     var body: some View {
         NavigationView {
             VStack {
-                //                List {
-                //                    // **Appointment Details Section**
-                //                    Section(header: Text("Appointment Details").font(.headline)) {
-                //                        InfoRowAppointment(label: "Patient Name", value: appointment.patientName)
-                //                        InfoRowAppointment(label: "Appointment Type", value: appointment.visitType)
-                //                        InfoRowAppointment(label: "Date & Time", value: appointment.dateTime)
-                //                        InfoRowAppointment(label: "Status", value: appointment.status)
-                //                    }
-                
-                List {
-                    // **Appointment Details Section**
-                    Section(header: Text("Appointment Details").font(.headline)) {
-                        //                    InfoRowAppointment(label: "Patient Name", value: appointment.patientName)  to be fetched by patient ID
-                        InfoRowAppointment(label: "Appointment Type", value: appointment.type.rawValue)
-                        InfoRowAppointment(label: "Date & Time", value: formatDate(appointment.date))
+                if isLoadingPrescription {
+                    ProgressView("Loading prescription...")
+                } else {
+                    List {
+                        // **Appointment Details Section**
+                        Section(header: Text("Appointment Details").font(.headline)) {
+                            InfoRowAppointment(label: "Appointment Type", value: appointment.type.rawValue)
+                            InfoRowAppointment(label: "Date & Time", value: formatDate(appointment.date))
+                            
+                            InfoRowAppointment(label: "Status", value: appointment.status.rawValue)
+                        }
                         
-                        InfoRowAppointment(label: "Status", value: appointment.status.rawValue)
+                        
+                        // **Patient's Medical Information**
+                        Section(header: Text("Patient's Medical Information").font(.headline)) {
+                            InfoRowAppointment(label: "Blood Group", value: bloodGroup)
+                            InfoRowAppointment(label: "Allergies", value: allergies)
+                            InfoRowAppointment(label: "Medical History", value: existingMedicalRecord)
+                            InfoRowAppointment(label: "Current Medication", value: currentMedication)
+                            InfoRowAppointment(label: "Past Surgeries", value: pastSurgeries)
+                            InfoRowAppointment(label: "Emergency Contact", value: emergencyContact)
+                        }
+                        
+                        // Prescription Section
+                        Section(header: Text("Prescription").font(.headline)) {
+                            if let prescription = existingPrescription {
+                                // Show existing prescription data
+                                Text("Diagnosis: \(prescription.diagnosis)")
+                                if let tests = prescription.labTests {
+                                    Text("Lab Tests:")
+                                    ForEach(tests, id: \.self) { test in
+                                        Text("• \(test)")
+                                    }
+                                }
+                                if let notes = prescription.additionalNotes {
+                                    Text("Additional Notes: \(notes)")
+                                }
+                            } else {
+                                // Show prescription input fields
+                                DiagnosisSection(diagnosis: $diagnosis)
+                                LabTestsSection(selectedLabTests: $selectedLabTests, showingLabTestPicker: $showingLabTestPicker)
+                                NotesSection(notes: $additionalNotes)
+                            }
+                        }
                     }
                     
-                    
-                    // **Patient's Medical Information**
-                    Section(header: Text("Patient's Medical Information").font(.headline)) {
-                        InfoRowAppointment(label: "Blood Group", value: bloodGroup)
-                        InfoRowAppointment(label: "Allergies", value: allergies)
-                        InfoRowAppointment(label: "Medical History", value: existingMedicalRecord)
-                        InfoRowAppointment(label: "Current Medication", value: currentMedication)
-                        InfoRowAppointment(label: "Past Surgeries", value: pastSurgeries)
-                        InfoRowAppointment(label: "Emergency Contact", value: emergencyContact)
+                    // View Prescription Button
+                    Button(action: {
+                        generateAndShowPrescription()
+                    }) {
+                        HStack {
+                            Image(systemName: "doc.text.fill")
+                            Text("View Prescription")
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .cornerRadius(10)
                     }
-                    
-                    // Prescription Section
-                    Section(header: Text("Prescription").font(.headline)) {
-                        DiagnosisSection(diagnosis: $diagnosis)
-                        LabTestsSection(selectedLabTests: $selectedLabTests, showingLabTestPicker: $showingLabTestPicker)
-                        NotesSection(notes: $additionalNotes)
-                    }
-                }
-                
-                // Add View Prescription Button at bottom
-                Button(action: {
-                    generateAndShowPrescription()
-                }) {
-                    HStack {
-                        Image(systemName: "doc.text.fill")
-                        Text("View Prescription")
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue)
-                    .cornerRadius(10)
                 }
-                .padding()
             }
             .navigationTitle("Appointment Details")
             .navigationBarItems(trailing: Button("Save") {
                 savePrescription()
                 presentationMode.wrappedValue.dismiss()
             })
+            .task {
+                await loadPrescription()
+            }
             .sheet(isPresented: $showingLabTestPicker) {
                 LabTestPickerView(selectedTests: $selectedLabTests, availableTests: availableLabTests)
             }
@@ -156,18 +162,38 @@ struct AppointmentDetailView: View {
         }
     }
     
+    private func loadPrescription() async {
+        isLoadingPrescription = true
+        do {
+            let prescriptions: [PrescriptionData] = try await supabase.client
+                .from("Prescription")
+                .select()
+                .eq("id", value: appointment.prescriptionId.uuidString)
+                .execute()
+                .value
+            
+            if let prescription = prescriptions.first {
+                existingPrescription = prescription
+                // Pre-fill the form fields with existing data
+                diagnosis = prescription.diagnosis
+                if let tests = prescription.labTests {
+                    selectedLabTests = Set(tests)
+                }
+                additionalNotes = prescription.additionalNotes ?? ""
+            }
+        } catch {
+            prescriptionError = error
+            print("Error loading prescription:", error)
+        }
+        isLoadingPrescription = false
+    }
+    
     // Add function to handle saving prescription
     func savePrescription() {
         let prescriptionData = PrescriptionData(
-            id: "123", // Generate unique ID
-            date: Date().formatted(date: .long, time: .shortened),
-            doctorName: "Dr. Onkar Bhave",
-            doctorQualification: "M.B.B.S., M.D., M.S.",
-            doctorRegNo: "270988",
-            clinicName: "Care Clinic",
-            clinicAddress: "Near Axis Bank, Kothrud, Pune - 411038",
-            patientName: "name to be fetched by ID",
-            patientAddress: "Pune", // Add to appointment model
+            id: UUID(), // Generate unique ID
+            patientId: UUID(),
+            doctorId: UUID(),
             diagnosis: "diagnosis to be added",
             labTests: ["labTest1","Labtest2"],
             additionalNotes: "Notes to be added"
@@ -200,19 +226,13 @@ struct AppointmentDetailView: View {
     
     // Add this function to generate and show prescription
     private func generateAndShowPrescription() {
-        let prescriptionData = PrescriptionData(
-            id: "123",
-            date: Date().formatted(date: .long, time: .shortened),
-            doctorName: "Dr. Onkar Bhave",
-            doctorQualification: "M.B.B.S., M.D., M.S.",
-            doctorRegNo: "270988",
-            clinicName: "Care Clinic",
-            clinicAddress: "Near Axis Bank, Kothrud, Pune - 411038",
-            patientName: "Name to be changed",
-            patientAddress: "Pune",
-            diagnosis: "diagnosis to be added",
-            labTests: ["labTest1","Labtest2"],
-            additionalNotes: "Notes to be added"
+        let prescriptionData = existingPrescription ?? PrescriptionData(
+            id: appointment.prescriptionId,
+            patientId: appointment.patientId,
+            doctorId: appointment.doctorId,
+            diagnosis: diagnosis,
+            labTests: Array(selectedLabTests),
+            additionalNotes: additionalNotes
         )
         
         if let pdfData = PDFGenerator.generatePrescriptionPDF(data: prescriptionData) {
@@ -377,7 +397,7 @@ struct AppointmentDetailView: View {
         static func generatePrescriptionPDF(data: PrescriptionData) -> Data? {
             let pdfMetaData = [
                 kCGPDFContextCreator: "Hospital Management System",
-                kCGPDFContextAuthor: data.doctorName
+                kCGPDFContextAuthor: "Doctor"
             ]
             let format = UIGraphicsPDFRendererFormat()
             format.documentInfo = pdfMetaData as [String: Any]
@@ -398,24 +418,10 @@ struct AppointmentDetailView: View {
                 let smallFont = UIFont.systemFont(ofSize: 10)
                 
                 // Header
-                drawText(data.clinicName, at: CGPoint(x: 40, y: 40), font: titleFont)
-                drawText(data.clinicAddress, at: CGPoint(x: 40, y: 70), font: regularFont)
-                drawText("Dr. \(data.doctorName)", at: CGPoint(x: 40, y: 90), font: regularFont)
-                drawText(data.doctorQualification, at: CGPoint(x: 40, y: 110), font: smallFont)
-                drawText("Reg No: \(data.doctorRegNo)", at: CGPoint(x: 40, y: 130), font: smallFont)
-                
-                
-                // Divider
-                drawLine(from: CGPoint(x: 40, y: 150), to: CGPoint(x: pageWidth - 40, y: 150))
+                drawText("Hospital Management System", at: CGPoint(x: 40, y: 40), font: titleFont)
                 
                 // Patient Details
-                drawText("Patient ID: \(data.id)", at: CGPoint(x: 40, y: 170), font: regularFont)
-                drawText("Name: \(data.patientName)", at: CGPoint(x: 40, y: 190), font: regularFont)
-                drawText("Address: \(data.patientAddress)", at: CGPoint(x: 40, y: 210), font: regularFont)
-                
-                
-                // Divider
-                drawLine(from: CGPoint(x: 40, y: 250), to: CGPoint(x: pageWidth - 40, y: 250))
+                drawText("Patient ID: \(data.patientId)", at: CGPoint(x: 40, y: 170), font: regularFont)
                 
                 // Diagnosis
                 drawText("Diagnosis:", at: CGPoint(x: 40, y: 270), font: regularFont)
@@ -424,20 +430,19 @@ struct AppointmentDetailView: View {
                 // Lab Tests
                 var yPos = 320.0
                 drawText("Lab Tests:", at: CGPoint(x: 40, y: yPos), font: regularFont)
-                for test in data.labTests {
-                    yPos += 20
-                    drawText("• \(test)", at: CGPoint(x: 60, y: yPos), font: regularFont)
+                if let tests = data.labTests {
+                    for test in tests {
+                        yPos += 20
+                        drawText("• \(test)", at: CGPoint(x: 60, y: yPos), font: regularFont)
+                    }
                 }
                 
                 // Additional Notes
                 yPos += 40
                 drawText("Additional Notes:", at: CGPoint(x: 40, y: yPos), font: regularFont)
-                drawText(data.additionalNotes, at: CGPoint(x: 60, y: yPos + 20), font: regularFont)
-                
-                // Follow Up
-                
-                drawLine(from: CGPoint(x: pageWidth - 200, y: pageHeight - 80),
-                         to: CGPoint(x: pageWidth - 50, y: pageHeight - 80))
+                if let notes = data.additionalNotes {
+                    drawText(notes, at: CGPoint(x: 60, y: yPos + 20), font: regularFont)
+                }
             }
             
             return data
