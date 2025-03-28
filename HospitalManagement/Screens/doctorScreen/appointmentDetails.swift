@@ -4,10 +4,10 @@ import PDFKit
 
 // Add this PDFGenerator class before the AppointmentDetailView struct
 class PDFGenerator {
-    static func generatePrescriptionPDF(data: PrescriptionData) -> Data? {
+    static func generatePrescriptionPDF(data: PrescriptionData, doctor: Doctor, hospital: Hospital) -> Data? {
         let pdfMetaData = [
             kCGPDFContextCreator: "Hospital Management System",
-            kCGPDFContextAuthor: "Doctor"
+            kCGPDFContextAuthor: doctor.full_name
         ]
         let format = UIGraphicsPDFRendererFormat()
         format.documentInfo = pdfMetaData as [String: Any]
@@ -21,49 +21,87 @@ class PDFGenerator {
         let data = renderer.pdfData { context in
             context.beginPage()
             
-            // Draw content
-            let titleFont = UIFont.systemFont(ofSize: 18, weight: .bold)
+            // Fonts
+            let titleFont = UIFont.systemFont(ofSize: 22, weight: .bold)
+            let headerFont = UIFont.systemFont(ofSize: 16, weight: .semibold)
             let regularFont = UIFont.systemFont(ofSize: 12)
+            let smallFont = UIFont.systemFont(ofSize: 10)
             
-            // Header
-            drawText("Hospital Management System", at: CGPoint(x: 40, y: 40), font: titleFont)
+            var yPos = 40.0
+            
+            // Hospital Header
+            drawText(hospital.name, at: CGPoint(x: 40, y: yPos), font: titleFont)
+            yPos += 25
+            drawText(hospital.address, at: CGPoint(x: 40, y: yPos), font: smallFont)
+            yPos += 15
+            drawText("\(hospital.city), \(hospital.state) - \(hospital.pincode)", at: CGPoint(x: 40, y: yPos), font: smallFont)
+            yPos += 15
+            drawText("Phone: \(hospital.mobile_number) | Email: \(hospital.email)", at: CGPoint(x: 40, y: yPos), font: smallFont)
+            
+            // Divider line
+            yPos += 20
+            let path = UIBezierPath()
+            path.move(to: CGPoint(x: 40, y: yPos))
+            path.addLine(to: CGPoint(x: pageWidth - 40, y: yPos))
+            path.lineWidth = 1
+            UIColor.gray.setStroke()
+            path.stroke()
+            
+            // Doctor Details
+            yPos += 25
+            drawText("Dr. \(doctor.full_name)", at: CGPoint(x: 40, y: yPos), font: headerFont)
+            yPos += 20
+            drawText("\(doctor.qualifications)", at: CGPoint(x: 40, y: yPos), font: regularFont)
+            yPos += 15
+            drawText("Reg. No: \(doctor.license_num)", at: CGPoint(x: 40, y: yPos), font: regularFont)
             
             // Patient Details
-            drawText("Patient ID: \(data.patientId)", at: CGPoint(x: 40, y: 80), font: regularFont)
+            yPos += 30
+            drawText("Patient ID: \(data.patientId)", at: CGPoint(x: 40, y: yPos), font: regularFont)
+            yPos += 20
+            drawText("Date: \(formatDate(Date()))", at: CGPoint(x: 40, y: yPos), font: regularFont)
             
             // Diagnosis
-            var yPos = 120.0
-            drawText("Diagnosis:", at: CGPoint(x: 40, y: yPos), font: regularFont)
-            drawText(data.diagnosis, at: CGPoint(x: 60, y: yPos + 20), font: regularFont)
+            yPos += 30
+            drawText("Diagnosis:", at: CGPoint(x: 40, y: yPos), font: headerFont)
+            yPos += 20
+            drawText(data.diagnosis, at: CGPoint(x: 60, y: yPos), font: regularFont)
             
             // Lab Tests
-            yPos += 60
-            drawText("Lab Tests:", at: CGPoint(x: 40, y: yPos), font: regularFont)
-            if let tests = data.labTests {
-                for (index, test) in tests.enumerated() {
+            if let tests = data.labTests, !tests.isEmpty {
+                yPos += 30
+                drawText("Lab Tests:", at: CGPoint(x: 40, y: yPos), font: headerFont)
+                for test in tests {
                     yPos += 20
                     drawText("• \(test)", at: CGPoint(x: 60, y: yPos), font: regularFont)
                 }
             }
             
-            // Medicine
-            yPos += 40
-            drawText("Medicine:", at: CGPoint(x: 40, y: yPos), font: regularFont)
+            // Medicines
+            yPos += 30
+            drawText("Medicines:", at: CGPoint(x: 40, y: yPos), font: headerFont)
             if let medicine = data.medicineName {
                 yPos += 20
                 drawText("• \(medicine)", at: CGPoint(x: 60, y: yPos), font: regularFont)
                 if let dosage = data.medicineDosage, let duration = data.medicineDuration {
                     yPos += 15
-                    drawText("  \(dosage.rawValue) - \(duration.rawValue)", at: CGPoint(x: 60, y: yPos), font: regularFont)
+                    drawText("  \(dosage.rawValue) for \(duration.rawValue)", at: CGPoint(x: 60, y: yPos), font: regularFont)
                 }
             }
             
             // Additional Notes
-            yPos += 40
-            drawText("Additional Notes:", at: CGPoint(x: 40, y: yPos), font: regularFont)
-            if let notes = data.additionalNotes {
-                drawText(notes, at: CGPoint(x: 60, y: yPos + 20), font: regularFont)
+            if let notes = data.additionalNotes, !notes.isEmpty {
+                yPos += 30
+                drawText("Additional Notes:", at: CGPoint(x: 40, y: yPos), font: headerFont)
+                yPos += 20
+                drawText(notes, at: CGPoint(x: 60, y: yPos), font: regularFont)
             }
+            
+            // Doctor's Signature
+            yPos = pageHeight - 100
+            drawText("Doctor's Signature", at: CGPoint(x: pageWidth - 200, y: yPos), font: regularFont)
+            yPos += 30
+            drawText("Dr. \(doctor.full_name)", at: CGPoint(x: pageWidth - 200, y: yPos), font: regularFont)
         }
         
         return data
@@ -74,6 +112,12 @@ class PDFGenerator {
             NSAttributedString.Key.font: font
         ]
         (text as NSString).draw(at: point, withAttributes: attributes)
+    }
+    
+    private static func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd MMM yyyy"
+        return formatter.string(from: date)
     }
 }
 
@@ -92,6 +136,19 @@ class Debouncer {
         workItem = newWorkItem
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: newWorkItem)
     }
+}
+
+// Add this struct at the top of the file
+struct PrescriptionRequestData: Encodable {
+    let id: String
+    let patientId: String
+    let doctorId: String
+    let diagnosis: String
+    let labTests: [String]
+    let additionalNotes: String
+    let medicineName: String
+    let medicineDosage: String
+    let medicineDuration: String
 }
 
 struct AppointmentDetailView: View {
@@ -131,9 +188,31 @@ struct AppointmentDetailView: View {
         "Liver Function Test",
         "Kidney Function Test",
         "X-Ray",
-        "ECG"
-    ]
-    
+        "ECG",
+        "Urine Analysis",
+        "HbA1c",
+        "C-Reactive Protein",
+        "Erythrocyte Sedimentation Rate (ESR)",
+        "Iron Studies",
+        "Electrolytes Test",
+        "Coagulation Profile",
+        "Vitamin D Test",
+        "Vitamin B12 Test",
+        "Calcium Test",
+        "Prostate Specific Antigen (PSA)",
+        "Pap Smear",
+        "Mammogram",
+        "Echocardiogram",
+        "Pulmonary Function Test",
+        "Stool Examination",
+        "Amylase Test",
+        "Lipase Test",
+        "Blood Culture",
+        "Urine Culture",
+        "Fasting Blood Sugar",
+        "Postprandial Blood Sugar"
+    ];
+
     @State private var showingMedicineSelection = false
     @State private var prescribedMedicines: [PrescribedMedicine] = []
     
@@ -265,63 +344,171 @@ struct AppointmentDetailView: View {
     private func loadPrescription() async {
         isLoadingPrescription = true
         do {
-            print("Loading prescription for ID:", appointment.prescriptionId.uuidString)
+            guard let prescriptionId = appointment.prescriptionId else {
+                print("No prescription ID available")
+                isLoadingPrescription = false
+                return
+            }
+            
+            print("Loading prescription for ID:", prescriptionId.uuidString)
             let prescriptions: [PrescriptionData] = try await supabase.client
-                .from("PrescriptionData") // Changed from "prescriptions" to "PrescriptionData"
+                .from("PrescriptionData")
                 .select()
-                .eq("id", value: appointment.prescriptionId.uuidString)
+                .eq("id", value: prescriptionId.uuidString)
                 .execute()
                 .value
             
             if let prescription = prescriptions.first {
                 existingPrescription = prescription
                 diagnosis = prescription.diagnosis
-                if let tests = prescription.labTests {
-                    selectedLabTests = Set(tests)
-                }
+                selectedLabTests = Set(prescription.labTests ?? [])
                 additionalNotes = prescription.additionalNotes ?? ""
+                
+                if let medicineName = prescription.medicineName {
+                    self.medicineName = medicineName
+                }
             }
         } catch {
             print("Error loading prescription:", error)
+            print("Detailed error:", String(describing: error))
         }
         isLoadingPrescription = false
     }
     
     func savePrescription() {
+        print("Starting to save prescription...")
+        
+        // Create medicine details string
+        let medicineDetails = prescribedMedicines.map { medicine in
+            "\(medicine.medicine.name) (\(medicine.dosage) for \(medicine.duration))"
+        }.joined(separator: ", ")
+        
+        // Convert dosage and duration to proper enums
+        let dosageOption = DosageOption(rawValue: prescribedMedicines.first?.dosage ?? "Once Daily") ?? .oneDaily
+        let durationOption = DurationOption(rawValue: prescribedMedicines.first?.duration ?? "7 Days") ?? .sevenDays
+        
+        // Create prescription data using existing model
         let prescriptionData = PrescriptionData(
-            id: UUID(),
+            id: appointment.prescriptionId ?? UUID(),
             patientId: appointment.patientId,
             doctorId: appointment.doctorId,
             diagnosis: diagnosis,
             labTests: Array(selectedLabTests),
             additionalNotes: additionalNotes,
-            medicineName: medicineName,
-            medicineDosage: selectedDosage,
-            medicineDuration: selectedDuration
+            medicineName: medicineDetails,
+            medicineDosage: dosageOption,
+            medicineDuration: durationOption
         )
         
-        if let pdfData = PDFGenerator.generatePrescriptionPDF(data: prescriptionData) {
-            self.prescriptionPDF = pdfData
-            showingPrescriptionPreview = true
+        Task {
+            do {
+                // First fetch doctor and hospital details
+                let doctors: [Doctor] = try await supabase.client
+                    .from("Doctor")
+                    .select()
+                    .eq("id", value: appointment.doctorId.uuidString)
+                    .execute()
+                    .value
+                
+                guard let doctor = doctors.first else {
+                    print("Doctor not found")
+                    return
+                }
+                
+                let hospitals: [Hospital] = try await supabase.client
+                    .from("Hospital")
+                    .select()
+                    .eq("id", value: doctor.hospital_id?.uuidString ?? "")
+                    .execute()
+                    .value
+                
+                guard let hospital = hospitals.first else {
+                    print("Hospital not found")
+                    return
+                }
+                
+                // Try to update existing prescription
+                print("Attempting to update prescription...")
+                try await supabase.client
+                    .from("PrescriptionData")
+                    .update(prescriptionData)
+                    .eq("id", value: appointment.prescriptionId?.uuidString)
+                    .execute()
+                
+                print("Successfully updated prescription")
+                
+                // Generate PDF with hospital and doctor details
+                if let pdfData = PDFGenerator.generatePrescriptionPDF(data: prescriptionData, doctor: doctor, hospital: hospital) {
+                    self.prescriptionPDF = pdfData
+                    showingPrescriptionPreview = true
+                    print("PDF generated successfully")
+                }
+            } catch {
+                print("Error saving prescription:", error)
+                print("Attempting to insert new prescription...")
+                
+                // If update fails, try to insert new prescription
+                do {
+                    try await supabase.client
+                        .from("PrescriptionData")
+                        .insert(prescriptionData)
+                        .execute()
+                    
+                    print("Successfully inserted new prescription")
+                } catch {
+                    print("Error inserting prescription:", error)
+                }
+            }
         }
     }
     
     private func generateAndShowPrescription() {
-        let prescriptionData = existingPrescription ?? PrescriptionData(
-            id: UUID(),
-            patientId: appointment.patientId,
-            doctorId: appointment.doctorId,
-            diagnosis: diagnosis,
-            labTests: Array(selectedLabTests),
-            additionalNotes: additionalNotes,
-            medicineName: medicineName,
-            medicineDosage: selectedDosage,
-            medicineDuration: selectedDuration
-        )
-        
-        if let pdfData = PDFGenerator.generatePrescriptionPDF(data: prescriptionData) {
-            self.prescriptionPDF = pdfData
-            self.showingPrescriptionPreview = true
+        Task {
+            do {
+                // First fetch doctor and hospital details
+                let doctors: [Doctor] = try await supabase.client
+                    .from("Doctor")
+                    .select()
+                    .eq("id", value: appointment.doctorId.uuidString)
+                    .execute()
+                    .value
+                
+                guard let doctor = doctors.first else {
+                    print("Doctor not found")
+                    return
+                }
+                
+                let hospitals: [Hospital] = try await supabase.client
+                    .from("Hospital")
+                    .select()
+                    .eq("id", value: doctor.hospital_id?.uuidString ?? "")
+                    .execute()
+                    .value
+                
+                guard let hospital = hospitals.first else {
+                    print("Hospital not found")
+                    return
+                }
+                
+                let prescriptionData = existingPrescription ?? PrescriptionData(
+                    id: UUID(),
+                    patientId: appointment.patientId,
+                    doctorId: appointment.doctorId,
+                    diagnosis: diagnosis,
+                    labTests: Array(selectedLabTests),
+                    additionalNotes: additionalNotes,
+                    medicineName: medicineName,
+                    medicineDosage: selectedDosage,
+                    medicineDuration: selectedDuration
+                )
+                
+                if let pdfData = PDFGenerator.generatePrescriptionPDF(data: prescriptionData, doctor: doctor, hospital: hospital) {
+                    self.prescriptionPDF = pdfData
+                    self.showingPrescriptionPreview = true
+                }
+            } catch {
+                print("Error generating prescription:", error)
+            }
         }
     }
     
@@ -658,6 +845,10 @@ struct AppointmentDetailView: View {
         }
         
         private func addMedicine(_ medicine: MedicineResponse, dosage: String, duration: String) {
+            print("Adding new medicine:", medicine.name)
+            print("Dosage:", dosage)
+            print("Duration:", duration)
+            
             let prescribed = PrescribedMedicine(
                 medicine: medicine,
                 dosage: dosage,
@@ -665,6 +856,7 @@ struct AppointmentDetailView: View {
                 timing: ""
             )
             prescribedMedicines.append(prescribed)
+            print("Current prescribed medicines count:", prescribedMedicines.count)
         }
     }
     
