@@ -1,10 +1,3 @@
-//
-//  EmergencyBookingConfirmationView.swift
-//  HospitalManagement
-//
-//  Created by Shivani Verma on 26/03/25.
-//
-
 import SwiftUI
 
 struct EmergencyBookingConfirmationView: View {
@@ -40,23 +33,52 @@ struct EmergencyBookingConfirmationView: View {
                     // ✅ Emergency & Payment Details
                     emergencyDetailsSection
                     invoiceDetailsSection
+
+                    // ✅ Invoice Button
+                    Button(action: viewInvoice) {
+                        Text("View Invoice")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(10)
+                            .shadow(radius: 2)
+                    }
+                    .padding(.horizontal)
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 20)
             }
 
-            // ✅ Fixed Done Button
+            // ✅ Fixed Done & View Voice Buttons
             VStack {
                 Divider()
-                Button(action: { dismiss() }) {
-                    Text("Done")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.mint)
-                        .cornerRadius(10)
-                        .shadow(radius: 2)
+                
+                HStack {
+                    // View Invoice Button
+                    Button(action: { viewInvoice() }) {
+                        Text("View Invoice")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(10)
+                            .shadow(radius: 2)
+                    }
+                    
+                    // Done Button
+                    Button(action: { dismiss() }) {
+                        Text("Done")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.mint)
+                            .cornerRadius(10)
+                            .shadow(radius: 2)
+                    }
                 }
                 .padding()
             }
@@ -137,6 +159,18 @@ struct EmergencyBookingConfirmationView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMM d, yyyy • h:mm a"
         return formatter.string(from: appointment.date)
+    }
+
+    // MARK: - View Invoice Action
+    private func viewInvoice() {
+        // Implement invoice viewing logic
+        print("Invoice viewed")
+    }
+    
+    // MARK: - View Voice Action
+    private func viewVoice() {
+        // Implement voice feedback logic
+        print("Voice viewed")
     }
 }
 
