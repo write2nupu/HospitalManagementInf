@@ -30,7 +30,7 @@ struct InvoicesTabView: View {
                                     status: .paid
                                 )
                                 
-                                invoiceCard(
+                                InvoiceCard(
                                     title: "Lab Tests",
                                     date: Date().addingTimeInterval(-30 * 24 * 60 * 60), // 30 days ago
                                     amount: 1200.00,

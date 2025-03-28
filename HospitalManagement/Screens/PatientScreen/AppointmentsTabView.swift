@@ -61,3 +61,4 @@ struct AppointmentsTabView: View {
     NavigationView {
         AppointmentsTabView()
     }
+}
