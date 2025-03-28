@@ -127,7 +127,7 @@ struct BedPaymentConfirmationView: View {
 
     // MARK: - Get Bed Type (Fetching from BedBooking)
     private var bedType: String {
-        return bedBooking.isAvailbale == true ? "Available" : "Not Available"
+        return bedBooking.isAvailable == true ? "Available" : "Not Available"
     }
 
     // MARK: - Format Payment Method
@@ -178,7 +178,7 @@ struct BedPaymentConfirmationView_Previews: PreviewProvider {
             bedId: UUID(),
             startDate: Date(),
             endDate: Date(),
-            isAvailbale: true
+            isAvailable: true
         )
 
         let sampleInvoice = Invoice(
@@ -187,7 +187,8 @@ struct BedPaymentConfirmationView_Previews: PreviewProvider {
             patientid: UUID(),
             amount: 5000,
             paymentType: .bed,
-            status: .paid
+            status: .paid,
+            hospitalId: UUID()
         )
 
         NavigationView {

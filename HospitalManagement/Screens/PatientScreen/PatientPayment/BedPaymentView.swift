@@ -209,7 +209,7 @@ struct BedPaymentView_Previews: PreviewProvider {
             bedId: sampleBed.id,
             startDate: Date(),
             endDate: Calendar.current.date(byAdding: .day, value: 5, to: Date())!,
-            isAvailbale: true
+            isAvailable: true
         )
 
         NavigationView {

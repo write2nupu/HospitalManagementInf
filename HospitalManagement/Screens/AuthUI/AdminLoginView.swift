@@ -79,7 +79,7 @@ struct AdminLoginViewS: View {
                     if user.is_first_login {
                         forcePasswordUpdate(user: user)
                     } else {
-                        AdminHomeView()
+                        AdminTabView()
                     }
                 }
             }

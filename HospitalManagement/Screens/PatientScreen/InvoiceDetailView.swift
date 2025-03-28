@@ -81,7 +81,8 @@ struct InvoiceDetailView_Previews: PreviewProvider {
             patientid: UUID(),
             amount: 599,
             paymentType: .appointment,
-            status: .paid
+            status: .paid,
+            hospitalId: UUID()
         ))
     }
 }

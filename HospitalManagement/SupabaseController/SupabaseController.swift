@@ -834,36 +834,107 @@ func fetchAllBeds(hospitalId: UUID? = nil) async throws -> [Bed] {
             hospitalId,
             price,
             type,
-            isAvailable,
-            BedBooking (
-                id,
-                patientId,
-                startDate,
-                endDate,
-                isAvailable
-            )
+            isAvailable
         """)
     
     if let hospitalId = hospitalId {
         query = query.eq("hospitalId", value: hospitalId.uuidString)
     }
     
-    let beds: [Bed] = try await query
-        .execute()
-        .value
-    
-    return beds
+    do {
+        let beds: [Bed] = try await query
+            .execute()
+            .value
+        
+        return beds
+    } catch let error as PostgrestError {
+        print("Postgrest error fetching beds: \(error)")
+        throw error
+    } catch let error as DecodingError {
+        // Handle specific decoding errors
+        print("Decoding error fetching beds: \(error)")
+        
+        // Attempt to recover with a manual decode
+        let response = try await query.execute()
+        // Check if response.data exists and isn't nil
+        if let jsonObject = response.data as? [[String: Any]], !jsonObject.isEmpty {
+            do {
+                // Try to manually decode the response
+                let jsonData = try JSONSerialization.data(withJSONObject: jsonObject)
+                let decoder = JSONDecoder()
+                
+                // Create a custom decoder to handle missing values
+                let beds = try decoder.decode([SafeBed].self, from: jsonData).map { safeBed -> Bed in
+                    return Bed(
+                        id: safeBed.id,
+                        hospitalId: safeBed.hospitalId,
+                        price: safeBed.price ?? 0,  // Default to 0 if price is missing
+                        type: safeBed.type ?? .General,  // Default to General if type is missing
+                        isAvailable: safeBed.isAvailable ?? true  // Default to true if isAvailable is missing
+                    )
+                }
+                return beds
+            } catch {
+                print("Failed to manually decode beds: \(error)")
+                return []  // Return empty array instead of throwing
+            }
+        }
+        return []  // Return empty array if data is nil
+    } catch {
+        print("Unknown error fetching beds: \(error)")
+        throw error
+    }
 }
 
-func addBeds(beds: [Bed]) async throws {
+// Safe decoding structure for Bed
+private struct SafeBed: Codable {
+    let id: UUID
+    let hospitalId: UUID?
+    let price: Int?
+    let type: BedType?
+    let isAvailable: Bool?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, hospitalId, price, type, isAvailable
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // Required field - will throw if missing
+        id = try container.decode(UUID.self, forKey: .id)
+        
+        // Optional fields - use nil if missing or can't be decoded
+        hospitalId = try container.decodeIfPresent(UUID.self, forKey: .hospitalId)
+        
+        // Handle price which might be a Double in the database but Int in our model
+        if let priceDouble = try? container.decodeIfPresent(Double.self, forKey: .price) {
+            price = Int(priceDouble)
+        } else {
+            price = try? container.decodeIfPresent(Int.self, forKey: .price)
+        }
+        
+        // Handle bed type which might be a string
+        if let typeString = try? container.decodeIfPresent(String.self, forKey: .type),
+           let bedType = BedType(rawValue: typeString) {
+            type = bedType
+        } else {
+            type = try? container.decodeIfPresent(BedType.self, forKey: .type)
+        }
+        
+        isAvailable = try container.decodeIfPresent(Bool.self, forKey: .isAvailable)
+    }
+}
+
+func addBeds(beds: [Bed], hospitalId: UUID) async throws {
     // Convert beds to match schema
     let bedData = beds.map { bed -> [String: AnyJSON] in
         return [
             "id": .string(bed.id.uuidString),
-            "hospitalId": bed.hospitalId.map { .string($0.uuidString) } ?? .null,
+            "hospitalId": .string(hospitalId.uuidString),  // Always use the provided hospitalId
             "price": .double(Double(bed.price)),
             "type": .string(bed.type.rawValue),
-            "isAvailable": .bool(bed.isAvailable!)
+            "isAvailable": .bool(true)  // New beds should be available by default
         ]
     }
     
@@ -882,68 +953,86 @@ func updateBedAvailability(bedId: UUID, isAvailable: Bool) async throws {
 }
 
 func getRecentBedBookings(hospitalId: UUID? = nil, limit: Int = 10) async throws -> [BedBookingWithDetails] {
-    var query = client
-        .from("BedBooking")
-        .select("""
-            id,
-            patientId,
-            bedId,
-            startDate,
-            endDate,
-            isAvailable,
-            Patient (
+    do {
+        var query = client
+            .from("BedBooking")
+            .select("""
                 id,
-                fullname
-            ),
-            Bed (
-                id,
-                type,
-                price,
-                hospitalId
-            )
-        """)
-        
-    if let hospitalId = hospitalId {
-        query = query.eq("hospitalId", value: hospitalId.uuidString)
-    }
-    
-    let bookings: [BedBooking] = try await query
-        .order("startDate", ascending: false)
-        .limit(limit)
-        .execute()
-        .value
-    
-    // Convert raw bookings to BedBookingWithDetails
-    var bookingsWithDetails: [BedBookingWithDetails] = []
-    for booking in bookings {
-        if let patient = try await fetchPatientDetails(patientId: booking.patientId),
-           let bed = try await fetchBedDetails(bedId: booking.bedId) {
-            let bookingWithDetails = BedBookingWithDetails(
-                booking: booking,
-                patient: patient,
-                bed: bed
-            )
-            bookingsWithDetails.append(bookingWithDetails)
+                patientId,
+                bedId,
+                startDate,
+                endDate,
+                isAvailable,
+                Patient (
+                    id,
+                    fullname
+                ),
+                Bed (
+                    id,
+                    type,
+                    price,
+                    hospitalId
+                )
+            """)
+            
+        if let hospitalId = hospitalId {
+            query = query.eq("hospitalId", value: hospitalId.uuidString)
         }
+        
+        let bookings: [BedBooking] = try await query
+            .order("startDate", ascending: false)
+            .limit(limit)
+            .execute()
+            .value
+        
+        // Convert raw bookings to BedBookingWithDetails
+        var bookingsWithDetails: [BedBookingWithDetails] = []
+        for booking in bookings {
+            do {
+                let patient = try await fetchPatientDetails(patientId: booking.patientId)
+                let bed = try await fetchBedDetails(bedId: booking.bedId)
+                
+                if let patient = patient, let bed = bed {
+                    let bookingWithDetails = BedBookingWithDetails(
+                        booking: booking,
+                        patient: patient,
+                        bed: bed
+                    )
+                    bookingsWithDetails.append(bookingWithDetails)
+                }
+            } catch {
+                // If we couldn't load patient or bed details, log the error but continue processing
+                print("Error loading details for booking \(booking.id): \(error)")
+                continue
+            }
+        }
+        
+        return bookingsWithDetails
+    } catch {
+        print("Error loading bed bookings: \(error)")
+        return [] // Return empty array instead of throwing
     }
-    
-    return bookingsWithDetails
 }
 
 private func fetchBedDetails(bedId: UUID) async throws -> Bed? {
-    let beds: [Bed] = try await client
-        .from("Bed")
-        .select("""
-            id,
-            hospitalId,
-            price,
-            type,
-            isAvailable
-        """)
-        .eq("id", value: bedId.uuidString)
-        .execute()
-        .value
-    return beds.first
+    do {
+        let beds: [Bed] = try await client
+            .from("Bed")
+            .select("""
+                id,
+                hospitalId,
+                price,
+                type,
+                isAvailable
+            """)
+            .eq("id", value: bedId.uuidString)
+            .execute()
+            .value
+        return beds.first
+    } catch {
+        print("Error fetching bed details for \(bedId): \(error)")
+        return nil
+    }
 }
 
 // Add function to create a bed booking
@@ -986,36 +1075,35 @@ func getAvailableBedsByType(type: BedType, hospitalId: UUID? = nil) async throws
 }
 
 func getBedStatistics(hospitalId: UUID? = nil) async throws -> (total: Int, available: Int, byType: [BedType: (total: Int, available: Int)]) {
-    var query = client
-        .from("Bed")
-        .select("""
-            id,
-            hospitalId,
-            type,
-            isAvailable
-        """)
-    
-    if let hospitalId = hospitalId {
-        query = query.eq("hospitalId", value: hospitalId.uuidString)
+    do {
+        // First try to fetch all beds
+        let beds = try await fetchAllBeds(hospitalId: hospitalId)
+        
+        let total = beds.count
+        let available = beds.filter { $0.isAvailable ?? false }.count
+        
+        var statsByType: [BedType: (total: Int, available: Int)] = [:]
+        
+        // Initialize stats for all bed types
+        for type in [BedType.General, BedType.ICU, BedType.Personal] {
+            let bedsOfType = beds.filter { $0.type == type }
+            let totalOfType = bedsOfType.count
+            let availableOfType = bedsOfType.filter { $0.isAvailable ?? false }.count
+            statsByType[type] = (total: totalOfType, available: availableOfType)
+        }
+        
+        return (total: total, available: available, byType: statsByType)
+    } catch {
+        print("Error fetching bed statistics: \(error)")
+        
+        // Return default stats with zeros
+        let defaultStats: [BedType: (total: Int, available: Int)] = [
+            .General: (total: 0, available: 0),
+            .ICU: (total: 0, available: 0),
+            .Personal: (total: 0, available: 0)
+        ]
+        
+        return (total: 0, available: 0, byType: defaultStats)
     }
-    
-    let beds: [Bed] = try await query
-        .execute()
-        .value
-    
-    let total = beds.count
-    let available = beds.filter { $0.isAvailable ?? false }.count
-    
-    var statsByType: [BedType: (total: Int, available: Int)] = [:]
-    
-    // Initialize stats for all bed types
-    for type in [BedType.General, BedType.ICU, BedType.Personal] {
-        let bedsOfType = beds.filter { $0.type == type }
-        let totalOfType = bedsOfType.count
-        let availableOfType = bedsOfType.filter { $0.isAvailable ?? false }.count
-        statsByType[type] = (total: totalOfType, available: availableOfType)
-    }
-    
-    return (total: total, available: available, byType: statsByType)
 }
 }

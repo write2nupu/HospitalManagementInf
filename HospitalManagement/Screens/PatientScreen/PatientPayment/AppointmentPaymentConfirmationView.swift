@@ -270,7 +270,8 @@ struct PaymentConfirmationView_Previews: PreviewProvider {
             patientid: UUID(),
             amount: 2000,
             paymentType: .appointment,
-            status: .paid
+            status: .paid,
+            hospitalId: UUID()
         )
 
         NavigationView {
