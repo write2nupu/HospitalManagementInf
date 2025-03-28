@@ -1106,4 +1106,14 @@ func getBedStatistics(hospitalId: UUID? = nil) async throws -> (total: Int, avai
         return (total: 0, available: 0, byType: defaultStats)
     }
 }
+    func fetcInvoices(HospitalId : Hospital.ID  ) async throws -> [Invoice]  {
+        do {
+            let invoices : [Invoice] = try await client.from("Invoice").select("*").eq("HospitalId", value: HospitalId).execute().value
+            print(invoices)
+            return []
+        }catch{
+            print(error.localizedDescription)
+        }
+        return []
+    }
 }
