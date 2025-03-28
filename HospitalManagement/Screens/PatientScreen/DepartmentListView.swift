@@ -7,6 +7,19 @@ struct DepartmentListView: View {
     @AppStorage("selectedHospitalId") private var selectedHospitalId: String = ""
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var searchText = ""
+    
+    // Filtered departments based on search
+    private var filteredDepartments: [Department] {
+        if searchText.isEmpty {
+            return departments
+        } else {
+            return departments.filter { 
+                $0.name.lowercased().contains(searchText.lowercased()) ||
+                ($0.description?.lowercased().contains(searchText.lowercased()) ?? false)
+            }
+        }
+    }
 
     // Adaptive Grid Layout with 2 Columns
     let columns = [
@@ -15,30 +28,95 @@ struct DepartmentListView: View {
     ]
     
     var body: some View {
-        ScrollView {
-            if isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding()
-            } else if let error = errorMessage {
-                Text(error)
-                    .foregroundColor(.red)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-            } else if departments.isEmpty {
-                Text("No departments available")
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-            } else {
-                LazyVGrid(columns: columns, spacing: 15) {
-                    ForEach(departments) { department in
-                        NavigationLink(destination: DoctorListView(doctors: doctorsByDepartment[department.id] ?? [])) {
-                            departmentCard(department: department)
-                        }
+        VStack(spacing: 0) {
+            // Custom Search Bar
+            HStack(spacing: 12) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16))
+                    .foregroundColor(.gray)
+                
+                TextField("Search departments", text: $searchText)
+                    .font(.body)
+                
+                if !searchText.isEmpty {
+                    Button(action: {
+                        searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.gray)
                     }
                 }
-                .padding()
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(.systemGray6))
+            )
+            .padding(.horizontal)
+            .padding(.top)
+            
+            ScrollView {
+                if isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding()
+                } else if let error = errorMessage {
+                    VStack(spacing: 15) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 40))
+                            .foregroundColor(.orange)
+                        
+                        Text(error)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                } else if filteredDepartments.isEmpty {
+                    VStack(spacing: 15) {
+                        if searchText.isEmpty {
+                            Image(systemName: "building.2.crop.circle")
+                                .font(.system(size: 50))
+                                .foregroundColor(.gray)
+                            
+                            Text("No departments available")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 50))
+                                .foregroundColor(.gray)
+                            
+                            Text("No departments found for '\(searchText)'")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 60)
+                } else {
+                    // Results Counter
+                    if !searchText.isEmpty {
+                        HStack {
+                            Text("Found \(filteredDepartments.count) department(s)")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 10)
+                    }
+                    
+                    LazyVGrid(columns: columns, spacing: 15) {
+                        ForEach(filteredDepartments) { department in
+                            NavigationLink(destination: DoctorListView(doctors: doctorsByDepartment[department.id] ?? [])) {
+                                departmentCard(department: department)
+                            }
+                        }
+                    }
+                    .padding()
+                }
             }
         }
         .navigationTitle("Select Department")
@@ -63,61 +141,83 @@ struct DepartmentListView: View {
         
         do {
             // Fetch departments first
-                 let fetchedDepartments = try await supabaseController.fetchHospitalDepartments(hospitalId: hospitalId)
-                 departments = fetchedDepartments
+            let fetchedDepartments = try await supabaseController.fetchHospitalDepartments(hospitalId: hospitalId)
+            departments = fetchedDepartments
                  
-                 // Fetch doctors for each department
-                 var doctorsByDept: [UUID: [Doctor]] = [:]
-                 for department in fetchedDepartments {
-                     let doctors = try await supabaseController.getDoctorsByDepartment(departmentId: department.id)
-                     doctorsByDept[department.id] = doctors.filter { $0.is_active }
-                 }
+            // Fetch doctors for each department
+            var doctorsByDept: [UUID: [Doctor]] = [:]
+            for department in fetchedDepartments {
+                let doctors = try await supabaseController.getDoctorsByDepartment(departmentId: department.id)
+                doctorsByDept[department.id] = doctors.filter { $0.is_active }
+            }
                  
-                 // Update doctors by department
-                 doctorsByDepartment = doctorsByDept
+            // Update doctors by department
+            doctorsByDepartment = doctorsByDept
                  
-             } catch {
-                 errorMessage = "Failed to load departments: \(error.localizedDescription)"
-             }
-             
-             isLoading = false
-
-            
+        } catch {
+            errorMessage = "Failed to load departments: \(error.localizedDescription)"
         }
+             
+        isLoading = false
+    }
+    
     // MARK: - Department Card UI
     private func departmentCard(department: Department) -> some View {
-        VStack(alignment: .leading, spacing: 6) {  // 🔹 Consistent alignment
-            Text(department.name)
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundColor(.mint)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(department.name)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.mint)
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.mint)
+                    .font(.caption)
+            }
             
-            Divider() // 🔹 Adds a clear separation
-
-            Text("Doctors Available:")
-                .font(.subheadline)
-                .foregroundColor(.gray)
+            Divider()
             
-            Text("\(doctorsByDepartment[department.id]?.count ?? 0)")
-                .font(.headline)
-                .foregroundColor(.mint)
+            HStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Doctors")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    
+                    Text("\(doctorsByDepartment[department.id]?.count ?? 0)")
+                        .font(.headline)
+                        .foregroundColor(.mint)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Fee")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    
+                    Text("₹\(String(format: "%.2f", department.fees))")
+                        .font(.headline)
+                        .foregroundColor(.mint)
+                }
+            }
             
-            if let description = department.description {
+            if let description = department.description, !description.isEmpty {
                 Text(description)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
             }
-            
-            Text("Consultation Fee: ₹\(String(format: "%.2f", department.fees))")
-                .font(.caption)
-                .foregroundColor(.mint)
         }
-        .frame(maxWidth: .infinity, minHeight: 100) // 🔹 Consistent card size
+        .frame(maxWidth: .infinity, minHeight: 140)
         .padding()
-        .background(Color.white)
-        .cornerRadius(12)
-        .shadow(color: .mint.opacity(0.3), radius: 4, x: 0, y: 2)
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(Color.white)
+                .shadow(color: .mint.opacity(0.2), radius: 5, x: 0, y: 2)
+        )
     }
     
     private func getCurrentHospitalId() -> UUID? {
