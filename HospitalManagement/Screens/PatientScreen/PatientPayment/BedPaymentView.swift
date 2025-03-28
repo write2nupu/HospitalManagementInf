@@ -12,6 +12,9 @@ struct BedPaymentView: View {
     let bedBooking: BedBooking
     let bed: Bed  // Now passing Bed separately
     let hospital: Hospital
+    @AppStorage("selectedHospitalId") private var selectedHospitalId: String = ""
+    
+    hospital = fetch
     
     @State private var selectedPaymentMethod: PaymentOption = .applePay
     @State private var cardNumber = ""
