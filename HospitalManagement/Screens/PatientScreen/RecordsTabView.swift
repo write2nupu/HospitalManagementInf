@@ -14,7 +14,7 @@ struct RecordsTabView: View {
                         VStack(spacing: 20) {
                             // Medical Records Section
                             VStack(alignment: .leading, spacing: 15) {
-                                Text("Medical Records")
+                                Text("")
                                     .font(.title2)
                                     .fontWeight(.bold)
                                     .foregroundColor(AppConfig.fontColor)

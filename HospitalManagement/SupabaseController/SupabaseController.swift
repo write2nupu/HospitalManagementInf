@@ -1106,4 +1106,38 @@ func getBedStatistics(hospitalId: UUID? = nil) async throws -> (total: Int, avai
         return (total: 0, available: 0, byType: defaultStats)
     }
 }
+
+// MARK: - Invoice Functions
+func fetchInvoicesByPatientId(patientId: UUID) async -> [Invoice] {
+    do {
+        let invoices: [Invoice] = try await client
+            .from("Invoice")
+            .select()
+            .eq("patientid", value: patientId)
+            .execute()
+            .value
+        
+        print("Successfully fetched \(invoices.count) invoices for patient \(patientId)")
+        return invoices
+    } catch {
+        print("Error fetching invoices: \(error)")
+        return []
+    }
+}
+
+func fetchAllInvoices() async -> [Invoice] {
+    do {
+        let invoices: [Invoice] = try await client
+            .from("Invoice")
+            .select()
+            .execute()
+            .value
+        
+        print("Successfully fetched \(invoices.count) invoices")
+        return invoices
+    } catch {
+        print("Error fetching all invoices: \(error)")
+        return []
+    }
+}
 }
