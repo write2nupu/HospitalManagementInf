@@ -298,21 +298,3 @@ struct HomeTabView: View {
         .background(AppConfig.backgroundColor)
     }
 }
-
-//#Preview {
-//    NavigationView {
-//        HomeTabView(
-//            selectedHospital: .constant(Hospital(
-//                id: UUID(),
-//                name: "City Hospital",
-//                city: "Mumbai",
-//                state: "Maharashtra",
-//                address: "123 Main Street",
-//                status: "active"
-//            )),
-//            departments: .constant([
-//                Department(id: UUID(), name: "Cardiology", description: "Heart related issues", hospitalId: UUID(), fees: 500)
-//            ])
-//        )
-//    }
-//} 

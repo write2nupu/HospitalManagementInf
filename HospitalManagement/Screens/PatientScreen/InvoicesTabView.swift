@@ -2,6 +2,7 @@ import SwiftUI
 
 struct InvoicesTabView: View {
     @Binding var selectedHospitalId: String
+
     
     var body: some View {
         ZStack(alignment: .top) {
@@ -21,6 +22,7 @@ struct InvoicesTabView: View {
                                     .padding(.horizontal)
                                 
                                 // Placeholder for invoices
+
                                 InvoiceCard(
                                     title: "Hospital Consultation",
                                     date: Date(),
@@ -28,7 +30,7 @@ struct InvoicesTabView: View {
                                     status: .paid
                                 )
                                 
-                                InvoiceCard(
+                                invoiceCard(
                                     title: "Lab Tests",
                                     date: Date().addingTimeInterval(-30 * 24 * 60 * 60), // 30 days ago
                                     amount: 1200.00,
@@ -59,6 +61,7 @@ struct InvoicesTabView: View {
             .zIndex(1) // Ensure header appears on top
         }
     }
+
 }
 
 // MARK: - Invoice Card Helper

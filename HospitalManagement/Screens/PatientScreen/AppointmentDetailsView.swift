@@ -156,8 +156,9 @@ struct AppointmentDetailsView: View {
     }
 }
 
-// Nested Detail Row View
- struct DetailRow1: View {
+
+// MARK: - Detail Row View
+struct DetailRow1: View {
     let icon: String
     let title: String
     let value: String
@@ -182,14 +183,3 @@ struct AppointmentDetailsView: View {
         }
     }
 }
-
-#Preview {
-    NavigationView {
-        AppointmentDetailsView(appointmentDetails: [
-            "appointmentType": "Consultation",
-            "doctorName": "Dr. John Smith",
-            "date": Date(),
-            "timeSlot": "10:00 AM"
-        ])
-    }
-} 

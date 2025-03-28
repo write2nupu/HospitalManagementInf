@@ -5,11 +5,13 @@ struct AppointmentsTabView: View {
         ZStack(alignment: .top) {
             Group {
                 if let savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]], !savedAppointments.isEmpty {
+
                     AppointmentListView(savedAppointments: .init(
                         get: { UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? [] },
                         set: { UserDefaults.standard.set($0, forKey: "savedAppointments") }
                     ))
                     .padding(.top, 50) // Add space at the top for the sticky header
+
                 } else {
                     VStack(spacing: 15) {
                         Image(systemName: "calendar.badge.exclamationmark")
@@ -34,11 +36,10 @@ struct AppointmentsTabView: View {
                                 .cornerRadius(10)
                         }
                     }
+
                     .padding(.top, 50) // Add space at the top for the sticky header
                 }
             }
-            
-            // Sticky header for Appointments tab
             VStack(spacing: 0) {
                 Text("Appointments")
                     .font(.largeTitle)
@@ -60,4 +61,3 @@ struct AppointmentsTabView: View {
     NavigationView {
         AppointmentsTabView()
     }
-} 

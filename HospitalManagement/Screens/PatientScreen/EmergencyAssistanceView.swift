@@ -1,6 +1,4 @@
- 
 import SwiftUI
-
 struct EmergencyAssistanceView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var patientName = ""

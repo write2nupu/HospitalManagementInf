@@ -21,6 +21,7 @@ struct RecordsTabView: View {
                                     .padding(.horizontal)
                                 
                                 // Placeholder for medical records
+
                                 RecordCategoryCard(title: "Lab Reports", iconName: "cross.case.fill", count: 0)
                                 RecordCategoryCard(title: "Prescriptions", iconName: "pill.fill", count: 0)
                             }
