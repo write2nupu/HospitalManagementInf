@@ -8,25 +8,71 @@
 import SwiftUI
 
 struct AllPaymentsView: View {
-    let invoices: [Invoice]
+    @State private var invoices: [Invoice] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String? = nil
+    @StateObject private var supabaseController = SupabaseController()
+    @State private var hospitalId: UUID?
     @State private var selectedFilter: PaymentType?
     
+    // Simplified computed property with intermediate variables
     var filteredInvoices: [Invoice] {
+        // First filter paid invoices
+        let paidInvoices = invoices.filter { $0.status == .paid }
+        
+        // Then apply type filter if needed
         if let filter = selectedFilter {
-            return invoices.filter { $0.paymentType == filter }
+            return paidInvoices.filter { $0.paymentType == filter }
         }
-        return invoices
+        return paidInvoices
+    }
+    
+    // Sort invoices separately to avoid complex chained expressions
+    var sortedFilteredInvoices: [Invoice] {
+        return filteredInvoices.sorted { $0.createdAt > $1.createdAt }
     }
     
     var body: some View {
-        List {
-            ForEach(filteredInvoices.sorted(by: { $0.createdAt > $1.createdAt })) { invoice in
-                PaymentTableCell(invoice: invoice)
-                    .listRowInsets(EdgeInsets()) // Remove default list row padding
-                    .listRowSeparator(.visible) // Add separator between rows
+        ZStack {
+            if isLoading {
+                ProgressView("Loading payments...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = errorMessage {
+                VStack {
+                    Text("Error")
+                        .font(.title)
+                        .foregroundColor(.red)
+                    Text(error)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if invoices.isEmpty {
+                VStack {
+                    Image(systemName: "doc.text")
+                        .font(.system(size: 60))
+                        .foregroundColor(.gray)
+                        .padding()
+                    Text("No payment records found")
+                        .font(.headline)
+                    Text("Any payments made will appear here")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List {
+                    // Use pre-sorted and filtered data
+                    ForEach(sortedFilteredInvoices) { invoice in
+                        PaymentTableCell(invoice: invoice)
+                            .listRowInsets(EdgeInsets()) 
+                            .listRowSeparator(.visible)
+                    }
+                }
+                .listStyle(PlainListStyle())
             }
         }
-        .listStyle(PlainListStyle()) // Use plain style to match the design
         .navigationTitle("All Payments")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
@@ -51,6 +97,77 @@ struct AllPaymentsView: View {
                     Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
                 }
             }
+        }
+        .task {
+            await loadHospitalId()
+        }
+    }
+    
+    // Split the complex loadHospitalId logic
+    private func loadHospitalId() async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let result = try await supabaseController.fetchHospitalAndAdmin()
+            handleHospitalResult(result)
+        } catch {
+            handleError(error)
+        }
+    }
+    
+    private func handleHospitalResult(_ result: (Hospital, String)?) {
+        if let (hospital, _) = result {
+            hospitalId = hospital.id
+            loadInvoices()
+        } else {
+            DispatchQueue.main.async {
+                isLoading = false
+                errorMessage = "No hospital information found."
+            }
+        }
+    }
+    
+    private func handleError(_ error: Error) {
+        DispatchQueue.main.async {
+            isLoading = false
+            errorMessage = "Failed to load hospital: \(error.localizedDescription)"
+        }
+    }
+    
+    // Split the complex loadInvoices logic
+    private func loadInvoices() {
+        guard let id = hospitalId else {
+            isLoading = false
+            errorMessage = "No hospital selected. Please select a hospital first."
+            return
+        }
+        
+        Task {
+            do {
+                await fetchInvoicesForHospital(id)
+            } catch {
+                handleInvoiceError(error)
+            }
+        }
+    }
+    
+    private func fetchInvoicesForHospital(_ id: UUID) async {
+        do {
+            let fetchedInvoices = try await supabaseController.fetchInvoices(HospitalId: id)
+            DispatchQueue.main.async {
+                invoices = fetchedInvoices
+                isLoading = false
+            }
+        } catch {
+            handleInvoiceError(error)
+        }
+    }
+    
+    private func handleInvoiceError(_ error: Error) {
+        DispatchQueue.main.async {
+            isLoading = false
+            errorMessage = "Failed to load payments: \(error.localizedDescription)"
         }
     }
 }
@@ -98,14 +215,4 @@ private let dateFormatter2: DateFormatter = {
     return formatter
 }()
 
-struct AllPaymentsView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            AllPaymentsView(invoices: [
-                Invoice(id: UUID(), createdAt: Date(), patientid: UUID(), amount: 599, paymentType: .appointment, status: .paid, hospitalId: UUID()),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-1800), patientid: UUID(), amount: 499, paymentType: .appointment, status: .paid, hospitalId: UUID()),
-                Invoice(id: UUID(), createdAt: Date().addingTimeInterval(-3600), patientid: UUID(), amount: 599, paymentType: .appointment, status: .paid, hospitalId: UUID())])
-  
-        }
-    }
-} 
+
