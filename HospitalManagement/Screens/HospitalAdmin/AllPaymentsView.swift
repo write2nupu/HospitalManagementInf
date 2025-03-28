@@ -8,12 +8,18 @@
 import SwiftUI
 
 struct AllPaymentsView: View {
-    @State private var invoices: [Invoice] = []
+    @State private var invoices: [Invoice]
     @State private var isLoading = false
     @State private var errorMessage: String? = nil
     @StateObject private var supabaseController = SupabaseController()
     @State private var hospitalId: UUID?
     @State private var selectedFilter: PaymentType?
+    let patientNames: [UUID: String]
+    
+    init(invoices: [Invoice] = [], patientNames: [UUID: String]) {
+        _invoices = State(initialValue: invoices)
+        self.patientNames = patientNames
+    }
     
     // Simplified computed property with intermediate variables
     var filteredInvoices: [Invoice] {
@@ -65,9 +71,12 @@ struct AllPaymentsView: View {
                 List {
                     // Use pre-sorted and filtered data
                     ForEach(sortedFilteredInvoices) { invoice in
-                        PaymentTableCell(invoice: invoice)
-                            .listRowInsets(EdgeInsets()) 
-                            .listRowSeparator(.visible)
+                        PaymentTableCell(
+                            invoice: invoice,
+                            patientName: patientNames[invoice.patientid]
+                        )
+                        .listRowInsets(EdgeInsets()) 
+                        .listRowSeparator(.visible)
                     }
                 }
                 .listStyle(PlainListStyle())
@@ -99,7 +108,9 @@ struct AllPaymentsView: View {
             }
         }
         .task {
-            await loadHospitalId()
+            if invoices.isEmpty {
+                await loadHospitalId()
+            }
         }
     }
     
@@ -135,7 +146,6 @@ struct AllPaymentsView: View {
         }
     }
     
-    // Split the complex loadInvoices logic
     private func loadInvoices() {
         guard let id = hospitalId else {
             isLoading = false
@@ -144,11 +154,7 @@ struct AllPaymentsView: View {
         }
         
         Task {
-            do {
-                await fetchInvoicesForHospital(id)
-            } catch {
-                handleInvoiceError(error)
-            }
+            await fetchInvoicesForHospital(id)
         }
     }
     
@@ -174,13 +180,14 @@ struct AllPaymentsView: View {
 
 struct PaymentTableCell: View {
     let invoice: Invoice
+    let patientName: String?
     
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 // Left side - Name and Payment Type
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Rahul - \(invoice.paymentType.rawValue.capitalized)")
+                    Text("\(patientName ?? "Loading...") - \(invoice.paymentType.rawValue.capitalized)")
                         .font(.system(size: 17, weight: .regular))
                     Text(invoice.createdAt, formatter: dateFormatter2)
                         .font(.system(size: 15))
@@ -191,15 +198,13 @@ struct PaymentTableCell: View {
                 
                 // Right side - Amount and Status
                 HStack(spacing: 8) {
-                    Text("₹\(invoice.amount, specifier: "%.2f")")
+                    Text("₹\(String(format: "%.2f", Double(invoice.amount)))")
                         .font(.system(size: 17, weight: .regular))
                     
                     // Paid Status Indicator
                     Circle()
                         .fill(Color.green)
                         .frame(width: 8, height: 8)
-    
-                    
                 }
             }
             .padding(.horizontal, 16)
