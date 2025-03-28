@@ -12,6 +12,9 @@ struct AddBedView: View {
     @StateObject private var supabaseController = SupabaseController()
     @Environment(\.dismiss) private var dismiss
     
+    // Add hospital ID state
+    @State private var currentHospitalId: UUID?
+    
     // Form state
     @State private var price: String = ""
     @State private var selectedType: BedType = .General
@@ -114,6 +117,18 @@ struct AddBedView: View {
                 }
             }
         }
+        .task {
+            // Fetch the hospital ID when view appears
+            do {
+                if let (hospital, _) = try await supabaseController.fetchHospitalAndAdmin() {
+                    currentHospitalId = hospital.id
+                }
+            } catch {
+                alertMessage = "Failed to fetch hospital information"
+                isSuccess = false
+                showAlert = true
+            }
+        }
     }
     
     private func addBed() async {
@@ -132,6 +147,13 @@ struct AddBedView: View {
             return
         }
         
+        guard let hospitalId = currentHospitalId else {
+            alertMessage = "Hospital information not available"
+            isSuccess = false
+            showAlert = true
+            return
+        }
+        
         isLoading = true
         
         do {
@@ -140,7 +162,7 @@ struct AddBedView: View {
             for _ in 1...numberOfBeds {
                 let newBed = Bed(
                     id: UUID(),
-                    hospitalId: nil, // This should be set based on the hospital context
+                    hospitalId: hospitalId, // Set the hospital ID
                     price: priceValue,
                     type: selectedType,
                     isAvailable: isAvailable
@@ -148,8 +170,8 @@ struct AddBedView: View {
                 beds.append(newBed)
             }
             
-            // Add beds to Supabase
-            try await supabaseController.addBeds(beds: beds)
+            // Add beds to Supabase with hospital ID
+            try await supabaseController.addBeds(beds: beds, hospitalId: hospitalId)
             
             // Show success alert
             isSuccess = true

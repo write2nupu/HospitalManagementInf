@@ -209,7 +209,7 @@ enum PaymentType: String, Codable, CaseIterable {
     case bed
 }
 
-struct Bed: Codable {
+struct Bed: Identifiable, Codable {
     let id: UUID
     let hospitalId: UUID?
     let price: Int
@@ -230,7 +230,7 @@ struct BedBooking: Codable {
     let bedId: UUID
     let startDate: Date
     let endDate: Date
-    let isAvailbale: Bool?
+    let isAvailable: Bool?
    
 }
 enum PaymentOption: String, Codable {

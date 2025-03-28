@@ -15,6 +15,8 @@ struct BillingView: View {
              
     ]
     
+    @State private var showAdminProfile = false
+    
     var totalRevenue: Double {
         var total = 0.0
         for invoice in invoices {
@@ -51,68 +53,82 @@ struct BillingView: View {
     }
     
     var body: some View {
-        NavigationView {
-                VStack(spacing: 20) {
-                    // Revenue Overview Section
-                    VStack(spacing: 16) {
-                        // Total Revenue Card
-                        VStack {
-                            Text("Total Revenue")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Text("₹\(String(format: "%.2f", totalRevenue))")
-                                .font(.system(size: 34, weight: .bold))
-                                .foregroundColor(.primary)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 20)
-                        .background(Color(.systemBackground))
-                        .cornerRadius(12)
-                        .shadow(color: Color.black.opacity(0.05), radius: 8)
+        NavigationStack {
+            VStack(spacing: 20) {
+                // Revenue Overview Section
+                VStack(spacing: 16) {
+                    // Total Revenue Card
+                    VStack {
+                        Text("Total Revenue")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Text("₹\(String(format: "%.2f", totalRevenue))")
+                            .font(.system(size: 34, weight: .bold))
+                            .foregroundColor(.primary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.05), radius: 8)
 
-                        // Revenue Breakdown Cards
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 16) {
-                            RevenueCard(title: "Consultants", amount: consultantRevenue, color: .blue)
-                            RevenueCard(title: "Tests", amount: testRevenue, color: .green)
-                            RevenueCard(title: "Beds", amount: bedRevenue, color: .purple)
+                    // Revenue Breakdown Cards
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 16) {
+                        RevenueCard(title: "Consultants", amount: consultantRevenue, color: .blue)
+                        RevenueCard(title: "Tests", amount: testRevenue, color: .green)
+                        RevenueCard(title: "Beds", amount: bedRevenue, color: .purple)
+                    }
+                }
+                .padding(.horizontal)
+
+                // Recent Payments Section
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("Recent Payments")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                        Spacer()
+                        NavigationLink(destination: AllPaymentsView(invoices: invoices.filter { $0.status == .paid })) {
+                            Text("See All")
+                                .foregroundColor(.blue)
                         }
                     }
                     .padding(.horizontal)
 
-                    // Recent Payments Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("Recent Payments")
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                            Spacer()
-                            NavigationLink(destination: AllPaymentsView(invoices: invoices.filter { $0.status == .paid })) {
-                                Text("See All")
-                                    .foregroundColor(.blue)
-                            }
+                    // Table View for Recent Payments
+                    List(invoices.filter { $0.status == .paid }.sorted(by: { $0.createdAt > $1.createdAt })) { invoice in
+                            RecentPaymentRow(invoice: invoice)
+                                .listRowInsets(EdgeInsets()) // Remove default list row padding
                         }
-                        .padding(.horizontal)
-
-                        // Table View for Recent Payments
-                        List(invoices.filter { $0.status == .paid }.sorted(by: { $0.createdAt > $1.createdAt })) { invoice in
-                                RecentPaymentRow(invoice: invoice)
-                                    .listRowInsets(EdgeInsets()) // Remove default list row padding
-                            }
-                            .listStyle(PlainListStyle()) // Use plain list style
-                            .frame(maxHeight: .infinity)
-                        }
-                   // .frame(height: 600) // Fixed height for scroll view
+                        .listStyle(PlainListStyle()) // Use plain list style
+                        .frame(maxHeight: .infinity)
+                    }
+               // .frame(height: 600) // Fixed height for scroll view
+                }
+            }
+            .padding(.top)
+            .navigationTitle("Billing")
+            .navigationBarTitleDisplayMode(.large)
+            .background(Color(.systemGroupedBackground))
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showAdminProfile = true
+                    } label: {
+                        Image(systemName: "person.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.mint)
                     }
                 }
-                .padding(.top).navigationTitle("Billing").navigationBarTitleDisplayMode(.large)
-                .background(Color(.systemGroupedBackground))
             }
-            
-            
+            .sheet(isPresented: $showAdminProfile) {
+                AdminProfileView()
+            }
+        }
     }
 
 
