@@ -147,7 +147,7 @@ struct BillingView: View {
         // Extract the paid invoices outside the closure
         let paidInvoices = invoices.filter { $0.status == .paid }
         
-        return NavigationLink(destination: AllPaymentsView()) {
+        return NavigationLink(destination: AllPaymentsView(invoices: paidInvoices, patientNames: patientNames)) {
             Text("See All")
                 .foregroundColor(.blue)
         }
@@ -247,7 +247,7 @@ struct BillingView: View {
         }
     }
     
-    private func fetchPatientNames(for patientIds: [UUID]) async throws -> [UUID: String] {
+     func fetchPatientNames(for patientIds: [UUID]) async throws -> [UUID: String] {
         var names: [UUID: String] = [:]
         
         for patientId in patientIds {
@@ -311,7 +311,7 @@ struct RecentPaymentRow: View {
             Spacer()
             
             VStack(alignment: .trailing, spacing: 4) {
-                Text("₹\(invoice.amount, specifier: "%.2f")")
+                Text("₹\(String(format: "%.2f", Double(invoice.amount)))")
                     .font(.headline)
                     .foregroundColor(.green)
                 Text("PAID")
@@ -344,7 +344,7 @@ extension SupabaseController {
                 .eq("hospitalId", value: HospitalId)  // Ensure field name matches exactly with database
                 .execute()
                 .value
-            
+            print(invoices)
             return invoices
         } catch {
             print("Error fetching invoices: \(error.localizedDescription)")
