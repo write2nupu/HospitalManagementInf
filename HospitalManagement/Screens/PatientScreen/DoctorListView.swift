@@ -163,49 +163,81 @@ struct DoctorListView: View {
         }
     }
     
-    private func bookAppointment() {
-        guard let doctor = selectedDoctor,
-              let appointmentType = selectedAppointmentType,
-              let timeSlot = selectedTimeSlot else {
+    // Book appointment function
+    func bookAppointment() {
+        guard let timeSlot = selectedTimeSlot else {
+            // Cannot book without a time slot
+            bookingError = NSError(domain: "AppointmentBooking", 
+                                 code: 1, 
+                                 userInfo: [NSLocalizedDescriptionKey: "Please select a time slot"])
             return
         }
         
-        isBookingAppointment = true
+        // Check if user already has an appointment at this date and time
+        if isTimeSlotAlreadyBooked(date: selectedDate, timeSlot: timeSlot) {
+            bookingError = NSError(domain: "AppointmentBooking", 
+                                 code: 2, 
+                                 userInfo: [NSLocalizedDescriptionKey: "You already have an appointment at this date and time"])
+            return
+        }
         
-        Task {
-            do {
-                // TODO: Replace with actual appointment booking method from Supabase controller
-                // Simulating an async booking process
-                try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
-                
-                // Prepare appointment details
-                let appointmentDetails: [String: Any] = [
-                    "doctorName": doctor.full_name,
-                    "appointmentType": appointmentType.rawValue,
-                    "date": selectedDate,
-                    "timeSlot": timeSlot,
-                    "timestamp": Date()
-                ]
-                
-                // Save appointment details to UserDefaults
-                var savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
-                savedAppointments.append(appointmentDetails)
-                UserDefaults.standard.set(savedAppointments, forKey: "savedAppointments")
-                
-                // Reset and dismiss
-                DispatchQueue.main.async {
-                    isBookingAppointment = false
-                    showAppointmentBookingModal = false
-                    selectedTimeSlot = nil
-                    selectedAppointmentType = nil
-                    dismiss()
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    isBookingAppointment = false
-                    bookingError = error
-                }
+        // Start booking process
+        isBookingAppointment = true
+        bookingError = nil
+        
+        // Simulate booking process with a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            guard let doctor = self.selectedDoctor else { return }
+            
+            // Prepare appointment details
+            let appointmentDetails: [String: Any] = [
+                "id": UUID().uuidString,
+                "doctorName": doctor.full_name,
+                "doctorSpecialty": self.departmentDetails[doctor.department_id ?? UUID()]?.name ?? "Unknown Specialty",
+                "date": self.selectedDate,
+                "timeSlot": timeSlot,
+                "appointmentType": self.selectedAppointmentType?.rawValue ?? "Consultation",
+                "timestamp": Date() // Add timestamp for latest appointment tracking
+            ]
+            
+            // Get existing appointments
+            var savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
+            
+            // Add new appointment
+            savedAppointments.append(appointmentDetails)
+            
+            // Save to UserDefaults
+            UserDefaults.standard.set(savedAppointments, forKey: "savedAppointments")
+            
+            // Reset state
+            self.isBookingAppointment = false
+            self.showAppointmentBookingModal = false
+            self.selectedTimeSlot = nil
+            self.selectedAppointmentType = nil
+            self.dismiss()
+        }
+    }
+    
+    // Check if user already has an appointment at this date and time
+    private func isTimeSlotAlreadyBooked(date: Date, timeSlot: String) -> Bool {
+        // Get existing appointments
+        let savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
+        
+        // Create calendar for date comparison
+        let calendar = Calendar.current
+        
+        // Check if any appointment matches the date and time slot
+        return savedAppointments.contains { appointment in
+            guard let appointmentDate = appointment["date"] as? Date,
+                  let appointmentTimeSlot = appointment["timeSlot"] as? String else {
+                return false
             }
+            
+            // Compare dates (same day) and time slot
+            let sameDay = calendar.isDate(appointmentDate, inSameDayAs: date)
+            let sameTimeSlot = appointmentTimeSlot == timeSlot
+            
+            return sameDay && sameTimeSlot
         }
     }
     
@@ -283,6 +315,8 @@ struct AppointmentBookingView: View {
     @Binding var bookingError: Error?
     var onBookAppointment: () -> Void
     @Binding var selectedAppointmentType: AppointmentType?
+    @State private var showTimeSlotWarning = false
+    @State private var timeSlotError = ""
     
     // Appointment Types
     enum AppointmentType: String, CaseIterable {
@@ -374,6 +408,10 @@ struct AppointmentBookingView: View {
                                in: Date()..., 
                                displayedComponents: .date)
                         .datePickerStyle(GraphicalDatePickerStyle())
+                        .onChange(of: selectedDate) { _ in
+                            // Reset time slot when date changes
+                            selectedTimeSlot = nil
+                        }
                 }
                 
                 // Time Slot Selection Section
@@ -382,26 +420,53 @@ struct AppointmentBookingView: View {
                         HStack(spacing: 10) {
                             ForEach(timeSlots, id: \.self) { slot in
                                 Button(action: {
-                                    selectedTimeSlot = slot
+                                    // Check if this time slot is already booked
+                                    if isTimeSlotAlreadyBooked(date: selectedDate, slot: slot) {
+                                        timeSlotError = "You already have an appointment scheduled at this time slot. Please select a different time."
+                                        showTimeSlotWarning = true
+                                    } else {
+                                        selectedTimeSlot = slot
+                                        showTimeSlotWarning = false
+                                    }
                                 }) {
                                     Text(slot)
                                         .padding(10)
                                         .background(
                                             selectedTimeSlot == slot ? 
-                                            Color.mint : Color.gray.opacity(0.2)
+                                            Color.mint : 
+                                            isTimeSlotAlreadyBooked(date: selectedDate, slot: slot) ?
+                                            Color.red.opacity(0.2) : Color.gray.opacity(0.2)
                                         )
                                         .foregroundColor(
                                             selectedTimeSlot == slot ? 
-                                            .white : .primary
+                                            .white :
+                                            isTimeSlotAlreadyBooked(date: selectedDate, slot: slot) ?
+                                            .red : .primary
                                         )
                                         .cornerRadius(10)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 10)
-                                                .stroke(selectedTimeSlot == slot ? Color.mint : Color.gray, lineWidth: 2)
+                                                .stroke(
+                                                    selectedTimeSlot == slot ? Color.mint : 
+                                                    isTimeSlotAlreadyBooked(date: selectedDate, slot: slot) ?
+                                                    Color.red : Color.gray, 
+                                                    lineWidth: 2
+                                                )
                                         )
                                 }
                             }
                         }
+                    }
+                    
+                    if showTimeSlotWarning {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.red)
+                            Text(timeSlotError)
+                                .font(.footnote)
+                                .foregroundColor(.red)
+                        }
+                        .padding(.vertical, 5)
                     }
                 }
             }
@@ -416,6 +481,36 @@ struct AppointmentBookingView: View {
                     isBookingAppointment
                 )
             )
+            .alert(isPresented: $showTimeSlotWarning) {
+                Alert(
+                    title: Text("Time Slot Unavailable"),
+                    message: Text(timeSlotError),
+                    dismissButton: .default(Text("Choose Another Time"))
+                )
+            }
+        }
+    }
+    
+    // Check if a time slot is already booked
+    private func isTimeSlotAlreadyBooked(date: Date, slot: String) -> Bool {
+        // Get existing appointments
+        let savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
+        
+        // Create calendar for date comparison
+        let calendar = Calendar.current
+        
+        // Check if any appointment matches the date and time slot
+        return savedAppointments.contains { appointment in
+            guard let appointmentDate = appointment["date"] as? Date,
+                  let appointmentTimeSlot = appointment["timeSlot"] as? String else {
+                return false
+            }
+            
+            // Compare dates (same day) and time slot
+            let sameDay = calendar.isDate(appointmentDate, inSameDayAs: date)
+            let sameTimeSlot = appointmentTimeSlot == slot
+            
+            return sameDay && sameTimeSlot
         }
     }
 }

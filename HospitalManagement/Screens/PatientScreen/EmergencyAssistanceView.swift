@@ -1,6 +1,4 @@
 import SwiftUI
-
-// MARK: - Emergency Assistance View
 struct EmergencyAssistanceView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var patientName = ""
@@ -88,8 +86,8 @@ struct EmergencyAssistanceView: View {
     
     // Computed property to check if emergency can be booked
     private var canBookEmergency: Bool {
-        !patientName.isEmpty && 
-        !patientAge.isEmpty && 
+        !patientName.isEmpty &&
+        !patientAge.isEmpty &&
         !emergencyDescription.isEmpty
     }
     
@@ -126,9 +124,8 @@ struct EmergencyAssistanceView: View {
     }
 }
 
-// MARK: - Preview
 #Preview {
-    NavigationStack {
+    NavigationView {
         EmergencyAssistanceView()
     }
-} 
+}

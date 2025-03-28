@@ -1,10 +1,8 @@
 import SwiftUI
 
 struct HomeTabView: View {
-    let patient: Patient
-    let departments: [Department]
-    let selectedHospital: Hospital?
-    let selectedHospitalId: String
+    @Binding var selectedHospital: Hospital?
+    @Binding var departments: [Department]
     
     var body: some View {
         ScrollView {
@@ -300,20 +298,3 @@ struct HomeTabView: View {
         .background(AppConfig.backgroundColor)
     }
 }
-
-// MARK: - Preview
-#Preview {
-    HomeTabView(
-        patient: Patient(
-            id: UUID(),
-            fullName: "John Doe",
-            gender: "male",
-            dateOfBirth: Date(),
-            contactNo: "1234567890",
-            email: "john@example.com"
-        ),
-        departments: [],
-        selectedHospital: nil,
-        selectedHospitalId: ""
-    )
-} 
