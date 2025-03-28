@@ -1,6 +1,5 @@
 import SwiftUI
 
-// MARK: - Appointment Details View
 struct AppointmentDetailsView: View {
     let appointmentDetails: [String: Any]
     
@@ -157,6 +156,7 @@ struct AppointmentDetailsView: View {
     }
 }
 
+
 // MARK: - Detail Row View
 struct DetailRow1: View {
     let icon: String
@@ -183,16 +183,3 @@ struct DetailRow1: View {
         }
     }
 }
-
-// MARK: - Preview
-#Preview {
-    AppointmentDetailsView(appointmentDetails: [
-        "appointmentType": "Emergency",
-        "doctorName": "Dr. Smith",
-        "date": Date(),
-        "timeSlot": "10:00 AM",
-        "patientName": "John Doe",
-        "patientAge": "35",
-        "emergencyDescription": "Patient is experiencing severe chest pain and shortness of breath."
-    ])
-} 

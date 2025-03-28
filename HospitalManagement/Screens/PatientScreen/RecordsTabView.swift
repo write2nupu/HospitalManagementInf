@@ -1,13 +1,13 @@
 import SwiftUI
 
 struct RecordsTabView: View {
-    let selectedHospitalId: String
+    @Binding var selectedHospitalId: String
     
     var body: some View {
         ZStack(alignment: .top) {
             Group {
                 if selectedHospitalId.isEmpty {
-                    noHospitalSelectedView
+                    NoHospitalSelectedView()
                         .padding(.top, 50) // Add space at the top for the sticky header
                 } else {
                     ScrollView {
@@ -21,8 +21,9 @@ struct RecordsTabView: View {
                                     .padding(.horizontal)
                                 
                                 // Placeholder for medical records
-                                recordCategoryCard(title: "Lab Reports", iconName: "cross.case.fill", count: 0)
-                                recordCategoryCard(title: "Prescriptions", iconName: "pill.fill", count: 0)
+
+                                RecordCategoryCard(title: "Lab Reports", iconName: "cross.case.fill", count: 0)
+                                RecordCategoryCard(title: "Prescriptions", iconName: "pill.fill", count: 0)
                             }
                             .padding(.horizontal)
                         }
@@ -49,43 +50,15 @@ struct RecordsTabView: View {
             .zIndex(1) // Ensure header appears on top
         }
     }
+}
+
+// MARK: - Record Category Card
+struct RecordCategoryCard: View {
+    let title: String
+    let iconName: String
+    let count: Int
     
-    // MARK: - No Hospital Selected View
-    private var noHospitalSelectedView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "building.2.fill")
-                .font(.system(size: 60))
-                .foregroundColor(AppConfig.buttonColor.opacity(0.5))
-            
-            Text("No Hospital Selected")
-                .font(.title3)
-                .foregroundColor(AppConfig.fontColor)
-            
-            Text("Please select a hospital to view your information")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-            
-            Button(action: {
-                // Navigate to Home tab
-            }) {
-                Text("Go to Home")
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(AppConfig.buttonColor)
-                    .cornerRadius(10)
-            }
-            .padding(.horizontal, 50)
-            .padding(.top, 10)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    // MARK: - Record Detail View
-    private func recordCategoryCard(title: String, iconName: String, count: Int) -> some View {
+    var body: some View {
         NavigationLink(destination: RecordDetailView(title: title)) {
             HStack {
                 Image(systemName: iconName)
@@ -146,7 +119,46 @@ struct RecordDetailView: View {
     }
 }
 
-// MARK: - Preview
+// MARK: - No Hospital Selected View
+struct NoHospitalSelectedView: View {
+    @State private var selectedTab = 0
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "building.2.fill")
+                .font(.system(size: 60))
+                .foregroundColor(AppConfig.buttonColor.opacity(0.5))
+            
+            Text("No Hospital Selected")
+                .font(.title3)
+                .foregroundColor(AppConfig.fontColor)
+            
+            Text("Please select a hospital to view your information")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            
+            Button(action: {
+                selectedTab = 0
+            }) {
+                Text("Go to Home")
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(AppConfig.buttonColor)
+                    .cornerRadius(10)
+            }
+            .padding(.horizontal, 50)
+            .padding(.top, 10)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
 #Preview {
-    RecordsTabView(selectedHospitalId: "")
+    NavigationView {
+        RecordsTabView(selectedHospitalId: .constant(""))
+    }
 } 
