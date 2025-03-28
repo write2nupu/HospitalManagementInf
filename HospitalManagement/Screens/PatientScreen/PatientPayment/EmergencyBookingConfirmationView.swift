@@ -1,14 +1,11 @@
 import SwiftUI
 
-struct PaymentConfirmationView: View {
+struct EmergencyBookingConfirmationView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var showInvoice = false
-    
     let appointment: Appointment
-    let doctor: Doctor
-    let department: Department
     let hospital: Hospital
     let invoice: Invoice
+    let patient: Patient
 
     var body: some View {
         VStack(spacing: 0) {
@@ -22,32 +19,23 @@ struct PaymentConfirmationView: View {
                         .padding(.top)
 
                     // ✅ Success Message
-                    Text("Payment Successful")
-                        .font(.title)
+                    Text("Emergency Booking Confirmed")
+                        .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.mint)
 
-                    Text("Your appointment has been confirmed.")
+                    Text("Your emergency request has been successfully submitted to the hospital.")
                         .font(.body)
                         .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
 
-                    // ✅ Appointment & Payment Details
-                    appointmentDetailsSection
+                    // ✅ Emergency & Payment Details
+                    emergencyDetailsSection
                     invoiceDetailsSection
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 20)
-            }
 
-            // ✅ Fixed Buttons Section
-            VStack {
-                Divider()
-                
-                HStack(spacing: 12) {
-                    Spacer()
-                    
-                    // ✅ View Invoice Button
-                    Button(action: { showInvoice.toggle() }) {
+                    // ✅ Invoice Button
+                    Button(action: viewInvoice) {
                         Text("View Invoice")
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
@@ -57,7 +45,30 @@ struct PaymentConfirmationView: View {
                             .cornerRadius(10)
                             .shadow(radius: 2)
                     }
-                    // ✅ Done Button
+                    .padding(.horizontal)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 20)
+            }
+
+            // ✅ Fixed Done & View Voice Buttons
+            VStack {
+                Divider()
+                
+                HStack {
+                    // View Invoice Button
+                    Button(action: { viewInvoice() }) {
+                        Text("View Invoice")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(10)
+                            .shadow(radius: 2)
+                    }
+                    
+                    // Done Button
                     Button(action: { dismiss() }) {
                         Text("Done")
                             .fontWeight(.semibold)
@@ -76,23 +87,19 @@ struct PaymentConfirmationView: View {
         }
         .background(Color.white.edgesIgnoringSafeArea(.all))
         .navigationBarBackButtonHidden(true)
-        .sheet(isPresented: $showInvoice) {
-            InvoiceView(invoice: invoice)
-        }
     }
 
-    // MARK: - Appointment Details Section
-    private var appointmentDetailsSection: some View {
+    // MARK: - Emergency Details Section
+    private var emergencyDetailsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Appointment Details")
+            Text("Emergency Details")
                 .font(.headline)
                 .foregroundColor(.mint)
 
-            detailRow(label: "Doctor", value: doctor.full_name)
-            detailRow(label: "Specialization", value: department.name)
+            detailRow(label: "Patient Name", value: patient.fullname)
+            detailRow(label: "Emergency Type", value: appointment.type.rawValue.capitalized)
             detailRow(label: "Hospital", value: hospital.name)
             detailRow(label: "Date & Time", value: formattedDateTime)
-            detailRow(label: "Appointment Type", value: appointment.type.rawValue.capitalized)
 
             Divider()
         }
@@ -109,9 +116,10 @@ struct PaymentConfirmationView: View {
                 .font(.headline)
                 .foregroundColor(.mint)
 
-            detailRow(label: "Appointment ID", value: appointment.id.uuidString)
+            detailRow(label: "Emergency ID", value: String(appointment.id.uuidString.prefix(8)))
             detailRow(label: "Payment Method", value: formattedPaymentMethod)
             detailRow(label: "Amount Paid", value: "₹\(invoice.amount)")
+            detailRow(label: "Payment Status", value: invoice.status.rawValue.capitalized)
 
             Divider()
         }
@@ -152,135 +160,70 @@ struct PaymentConfirmationView: View {
         formatter.dateFormat = "EEEE, MMM d, yyyy • h:mm a"
         return formatter.string(from: appointment.date)
     }
-}
 
-// MARK: - Invoice View
-struct InvoiceView: View {
-    let invoice: Invoice
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("Invoice")
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundColor(.mint)
-
-            detailRow(label: "Invoice ID", value: invoice.id.uuidString)
-            detailRow(label: "Date", value: formattedDate)
-            detailRow(label: "Payment Method", value: formattedPaymentMethod)
-            detailRow(label: "Amount Paid", value: "₹\(invoice.amount)")
-            detailRow(label: "Status", value: invoice.status.rawValue.capitalized)
-
-            Spacer()
-        }
-        .padding()
-        .navigationTitle("Invoice Details")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Close") {
-                    dismiss()
-                }
-            }
-        }
+    // MARK: - View Invoice Action
+    private func viewInvoice() {
+        // Implement invoice viewing logic
+        print("Invoice viewed")
     }
-
-    private func detailRow(label: String, value: String) -> some View {
-        HStack {
-            Text(label + ":")
-                .fontWeight(.medium)
-            Spacer()
-            Text(value)
-                .fontWeight(.regular)
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.trailing)
-        }
-        .padding(.vertical, 4)
-    }
-
-    private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM d, yyyy"
-        return formatter.string(from: invoice.createdAt)
-    }
-
-    private var formattedPaymentMethod: String {
-        switch invoice.paymentType {
-        case .appointment:
-            return "Apple Pay"
-        case .labTest:
-            return "Credit/Debit Card"
-        case .bed:
-            return "UPI"
-        }
+    
+    // MARK: - View Voice Action
+    private func viewVoice() {
+        // Implement voice feedback logic
+        print("Voice viewed")
     }
 }
 
 // MARK: - Preview
-struct PaymentConfirmationView_Previews: PreviewProvider {
+struct EmergencyBookingConfirmationView_Previews: PreviewProvider {
     static var previews: some View {
-        let sampleDoctor = Doctor(
-            id: UUID(),
-            full_name: "Dr. Ramesh Kumar",
-            department_id: UUID(),
-            hospital_id: UUID(),
-            experience: 10,
-            qualifications: "MBBS, MD",
-            is_active: true,
-            phone_num: "9876543210",
-            email_address: "dr.ramesh@example.com",
-            gender: "Male",
-            license_num: "123456"
-        )
-
-        let sampleDepartment = Department(
-            id: UUID(),
-            name: "Cardiology",
-            description: "Heart Specialist",
-            hospital_id: UUID(),
-            fees: 2000
-        )
-
         let sampleHospital = Hospital(
             id: UUID(),
-            name: "Apollo Hospital",
-            address: "123, Green Street",
-            city: "New Delhi",
-            state: "Delhi",
-            pincode: "110001",
+            name: "AIIMS Hospital",
+            address: "456, Emergency Road",
+            city: "Mumbai",
+            state: "Maharashtra",
+            pincode: "400001",
             mobile_number: "9876543210",
-            email: "contact@apollo.com",
-            license_number: "HOSP12345",
+            email: "contact@aiims.com",
+            license_number: "HOSP67890",
             is_active: true
+        )
+
+        let samplePatient = Patient(
+            id: UUID(),
+            fullName: "Rajesh Gupta",
+            gender: "Male",
+            dateOfBirth: Date(),
+            contactNo: "9876543210",
+            email: "rajesh@example.com"
         )
 
         let sampleAppointment = Appointment(
             id: UUID(),
-            patientId: UUID(),
+            patientId: samplePatient.id,
             doctorId: UUID(),
             date: Date(),
             status: .scheduled,
             createdAt: Date(),
-            type: .Consultation
+            type: .Emergency
         )
 
         let sampleInvoice = Invoice(
             id: UUID(),
             createdAt: Date(),
-            patientid: UUID(),
-            amount: 2000,
+            patientid: samplePatient.id,
+            amount: 5000,
             paymentType: .appointment,
-            status: .paid,
-            hospitalId: UUID()
+            status: .paid
         )
 
         NavigationView {
-            PaymentConfirmationView(
+            EmergencyBookingConfirmationView(
                 appointment: sampleAppointment,
-                doctor: sampleDoctor,
-                department: sampleDepartment,
                 hospital: sampleHospital,
-                invoice: sampleInvoice
+                invoice: sampleInvoice,
+                patient: samplePatient
             )
         }
     }

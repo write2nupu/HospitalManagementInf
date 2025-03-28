@@ -1,13 +1,14 @@
 import SwiftUI
 
 struct InvoicesTabView: View {
-    let selectedHospitalId: String
+    @Binding var selectedHospitalId: String
+
     
     var body: some View {
         ZStack(alignment: .top) {
             Group {
                 if selectedHospitalId.isEmpty {
-                    noHospitalSelectedView
+                    NoHospitalSelectedView()
                         .padding(.top, 50) // Add space at the top for the sticky header
                 } else {
                     ScrollView {
@@ -21,14 +22,15 @@ struct InvoicesTabView: View {
                                     .padding(.horizontal)
                                 
                                 // Placeholder for invoices
-                                invoiceCard(
+
+                                InvoiceCard(
                                     title: "Hospital Consultation",
                                     date: Date(),
                                     amount: 500.00,
                                     status: .paid
                                 )
                                 
-                                invoiceCard(
+                                InvoiceCard(
                                     title: "Lab Tests",
                                     date: Date().addingTimeInterval(-30 * 24 * 60 * 60), // 30 days ago
                                     amount: 1200.00,
@@ -59,15 +61,23 @@ struct InvoicesTabView: View {
             .zIndex(1) // Ensure header appears on top
         }
     }
+
+}
+
+// MARK: - Invoice Card Helper
+enum InvoiceStatus {
+    case paid
+    case pending
+    case overdue
+}
+
+struct InvoiceCard: View {
+    let title: String
+    let date: Date
+    let amount: Double
+    let status: InvoiceStatus
     
-    // MARK: - Invoice Card Helper
-    private enum InvoiceStatus {
-        case paid
-        case pending
-        case overdue
-    }
-    
-    private func invoiceCard(title: String, date: Date, amount: Double, status: InvoiceStatus) -> some View {
+    var body: some View {
         HStack {
             Image(systemName: "doc.text.fill")
                 .font(.system(size: 24))
@@ -129,43 +139,10 @@ struct InvoicesTabView: View {
         case .overdue: return "Overdue"
         }
     }
-    
-    // MARK: - No Hospital Selected View
-    private var noHospitalSelectedView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "building.2.fill")
-                .font(.system(size: 60))
-                .foregroundColor(AppConfig.buttonColor.opacity(0.5))
-            
-            Text("No Hospital Selected")
-                .font(.title3)
-                .foregroundColor(AppConfig.fontColor)
-            
-            Text("Please select a hospital to view your information")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-            
-            Button(action: {
-                // Navigate to Home tab
-            }) {
-                Text("Go to Home")
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(AppConfig.buttonColor)
-                    .cornerRadius(10)
-            }
-            .padding(.horizontal, 50)
-            .padding(.top, 10)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
 }
 
-// MARK: - Preview
 #Preview {
-    InvoicesTabView(selectedHospitalId: "123")
+    NavigationView {
+        InvoicesTabView(selectedHospitalId: .constant("123"))
+    }
 } 

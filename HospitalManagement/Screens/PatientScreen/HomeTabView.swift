@@ -1,23 +1,15 @@
 import SwiftUI
 
 struct HomeTabView: View {
-    let patient: Patient
-    let departments: [Department]
-    let selectedHospital: Hospital?
-    let selectedHospitalId: String
+    @Binding var selectedHospital: Hospital?
+    @Binding var departments: [Department]
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // MARK: - Subtitle Section
-                Text("Let's take care of your health.")
-                    .font(.body)
-                    .foregroundColor(AppConfig.fontColor)
-                    .padding(.horizontal)
-                
                 // MARK: - Quick Actions Section
                 VStack(alignment: .leading, spacing: 15) {
-                    Text("Quick Action")
+                    Text("Hospital")
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(AppConfig.fontColor)
@@ -223,7 +215,7 @@ struct HomeTabView: View {
                             }
                             
                             // Book Bed Card
-                            NavigationLink(destination: Text("Bed Booking Coming Soon")) {
+                            NavigationLink(destination: CurrentBedBookingView()) {
                                 VStack(spacing: 12) {
                                     Image(systemName: "bed.double.fill")
                                         .font(.system(size: 30))
@@ -300,20 +292,3 @@ struct HomeTabView: View {
         .background(AppConfig.backgroundColor)
     }
 }
-
-// MARK: - Preview
-#Preview {
-    HomeTabView(
-        patient: Patient(
-            id: UUID(),
-            fullName: "John Doe",
-            gender: "male",
-            dateOfBirth: Date(),
-            contactNo: "1234567890",
-            email: "john@example.com"
-        ),
-        departments: [],
-        selectedHospital: nil,
-        selectedHospitalId: ""
-    )
-} 
