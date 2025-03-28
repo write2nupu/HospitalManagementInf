@@ -215,7 +215,8 @@ struct EmergencyBookingConfirmationView_Previews: PreviewProvider {
             patientid: samplePatient.id,
             amount: 5000,
             paymentType: .appointment,
-            status: .paid
+            status: .paid,
+            hospitalId: UUID()
         )
 
         NavigationView {
