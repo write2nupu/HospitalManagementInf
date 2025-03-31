@@ -1,4 +1,3 @@
-import SwiftUICore
 import SwiftUI
 
 struct mainBoard: View {
@@ -8,6 +7,21 @@ struct mainBoard: View {
     @State private var doctor: Doctor?
     @State private var isLoading = true
     @State private var errorMessage: String?
+    
+    // Track selected tab
+    @State private var selectedTab: Int?
+    
+    // Titles for different screens
+    var tabTitles = ["Dashboard", "Appointments", "Patients"]
+    
+    // Dynamic Title based on Selected Tab
+    var dynamicTitle: String {
+        if selectedTab == 0 {
+            return "Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")"
+        } else {
+            return tabTitles[selectedTab ?? 0]
+        }
+    }
     
     var body: some View {
         NavigationStack {
@@ -27,26 +41,32 @@ struct mainBoard: View {
                         }
                     }
                 } else if let doctor = doctor {
-                    TabView {
+                    TabView(selection: $selectedTab) {
                         DoctorDashBoard()
+                            .tag(0)
                             .tabItem {
                                 Label("Home", systemImage: "house.fill")
                             }
-                        
+                            .onAppear { selectedTab = 0 }
+
                         AppointmentView()
+                            .tag(1)
                             .tabItem {
                                 Label("Appointments", systemImage: "calendar")
                             }
-                        
+                            .onAppear { selectedTab = 1 }
+
                         PatientView()
+                            .tag(2)
                             .tabItem {
                                 Label("Patients", systemImage: "person.fill")
                             }
+                            .onAppear { selectedTab = 2 }
                     }
-                    .accentColor(AppConfig.buttonColor) // ✅ Tab bar icon color
+                    .accentColor(AppConfig.buttonColor)
                 }
             }
-            .navigationTitle("Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")")
+            .navigationTitle(dynamicTitle) // ✅ Dynamic Title
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {

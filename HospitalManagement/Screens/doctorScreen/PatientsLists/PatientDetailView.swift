@@ -2,44 +2,35 @@ import SwiftUI
 
 struct PatientDetailView: View {
     let patient: Patient
-    
+    let patientDetails: PatientDetails
+
     var body: some View {
-        VStack(spacing: 20) {
-            // Profile Picture Placeholder
-            Circle()
-                .fill(Color.blue.opacity(0.3))
-                .frame(width: 100, height: 100)
-                .overlay(
-                    Image(systemName: "person.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 60, height: 60)
-                        .foregroundColor(.white)
-                )
-                .padding(.top, 20)
+        List {
             
-            Text(patient.fullname)
-                .font(.largeTitle)
-                .fontWeight(.bold)
-            
-            VStack(alignment: .leading, spacing: 10) {
-                InfoRowPatinetList(label: "Gender", value: patient.gender)
-                InfoRowPatinetList(label: "Date of Birth", value: formatDate(patient.dateofbirth))
-                InfoRowPatinetList(label: "Contact", value: patient.contactno)
-                InfoRowPatinetList(label: "Email", value: patient.email)
+            Section(header: Text("Personal Information")) {
+                InfoRowPatientList(label: "Full Name", value: patient.fullname)
+                InfoRowPatientList(label: "Gender", value: patient.gender)
+                InfoRowPatientList(label: "Date of Birth", value: formatDate(patient.dateofbirth))
+                InfoRowPatientList(label: "Blood Group", value: patientDetails.blood_group ?? "none")
             }
-            .padding()
-            .background(Color.white)
-            .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-            .padding(.horizontal)
             
-            Spacer()
+            Section(header: Text("Medical History")) {
+                InfoRowPatientList(label: "Allergies", value: patientDetails.allergies ?? "none")
+                InfoRowPatientList(label: "Current Medication", value: patientDetails.current_medication ?? "none")
+                InfoRowPatientList(label: "Past Surgeries", value: patientDetails.past_surgeries ?? "none")
+            }
+            
+            Section(header: Text("Contact Details")) {
+                InfoRowPatientList(label: "Contact", value: patient.contactno)
+                InfoRowPatientList(label: "Email", value: patient.email)
+                InfoRowPatientList(label: "Emergency Contact", value: patientDetails.emergency_contact ?? "Emergency Contact")
+            }
         }
+        .listStyle(InsetGroupedListStyle()) // ✅ Makes it look like iOS TableView
         .navigationTitle("Patient Details")
-        .background(Color(.systemGray5).opacity(0.2).edgesIgnoringSafeArea(.all))
+        .navigationBarTitleDisplayMode(.inline) // ✅ Small title
     }
-    
+
     // Helper function to format Date
     func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
@@ -48,19 +39,18 @@ struct PatientDetailView: View {
     }
 }
 
-// InfoRow View
-struct InfoRowPatinetList: View {
+// Row View for Table
+struct InfoRowPatientList: View {
     let label: String
     let value: String
-    
+
     var body: some View {
         HStack {
             Text(label)
-                .font(.headline)
+                .font(.none)
             Spacer()
             Text(value)
                 .foregroundColor(.gray)
         }
-        .padding(.vertical, 5)
     }
 }
