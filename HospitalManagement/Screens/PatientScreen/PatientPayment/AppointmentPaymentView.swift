@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PaymentView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.presentationMode) var presentationMode
     let appointment: Appointment
     let doctor: Doctor
     let department: Department
@@ -11,68 +12,104 @@ struct PaymentView: View {
     @State private var expiryDate = ""
     @State private var cvv = ""
     @State private var upiId = ""
-    @State private var showingConfirmation = false
-
-    
+    @State private var showPaymentConfirmation = false
+    @State private var invoice: Invoice?
+    @StateObject private var coordinator = NavigationCoordinator.shared
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Title
-                    Text("Make Payment")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.mint)
-                        .padding(.top)
+        NavigationView {
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Title
+                        Text("Make Payment")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.mint)
+                            .padding(.top)
 
-                    // Booking Details Section
-                    bookingDetailsSection
+                        // Booking Details Section
+                        bookingDetailsSection
 
-                    // Payment Methods
-                    paymentMethodsSection
+                        // Payment Methods
+                        paymentMethodsSection
 
-                    // Payment Input Fields (Only for Card & UPI)
-                    if selectedPaymentMethod != .applePay {
-                        paymentFieldsSection
+                        // Payment Input Fields
+                        if selectedPaymentMethod != .applePay {
+                            paymentFieldsSection
+                        }
                     }
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 20)
-            }
 
-            // Fixed Pay Button
-            VStack {
-                Divider()
-                Button(action: {
-                    showingConfirmation = true
-                }) {
-                    HStack {
-                        Image(systemName: "lock.fill")
-                        Text("Pay ₹2000") // Static for now, replace with actual pricing logic
+                // Fixed Pay Button
+                VStack {
+                    Divider()
+                    Button(action: {
+                        processPayment()
+                    }) {
+                        HStack {
+                            Image(systemName: "lock.fill")
+                            Text("Pay ₹\(department.fees)")
+                        }
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.mint)
+                        .cornerRadius(10)
+                        .shadow(radius: 2)
                     }
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.mint)
-                    .cornerRadius(10)
-                    .shadow(radius: 2)
                 }
-                .padding()
+                .background(Color.white)
+                .shadow(radius: 3)
             }
-            .background(Color.white)
-            .shadow(radius: 3)
+            .navigationBarItems(
+                leading: Button("Cancel") {
+                    dismiss()
+                }
+            )
+            .navigationBarTitleDisplayMode(.inline)
         }
-        .navigationBarItems(leading: Button("Cancel") {
-            dismiss()
-        })
-        .alert("Payment Successful", isPresented: $showingConfirmation) {
-            Button("OK") { dismiss() }
-        } message: {
-            Text("Your payment has been successfully processed.")
+        .navigationViewStyle(StackNavigationViewStyle())
+        .sheet(isPresented: $showPaymentConfirmation) {
+            if let generatedInvoice = invoice {
+                NavigationView {
+                    PaymentConfirmationView(
+                        appointment: appointment,
+                        doctor: doctor,
+                        department: department,
+                        hospital: hospital,
+                        invoice: generatedInvoice
+                    )
+                }
+            }
+        }
+        .onChange(of: coordinator.shouldDismissToRoot) { shouldDismiss in
+            if shouldDismiss {
+                dismiss()
+            }
         }
         .background(Color.white.edgesIgnoringSafeArea(.all))
+    }
+
+    private func processPayment() {
+        // Create a paid invoice
+        let paidInvoice = Invoice(
+            id: UUID(),
+            createdAt: Date(),
+            patientid: appointment.patientId,
+            amount: Int(department.fees),
+            paymentType: .appointment,
+            status: .paid,
+            hospitalId: hospital.id
+        )
+        
+        // Store the invoice and show confirmation
+        invoice = paidInvoice
+        showPaymentConfirmation = true
     }
 
     // MARK: - Booking Details Section
@@ -93,7 +130,7 @@ struct PaymentView: View {
             HStack {
                 Text("Total Amount:")
                 Spacer()
-                Text("₹2000")
+                Text("₹\(department.fees)")
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(.mint)

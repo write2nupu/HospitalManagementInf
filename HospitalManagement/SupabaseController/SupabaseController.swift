@@ -444,22 +444,6 @@ class SupabaseController: ObservableObject {
         }
     }
     
-//    // MARK: - Fetch Hospital Departments
-//    func fetchHospitalDepartments(hospitalId: UUID) async -> [Department] {
-    //        do {
-//            let departments: [Department] = try await client
-//                .from("Department")
-    //                .select()
-//                .eq("hospitalId", value: hospitalId)
-    //                .execute()
-    //                .value
-//            return departments
-    //        } catch {
-//            print("Error fetching hospital departments: \(error)")
-    //            return []
-    //        }
-    //    }
-    
     // MARK: - Fetch Patient Details
     func fetchPatientDetails(patientId: UUID) async -> Patient? {
         do {
@@ -560,13 +544,36 @@ class SupabaseController: ObservableObject {
 
 // MARK: - Fetch Departments by Hospital
 func fetchHospitalDepartments(hospitalId: UUID) async throws -> [Department] {
-    let departments: [Department] = try await client
-        .from("Department")
-        .select()
-        .eq("hospital_id", value: hospitalId.uuidString)
-        .execute()
-        .value
-    return departments
+    print("🏥 Fetching departments for hospital: \(hospitalId)")
+    do {
+        print("📝 Building query for Department table")
+        let departments: [Department] = try await client
+            .from("Department")
+            .select("id, name, description, hospital_id, fees")
+            .eq("hospital_id", value: hospitalId)
+            .execute()
+            .value
+        
+        print("📋 Found \(departments.count) departments")
+        
+        // Print each department for debugging
+        departments.forEach { department in
+            print("  - Department: \(department.name) (ID: \(department.id))")
+            print("    Hospital ID: \(String(describing: department.hospital_id))")
+        }
+        
+        return departments
+    } catch let error as PostgrestError {
+        print("❌ Postgrest error fetching departments:")
+        print("  - Message: \(error.localizedDescription)")
+        print("  - Details: \(String(describing: error))")
+        throw error
+    } catch {
+        print("❌ Unexpected error fetching departments:")
+        print("  - Type: \(type(of: error))")
+        print("  - Message: \(error.localizedDescription)")
+        throw error
+    }
 }
 
 // MARK: - Fetch Doctors by Department

@@ -3,6 +3,7 @@ import SwiftUI
 struct PaymentConfirmationView: View {
     @Environment(\.dismiss) var dismiss
     @State private var showInvoice = false
+    @StateObject private var coordinator = NavigationCoordinator.shared
     
     let appointment: Appointment
     let doctor: Doctor
@@ -58,7 +59,28 @@ struct PaymentConfirmationView: View {
                             .shadow(radius: 2)
                     }
                     // ✅ Done Button
-                    Button(action: { dismiss() }) {
+                    Button(action: {
+                        print("👆 PaymentConfirmationView: Done button tapped")
+                        
+                        // Post notification to switch to appointments tab
+                        NotificationCenter.default.post(name: NSNotification.Name("NavigateToDashboard"), object: nil)
+                        print("📨 PaymentConfirmationView: Posted NavigateToDashboard notification")
+                        
+                        // Set coordinator state
+                        print("🔄 PaymentConfirmationView: Setting activeTab to 1")
+                        coordinator.activeTab = 1 // Switch to appointments tab
+                        
+                        print("🔄 PaymentConfirmationView: Setting shouldDismissToRoot to true")
+                        coordinator.shouldDismissToRoot = true
+                        
+                        // Clear navigation path
+                        print("🔄 PaymentConfirmationView: Clearing navigation path")
+                        coordinator.navigationPath = NavigationPath()
+                        
+                        // Dismiss current view
+                        print("👋 PaymentConfirmationView: Dismissing view")
+                        dismiss()
+                    }) {
                         Text("Done")
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
@@ -78,6 +100,12 @@ struct PaymentConfirmationView: View {
         .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showInvoice) {
             InvoiceView(invoice: invoice)
+        }
+        .onAppear {
+            print("👀 PaymentConfirmationView: View appeared")
+        }
+        .onDisappear {
+            print("👋 PaymentConfirmationView: View disappeared")
         }
     }
 
@@ -283,5 +311,24 @@ struct PaymentConfirmationView_Previews: PreviewProvider {
                 invoice: sampleInvoice
             )
         }
+    }
+}
+
+// Replace the RootPresentationModeKey implementation at the bottom with:
+
+private struct RootPresentationModeKey: EnvironmentKey {
+    static let defaultValue: Binding<Bool> = .constant(false)
+}
+
+extension EnvironmentValues {
+    var rootPresentationMode: Binding<Bool> {
+        get { self[RootPresentationModeKey.self] }
+        set { self[RootPresentationModeKey.self] = newValue }
+    }
+}
+
+extension View {
+    func rootPresentationMode(_ mode: Binding<Bool>) -> some View {
+        environment(\.rootPresentationMode, mode)
     }
 }

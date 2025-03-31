@@ -20,7 +20,10 @@ struct HospitalListView: View {
                         ForEach(hospitals) { hospital in
                             Button {
                                 // Set selected hospital and go back to home screen
+                                print("🏥 Selected hospital: \(hospital.name)")
+                                print("🆔 Setting hospital ID: \(hospital.id.uuidString)")
                                 selectedHospitalId = hospital.id.uuidString
+                                print("📦 Verifying stored hospital ID: \(selectedHospitalId)")
                                 dismiss()
                             } label: {
                                 VStack(alignment: .leading, spacing: 8) {
@@ -68,9 +71,12 @@ struct HospitalListView: View {
     }
     
     private func loadHospitals() async {
+        print("🔄 Loading hospitals...")
         isLoading = true
         let fetchedHospitals = await supabaseController.fetchHospitals()
+        print("📋 Fetched \(fetchedHospitals.count) hospitals")
         hospitals = fetchedHospitals.filter { $0.is_active }
+        print("✅ Filtered to \(hospitals.count) active hospitals")
         isLoading = false
     }
 }

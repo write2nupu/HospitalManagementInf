@@ -2,57 +2,49 @@ import SwiftUI
 
 struct AppointmentsTabView: View {
     var body: some View {
-        ZStack(alignment: .top) {
-            Group {
-                if let savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]], !savedAppointments.isEmpty {
-
-                    AppointmentListView(savedAppointments: .init(
-                        get: { UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? [] },
-                        set: { UserDefaults.standard.set($0, forKey: "savedAppointments") }
-                    ))
-                    .padding(.top, 50) // Add space at the top for the sticky header
-
-                } else {
-                    VStack(spacing: 15) {
-                        Image(systemName: "calendar.badge.exclamationmark")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 100, height: 100)
-                            .foregroundColor(.gray)
-                        
+        VStack(spacing: 0) {
+            if let savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]], !savedAppointments.isEmpty {
+                AppointmentListView(savedAppointments: .init(
+                    get: { UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? [] },
+                    set: { UserDefaults.standard.set($0, forKey: "savedAppointments") }
+                ))
+            } else {
+                VStack(spacing: 25) {
+                    Spacer()
+                    
+                    Image(systemName: "calendar.badge.exclamationmark")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 80, height: 80)
+                        .foregroundColor(.gray.opacity(0.5))
+                    
+                    VStack(spacing: 12) {
                         Text("No Appointments")
                             .font(.title2)
-                            .foregroundColor(.secondary)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
                         
                         Text("Book your first appointment to see it here")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        
-                        NavigationLink(destination: DepartmentListView()) {
-                            Text("Book Appointment")
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Color.mint)
-                                .cornerRadius(10)
-                        }
+                            .multilineTextAlignment(.center)
                     }
-
-                    .padding(.top, 50) // Add space at the top for the sticky header
+                    
+                    NavigationLink(destination: DepartmentListView()) {
+                        Text("Book Appointment")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(height: 50)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.mint)
+                            .cornerRadius(12)
+                            .padding(.horizontal, 40)
+                    }
+                    
+                    Spacer()
                 }
+                .padding()
             }
-            VStack(spacing: 0) {
-                Text("Appointments")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal)
-                    .padding(.top, 10)
-                    .background(Color(.systemBackground))
-                
-                Divider()
-            }
-            .background(Color(.systemBackground))
-            .zIndex(1) // Ensure header appears on top
         }
     }
 }
