@@ -366,6 +366,8 @@ struct BedCategoryCard: View {
                     Text("Available")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                     
                     Text("\(available)")
                         .font(.title3)
@@ -375,7 +377,7 @@ struct BedCategoryCard: View {
             }
         }
         .padding()
-        .frame(width: 180, height: 140)
+        .frame(width: 200, height: 140)
         .background(Color(.systemBackground))
         .cornerRadius(15)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)

@@ -80,7 +80,7 @@ struct AllDepartmentsView: View {
         .searchable(
             text: $searchText,
             placement: .navigationBarDrawer(displayMode: .always),
-            prompt: "Search departments..."
+            prompt: "Search department..."
         )
     }
 }
