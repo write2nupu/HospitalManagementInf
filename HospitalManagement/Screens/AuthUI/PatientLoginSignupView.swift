@@ -1,3 +1,10 @@
+//
+//  PatientLoginSignupView.swift
+//  HospitalManagement
+//
+//  Created by Shivani Verma on 21/03/25.
+//
+
 import SwiftUI
 
 struct PatientLoginSignupView: View {
@@ -159,3 +166,4 @@ struct PatientLoginView_Previews: PreviewProvider {
         PatientLoginSignupView()
     }
 }
+

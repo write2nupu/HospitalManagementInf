@@ -29,7 +29,7 @@ struct CurrentBedBookingView: View {
                                 .font(.title3)
                                 .bold()
                                 .padding(.leading, 30)
-                            Button(action: bookNow) {
+                            NavigationLink(destination: BedBookingView()) {
                                 Text("Book Now")
                                     .foregroundColor(.white)
                                     .padding(.vertical, 8)

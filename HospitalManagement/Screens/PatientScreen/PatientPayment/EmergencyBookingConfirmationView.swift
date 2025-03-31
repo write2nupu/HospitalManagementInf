@@ -1,41 +1,57 @@
 import SwiftUI
 
-struct BedPaymentConfirmationView: View {
+struct EmergencyBookingConfirmationView: View {
     @Environment(\.dismiss) var dismiss
-    let bedBooking: BedBooking
+    let appointment: Appointment
     let hospital: Hospital
     let invoice: Invoice
+    let patient: Patient
 
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Success Icon
+                    // ✅ Success Icon
                     Image(systemName: "checkmark.circle.fill")
                         .resizable()
                         .frame(width: 80, height: 80)
                         .foregroundColor(.mint)
                         .padding(.top)
 
-                    // Success Message
-                    Text("Payment Successful")
-                        .font(.title)
+                    // ✅ Success Message
+                    Text("Emergency Booking Confirmed")
+                        .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.mint)
 
-                    Text("Your bed booking has been confirmed.")
+                    Text("Your emergency request has been successfully submitted to the hospital.")
                         .font(.body)
                         .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
 
-                    // Bed Booking & Payment Details
-                    bedDetailsSection
+                    // ✅ Emergency & Payment Details
+                    emergencyDetailsSection
                     invoiceDetailsSection
+
+                    // ✅ Invoice Button
+                    Button(action: viewInvoice) {
+                        Text("View Invoice")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(10)
+                            .shadow(radius: 2)
+                    }
+                    .padding(.horizontal)
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 20)
             }
 
-            // Fixed Buttons
+            // ✅ Fixed Done & View Voice Buttons
             VStack {
                 Divider()
                 
@@ -73,17 +89,17 @@ struct BedPaymentConfirmationView: View {
         .navigationBarBackButtonHidden(true)
     }
 
-    // MARK: - Bed Booking Details Section
-    private var bedDetailsSection: some View {
+    // MARK: - Emergency Details Section
+    private var emergencyDetailsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Bed Booking Details")
+            Text("Emergency Details")
                 .font(.headline)
                 .foregroundColor(.mint)
 
-            detailRow(label: "Bed Type", value: bedType)
+            detailRow(label: "Patient Name", value: patient.fullname)
+            detailRow(label: "Emergency Type", value: appointment.type.rawValue.capitalized)
             detailRow(label: "Hospital", value: hospital.name)
-            detailRow(label: "Booking Date", value: formattedBookingDate)
-            detailRow(label: "Total Price", value: "₹\(invoice.amount)")
+            detailRow(label: "Date & Time", value: formattedDateTime)
 
             Divider()
         }
@@ -100,9 +116,10 @@ struct BedPaymentConfirmationView: View {
                 .font(.headline)
                 .foregroundColor(.mint)
 
-            detailRow(label: "Booking ID", value: bedBooking.id.uuidString)
+            detailRow(label: "Emergency ID", value: String(appointment.id.uuidString.prefix(8)))
             detailRow(label: "Payment Method", value: formattedPaymentMethod)
             detailRow(label: "Amount Paid", value: "₹\(invoice.amount)")
+            detailRow(label: "Payment Status", value: invoice.status.rawValue.capitalized)
 
             Divider()
         }
@@ -125,11 +142,6 @@ struct BedPaymentConfirmationView: View {
         }
     }
 
-    // MARK: - Get Bed Type (Fetching from BedBooking)
-    private var bedType: String {
-        return bedBooking.isAvailable == true ? "Available" : "Not Available"
-    }
-
     // MARK: - Format Payment Method
     private var formattedPaymentMethod: String {
         switch invoice.paymentType {
@@ -143,59 +155,76 @@ struct BedPaymentConfirmationView: View {
     }
 
     // MARK: - Date Formatter
-    private var formattedBookingDate: String {
+    private var formattedDateTime: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMM d, yyyy"
-        return formatter.string(from: bedBooking.startDate)
+        formatter.dateFormat = "EEEE, MMM d, yyyy • h:mm a"
+        return formatter.string(from: appointment.date)
     }
 
-    // MARK: - View Invoice Function
+    // MARK: - View Invoice Action
     private func viewInvoice() {
-        print("Viewing Invoice for Booking ID: \(bedBooking.id)")
+        // Implement invoice viewing logic
+        print("Invoice viewed")
+    }
+    
+    // MARK: - View Voice Action
+    private func viewVoice() {
+        // Implement voice feedback logic
+        print("Voice viewed")
     }
 }
 
 // MARK: - Preview
-struct BedPaymentConfirmationView_Previews: PreviewProvider {
+struct EmergencyBookingConfirmationView_Previews: PreviewProvider {
     static var previews: some View {
         let sampleHospital = Hospital(
             id: UUID(),
-            name: "Apollo Hospital",
-            address: "123, Green Street",
-            city: "New Delhi",
-            state: "Delhi",
-            pincode: "110001",
+            name: "AIIMS Hospital",
+            address: "456, Emergency Road",
+            city: "Mumbai",
+            state: "Maharashtra",
+            pincode: "400001",
             mobile_number: "9876543210",
-            email: "contact@apollo.com",
-            license_number: "HOSP12345",
+            email: "contact@aiims.com",
+            license_number: "HOSP67890",
             is_active: true
         )
 
-        let sampleBedBooking = BedBooking(
+        let samplePatient = Patient(
             id: UUID(),
-            patientId: UUID(),
-            hospitalId: UUID(),
-            bedId: UUID(),
-            startDate: Date(),
-            endDate: Date(),
-            isAvailable: true
+            fullName: "Rajesh Gupta",
+            gender: "Male",
+            dateOfBirth: Date(),
+            contactNo: "9876543210",
+            email: "rajesh@example.com"
+        )
+
+        let sampleAppointment = Appointment(
+            id: UUID(),
+            patientId: samplePatient.id,
+            doctorId: UUID(),
+            date: Date(),
+            status: .scheduled,
+            createdAt: Date(),
+            type: .Emergency
         )
 
         let sampleInvoice = Invoice(
             id: UUID(),
             createdAt: Date(),
-            patientid: UUID(),
+            patientid: samplePatient.id,
             amount: 5000,
-            paymentType: .bed,
+            paymentType: .appointment,
             status: .paid,
             hospitalId: UUID()
         )
 
         NavigationView {
-            BedPaymentConfirmationView(
-                bedBooking: sampleBedBooking,
+            EmergencyBookingConfirmationView(
+                appointment: sampleAppointment,
                 hospital: sampleHospital,
-                invoice: sampleInvoice
+                invoice: sampleInvoice,
+                patient: samplePatient
             )
         }
     }

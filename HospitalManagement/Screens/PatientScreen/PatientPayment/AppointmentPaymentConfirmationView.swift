@@ -2,6 +2,8 @@ import SwiftUI
 
 struct PaymentConfirmationView: View {
     @Environment(\.dismiss) var dismiss
+    @State private var showInvoice = false
+    
     let appointment: Appointment
     let doctor: Doctor
     let department: Department
@@ -20,14 +22,14 @@ struct PaymentConfirmationView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Success Icon
+                    // ✅ Success Icon
                     Image(systemName: "checkmark.circle.fill")
                         .resizable()
                         .frame(width: 80, height: 80)
                         .foregroundColor(.mint)
                         .padding(.top)
 
-                    // Success Message
+                    // ✅ Success Message
                     Text("Payment Successful")
                         .font(.title)
                         .fontWeight(.bold)
@@ -37,7 +39,7 @@ struct PaymentConfirmationView: View {
                         .font(.body)
                         .foregroundColor(.gray)
 
-                    // Appointment & Payment Details
+                    // ✅ Appointment & Payment Details
                     appointmentDetailsSection
                     invoiceDetailsSection
                 }
@@ -45,18 +47,35 @@ struct PaymentConfirmationView: View {
                 .padding(.bottom, 20)
             }
 
-            // Fixed Done Button
+            // ✅ Fixed Buttons Section
             VStack {
                 Divider()
-                Button(action: { dismiss() }) {
-                    Text("Done")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.mint)
-                        .cornerRadius(10)
-                        .shadow(radius: 2)
+                
+                HStack(spacing: 12) {
+                    Spacer()
+                    
+                    // ✅ View Invoice Button
+                    Button(action: { showInvoice.toggle() }) {
+                        Text("View Invoice")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(10)
+                            .shadow(radius: 2)
+                    }
+                    // ✅ Done Button
+                    Button(action: { dismiss() }) {
+                        Text("Done")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.mint)
+                            .cornerRadius(10)
+                            .shadow(radius: 2)
+                    }
                 }
                 .padding()
             }
@@ -65,6 +84,9 @@ struct PaymentConfirmationView: View {
         }
         .background(Color.white.edgesIgnoringSafeArea(.all))
         .navigationBarBackButtonHidden(true)
+        .sheet(isPresented: $showInvoice) {
+            InvoiceView(invoice: invoice)
+        }
     }
 
     // MARK: - Appointment Details Section
@@ -140,6 +162,68 @@ struct PaymentConfirmationView: View {
     }
 }
 
+// MARK: - Invoice View
+struct InvoiceView: View {
+    let invoice: Invoice
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Invoice")
+                .font(.title)
+                .fontWeight(.bold)
+                .foregroundColor(.mint)
+
+            detailRow(label: "Invoice ID", value: invoice.id.uuidString)
+            detailRow(label: "Date", value: formattedDate)
+            detailRow(label: "Payment Method", value: formattedPaymentMethod)
+            detailRow(label: "Amount Paid", value: "₹\(invoice.amount)")
+            detailRow(label: "Status", value: invoice.status.rawValue.capitalized)
+
+            Spacer()
+        }
+        .padding()
+        .navigationTitle("Invoice Details")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Close") {
+                    dismiss()
+                }
+            }
+        }
+    }
+
+    private func detailRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label + ":")
+                .fontWeight(.medium)
+            Spacer()
+            Text(value)
+                .fontWeight(.regular)
+                .foregroundColor(.gray)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM d, yyyy"
+        return formatter.string(from: invoice.createdAt)
+    }
+
+    private var formattedPaymentMethod: String {
+        switch invoice.paymentType {
+        case .appointment:
+            return "Apple Pay"
+        case .labTest:
+            return "Credit/Debit Card"
+        case .bed:
+            return "UPI"
+        }
+    }
+}
+
 // MARK: - Preview
 struct PaymentConfirmationView_Previews: PreviewProvider {
     static var previews: some View {
@@ -197,8 +281,9 @@ struct PaymentConfirmationView_Previews: PreviewProvider {
             createdAt: Date(),
             patientid: UUID(),
             amount: 2000,
-            paymentType: PaymentType.appointment,
-            status: PaymentStatus.paid
+            paymentType: .appointment,
+            status: .paid,
+            hospitalId: UUID()
         )
 
         NavigationView {

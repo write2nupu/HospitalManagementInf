@@ -91,3 +91,4 @@ struct BookAppointmentView_Previews: PreviewProvider {
         BookAppointmentView()
     }
 }
+

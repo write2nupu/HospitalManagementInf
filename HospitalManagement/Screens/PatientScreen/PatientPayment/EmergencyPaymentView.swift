@@ -1,5 +1,5 @@
 //
-//  BedPaymentView.swift
+//  EmergencyPaymentView.swift
 //  HospitalManagement
 //
 //  Created by Shivani Verma on 26/03/25.
@@ -7,11 +7,10 @@
 
 import SwiftUI
 
-struct BedPaymentView: View {
+struct EmergencyPaymentView: View {
     @Environment(\.dismiss) var dismiss
-    let bedBooking: BedBooking
-    let bed: Bed  // Now passing Bed separately
     let hospital: Hospital
+    let amount: Int // Emergency service charge
     
     @State private var selectedPaymentMethod: PaymentOption = .applePay
     @State private var cardNumber = ""
@@ -24,19 +23,19 @@ struct BedPaymentView: View {
         ScrollView {
             VStack(spacing: 20) {
                 // Title
-                Text("Make Payment")
+                Text("Emergency Payment")
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(.mint)
                     .padding(.top)
 
-                // Bed Booking Details
-                bookingDetailsSection
+                // Emergency Service Details
+                emergencyDetailsSection
 
                 // Payment Methods
                 paymentMethodsSection
 
-                // Payment Input Fields (Only for Card & UPI)
+                // Payment Input Fields (For Card & UPI)
                 if selectedPaymentMethod != .applePay {
                     paymentFieldsSection
                 }
@@ -53,15 +52,15 @@ struct BedPaymentView: View {
         .alert("Payment Successful", isPresented: $showingConfirmation) {
             Button("OK") { dismiss() }
         } message: {
-            Text("Your bed booking payment has been successfully processed.")
+            Text("Your emergency payment has been successfully processed.")
         }
-        .background(Color(UIColor.white).edgesIgnoringSafeArea(.all))
+        .background(Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all))
     }
 
-    // MARK: - Booking Details Section
-    private var bookingDetailsSection: some View {
+    // MARK: - Emergency Details Section
+    private var emergencyDetailsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Booking Details")
+            Text("Emergency Service Details")
                 .font(.headline)
                 .foregroundColor(.mint)
 
@@ -72,19 +71,12 @@ struct BedPaymentView: View {
                     .fontWeight(.medium)
             }
 
-            HStack {
-                Text("Bed Type:")
-                Spacer()
-                Text(bed.type.rawValue.capitalized)
-                    .fontWeight(.medium)
-            }
-
             Divider()
 
             HStack {
-                Text("Total Amount:")
+                Text("Emergency Charge:")
                 Spacer()
-                Text("₹\(bed.price)") // Fetch price from Bed
+                Text("₹\(amount)")
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(.mint)
@@ -163,7 +155,7 @@ struct BedPaymentView: View {
         }) {
             HStack {
                 Image(systemName: "lock.fill")
-                Text("Pay ₹\(bed.price)")
+                Text("Pay ₹\(amount)")
             }
             .fontWeight(.semibold)
             .foregroundColor(.white)
@@ -178,7 +170,7 @@ struct BedPaymentView: View {
 }
 
 // MARK: - Preview
-struct BedPaymentView_Previews: PreviewProvider {
+struct EmergencyPaymentView_Previews: PreviewProvider {
     static var previews: some View {
         let sampleHospital = Hospital(
             id: UUID(),
@@ -194,29 +186,10 @@ struct BedPaymentView_Previews: PreviewProvider {
             assigned_admin_id: nil
         )
 
-        let sampleBed = Bed(
-            id: UUID(),
-            hospitalId: sampleHospital.id,
-            price: 5000,
-            type: .ICU,
-            isAvailable: true
-        )
-
-        let sampleBedBooking = BedBooking(
-            id: UUID(),
-            patientId: UUID(),
-            hospitalId: sampleHospital.id,
-            bedId: sampleBed.id,
-            startDate: Date(),
-            endDate: Calendar.current.date(byAdding: .day, value: 5, to: Date())!,
-            isAvailable: true
-        )
-
         NavigationView {
-            BedPaymentView(
-                bedBooking: sampleBedBooking,
-                bed: sampleBed,  // Passing Bed separately
-                hospital: sampleHospital
+            EmergencyPaymentView(
+                hospital: sampleHospital,
+                amount: 3000 // Sample emergency charge
             )
         }
     }

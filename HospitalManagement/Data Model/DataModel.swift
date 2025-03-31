@@ -305,20 +305,21 @@ struct Invoice: Identifiable, Codable {
     var amount: Int
     var paymentType: PaymentType
     var status: PaymentStatus
+    let hospitalId: UUID?
 }
 
 enum PaymentStatus: String, Codable {
-    case paid
-    case pending
+    case paid = "paid"
+    case pending = "pending"
 }
 
-enum PaymentType: String, Codable {
+enum PaymentType: String, Codable, CaseIterable {
     case appointment
     case labTest
     case bed
 }
 
-struct Bed: Codable {
+struct Bed: Identifiable, Codable {
     let id: UUID
     let hospitalId: UUID?
     let price: Int
@@ -339,7 +340,7 @@ struct BedBooking: Codable {
     let bedId: UUID
     let startDate: Date
     let endDate: Date
-    let isAvailbale: Bool?
+    let isAvailable: Bool?
    
 }
 enum PaymentOption: String, Codable {

@@ -25,33 +25,72 @@ struct PatientDashboard: View {
     
     var body: some View {
         NavigationStack {
-            TabView(selection: $selectedTab) {
-                // MARK: - Home Tab
-                homeTabView
+            ZStack(alignment: .top) {
+                TabView(selection: $selectedTab) {
+                    // MARK: - Home Tab
+                    ZStack(alignment: .top) {
+                        // Main content starts below the header
+                        HomeTabView(
+                            selectedHospital: $selectedHospital,
+                            departments: $departments
+                        )
+                        .padding(.top, 50) // Add padding to account for sticky header
+                    }
                     .tabItem {
                         Label("Home", systemImage: "house.fill")
                     }
                     .tag(0)
+                    
+                    // MARK: - Appointments Tab
+                    AppointmentsTabView()
+                        .tabItem {
+                            Label("Appointments", systemImage: "calendar")
+                        }
+                        .tag(1)
+                    
+                    // MARK: - Records Tab
+                    RecordsTabView(selectedHospitalId: $selectedHospitalId)
+                        .tabItem {
+                            Label("Records", systemImage: "doc.text.fill")
+                        }
+                        .tag(2)
+                    
+                    // MARK: - Invoices Tab
+                    InvoicesTabView(selectedHospitalId: $selectedHospitalId)
+                        .tabItem {
+                            Label("Invoices", systemImage: "doc.text.fill")
+                        }
+                        .tag(3)
+                }
                 
-                // MARK: - Appointments Tab
-                appointmentsTabView
-                    .tabItem {
-                        Label("Appointments", systemImage: "calendar")
+                // Sticky header only visible in home tab
+                if selectedTab == 0 {
+                    VStack {
+                        Text("Hi, \(patient.fullname)")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal)
+                            .padding(.top, 10)
+                            .background(Color(.systemBackground))
+                        
+                        Divider()
                     }
-                    .tag(1)
-                
-                // MARK: - Records Tab
-                recordsTabView
-                    .tabItem {
-                        Label("Records", systemImage: "doc.text.fill")
-                    }
-                    .tag(2)
+                    .background(Color(.systemBackground))
+                    .zIndex(1) // Ensure header appears on top
+                }
             }
             .navigationBarBackButtonHidden(true)
-            .navigationTitle(selectedTab == 0 ? "Hi, \(patient.fullname)" : selectedTab == 1 ? "Appointments" : "Medical Records")
+            .navigationTitle(
+                selectedTab == 0 ? "" : // Empty for home tab since we use custom header
+                selectedTab == 1 ? "" : // Empty for appointments tab since we use custom header
+                selectedTab == 2 ? "" : // Empty for records tab since we use custom header
+                ""                      // Empty for invoices tab since we use custom header
+            )
+            .navigationBarTitleDisplayMode(.inline) // Use inline mode for all tabs since we have custom headers
             .toolbar {
                 // Profile Picture in the Top Right
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         showProfile = true
                     }) {
@@ -80,329 +119,6 @@ struct PatientDashboard: View {
                 }
             }
         }
-    }
-    
-    // MARK: - Home Tab View
-    private var homeTabView: some View {
-        ScrollView {
-            VStack(alignment: .leading) {
-                
-                // MARK: - Subtitle Section
-                Text("Let's take care of your health.")
-                    .font(.body)
-                    .foregroundColor(AppConfig.fontColor)
-                    .padding(.horizontal)
-                
-                // MARK: - Quick Actions Section
-                Text("Quick Action")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(AppConfig.fontColor)
-                    .padding(.horizontal)
-                    .padding(.top)
-                
-                NavigationLink(destination: HospitalListView()) {
-                    VStack(spacing: 12) {
-                        if let hospital = selectedHospital {
-                            // Selected Hospital Card View
-                            HStack(alignment: .center, spacing: 15) {
-                                Image(systemName: "building.fill")
-                                    .font(.system(size: 36))
-                                    .foregroundColor(AppConfig.buttonColor)
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(hospital.name)
-                                        .font(.headline)
-                                        .foregroundColor(AppConfig.fontColor)
-                                        .fontWeight(.semibold)
-                                    
-                                    Text("\(hospital.city), \(hospital.state)")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                        .lineLimit(1)
-                                }
-                                
-                                Spacer()
-                                
-                                Text("Change")
-                                    .font(.caption)
-                                    .foregroundColor(AppConfig.buttonColor)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .strokeBorder(AppConfig.buttonColor, lineWidth: 1)
-                                    )
-                            }
-                        } else {
-                            // No Hospital Selected View
-                            Image(systemName: "building.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(AppConfig.buttonColor)
-                            
-                            Text("Select Hospital")
-                                .font(.title3)
-                                .foregroundColor(AppConfig.fontColor)
-                                .fontWeight(.regular)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 15)
-                            .fill(Color(.systemBackground))
-                            .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
-                    )
-                    .padding(.horizontal)
-                }
-                
-                // Only show Services and Departments if a hospital is selected
-                if let hospital = selectedHospital {
-                    // MARK: - Services Section
-                    Text("Services")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(AppConfig.fontColor)
-                        .padding(.horizontal)
-                        .padding(.top, 20)
-                    
-                    HStack(spacing: 15) {
-                        // Book Appointment Card
-                        NavigationLink(destination: DepartmentListView()) {
-                            VStack(spacing: 12) {
-                                Image(systemName: "calendar.badge.plus")
-                                    .font(.system(size: 30))
-                                    .foregroundColor(AppConfig.buttonColor)
-                                
-                                Text("Book\nAppointment")
-                                    .font(.headline)
-                                    .multilineTextAlignment(.center)
-                                    .foregroundColor(AppConfig.fontColor)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 15)
-                                    .fill(Color(.systemBackground))
-                                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
-                            )
-                        }
-                        
-                        // Book Bed Card
-                        NavigationLink(destination: Text("Bed Booking Coming Soon")) {
-                            VStack(spacing: 12) {
-                                Image(systemName: "bed.double.fill")
-                                    .font(.system(size: 30))
-                                    .foregroundColor(AppConfig.buttonColor)
-                                
-                                Text("Book\nBed")
-                                    .font(.headline)
-                                    .multilineTextAlignment(.center)
-                                    .foregroundColor(AppConfig.fontColor)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 15)
-                                    .fill(Color(.systemBackground))
-                                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
-                            )
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    // MARK: - Departments Section
-                    HStack {
-                        Text("Departments")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(AppConfig.fontColor)
-                        
-                        Spacer()
-                        
-                        NavigationLink(destination: DepartmentListView()) {
-                            Text("View All")
-                                .font(.subheadline)
-                                .foregroundColor(AppConfig.buttonColor)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 20)
-                    
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 15) {
-                            ForEach(departments.prefix(5)) { department in
-                                NavigationLink(destination: DoctorListView(doctors: [])) {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text(department.name)
-                                            .font(.headline)
-                                            .foregroundColor(.mint)
-                                            .lineLimit(1)
-                                        
-                                        if let description = department.description {
-                                            Text(description)
-                                                .font(.caption)
-                                                .foregroundColor(.gray)
-                                                .lineLimit(2)
-                                        }
-                                    }
-                                    .frame(width: 150, height: 100)
-                                    .padding()
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 15)
-                                            .fill(Color(.systemBackground))
-                                            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-                                    )
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                }
-                
-                Spacer(minLength: 20)
-            }
-        }
-        .background(AppConfig.backgroundColor)
-    }
-    
-    // MARK: - Appointments Tab View
-    private var appointmentsTabView: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                if selectedHospitalId.isEmpty {
-                    noHospitalSelectedView
-                } else {
-                    // Upcoming Appointments Section
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("Upcoming Appointments")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(AppConfig.fontColor)
-                            .padding(.horizontal)
-                        
-                        // Placeholder for upcoming appointments
-                        Text("No upcoming appointments")
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 30)
-                    }
-                    
-                    // Past Appointments Section
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("Past Appointments")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(AppConfig.fontColor)
-                            .padding(.horizontal)
-                        
-                        // Placeholder for past appointments
-                        Text("No past appointments")
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 30)
-                    }
-                }
-            }
-            .padding(.vertical)
-        }
-        .background(AppConfig.backgroundColor)
-    }
-    
-    // MARK: - Records Tab View
-    private var recordsTabView: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                if selectedHospitalId.isEmpty {
-                    noHospitalSelectedView
-                } else {
-                    // Medical Records Section
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("Medical Records")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(AppConfig.fontColor)
-                            .padding(.horizontal)
-                        
-                        // Placeholder for medical records
-                        recordCategoryCard(title: "Lab Reports", iconName: "cross.case.fill", count: 0)
-                        recordCategoryCard(title: "Prescriptions", iconName: "pill.fill", count: 0)
-                        recordCategoryCard(title: "Imaging & Scans", iconName: "lungs.fill", count: 0)
-                        recordCategoryCard(title: "Discharge Summaries", iconName: "doc.text.fill", count: 0)
-                    }
-                    .padding(.horizontal)
-                }
-            }
-            .padding(.vertical)
-        }
-        .background(AppConfig.backgroundColor)
-    }
-    
-    // MARK: - Helper Views
-    private var noHospitalSelectedView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "building.2.fill")
-                .font(.system(size: 60))
-                .foregroundColor(AppConfig.buttonColor.opacity(0.5))
-            
-            Text("No Hospital Selected")
-                .font(.title3)
-                .foregroundColor(AppConfig.fontColor)
-            
-            Text("Please select a hospital to view your information")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-            
-            Button(action: {
-                selectedTab = 0
-            }) {
-                Text("Go to Home")
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(AppConfig.buttonColor)
-                    .cornerRadius(10)
-            }
-            .padding(.horizontal, 50)
-            .padding(.top, 10)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    private func recordCategoryCard(title: String, iconName: String, count: Int) -> some View {
-        HStack {
-            Image(systemName: iconName)
-                .font(.system(size: 24))
-                .foregroundColor(AppConfig.buttonColor)
-                .frame(width: 50, height: 50)
-                .background(AppConfig.buttonColor.opacity(0.1))
-                .cornerRadius(10)
-            
-            VStack(alignment: .leading, spacing: 5) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(AppConfig.fontColor)
-                
-                Text("\(count) records")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-        )
-        .padding(.vertical, 5)
     }
     
     private func loadDepartments() {
@@ -447,7 +163,7 @@ struct PatientDashboard: View {
             } catch {
                 print("Error fetching selected hospital: \(error)")
             }
-        }
+        } 
     }
 }
 
@@ -462,3 +178,31 @@ struct PatientDashboard: View {
         email: "tarun@gmail.com"
     ))
 }
+
+// MARK: - TextEditor Placeholder Extension
+extension View {
+    func placeholder<Content: View>(
+        when shouldShow: Bool,
+        alignment: Alignment = .leading,
+        @ViewBuilder then: () -> Content
+    ) -> some View {
+        ZStack(alignment: alignment) {
+            then()
+                .opacity(shouldShow ? 1 : 0)
+            
+            self
+        }
+    }
+    
+    func placeholder(
+        _ text: String,
+        when shouldShow: Bool,
+        alignment: Alignment = .leading
+    ) -> some View {
+        placeholder(when: shouldShow, alignment: alignment) {
+            Text(text)
+                .foregroundColor(.gray)
+        }
+    }
+}
+

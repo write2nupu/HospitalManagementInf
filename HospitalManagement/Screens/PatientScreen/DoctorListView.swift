@@ -12,6 +12,7 @@ struct DoctorListView: View {
     @State private var bookingError: Error?
     @Environment(\.dismiss) private var dismiss
     @State private var selectedAppointmentType: AppointmentBookingView.AppointmentType?
+    @State private var searchText = ""
     
     // Time slots for demonstration
     private let timeSlots = [
@@ -19,19 +20,112 @@ struct DoctorListView: View {
         "02:00 PM", "03:00 PM", "04:00 PM"
     ]
     
+    // Filtered doctors based on search
+    private var filteredDoctors: [Doctor] {
+        if searchText.isEmpty {
+            return doctors
+        } else {
+            return doctors.filter { doctor in
+                let name = doctor.full_name.lowercased()
+                let search = searchText.lowercased()
+                
+                // Filter by name only since 'specialization' doesn't exist
+                return name.contains(search)
+            }
+        }
+    }
+    
     var body: some View {
-        ScrollView {
-            VStack(spacing: 15) {
-                ForEach(doctors) { doctor in
+        VStack(spacing: 0) {
+            // Custom Search Bar
+            HStack(spacing: 12) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16))
+                    .foregroundColor(.gray)
+                
+                TextField("Search by doctor name", text: $searchText)
+                    .font(.body)
+                
+                if !searchText.isEmpty {
                     Button(action: {
-                        selectedDoctor = doctor
-                        showAppointmentBookingModal = true
+                        searchText = ""
                     }) {
-                        doctorCard(doctor: doctor)
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.gray)
                     }
                 }
             }
-            .padding()
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(.systemGray6))
+            )
+            .padding(.horizontal)
+            .padding(.top)
+            
+            ScrollView {
+                if filteredDoctors.isEmpty {
+                    VStack(spacing: 20) {
+                        Spacer().frame(height: 60)
+                        
+                        if searchText.isEmpty {
+                            Image(systemName: "person.2.slash")
+                                .font(.system(size: 50))
+                                .foregroundColor(.gray)
+                            
+                            Text("No doctors available")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 50))
+                                .foregroundColor(.gray)
+                            
+                            Text("No doctors match '\(searchText)'")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            
+                            Button("Clear Search") {
+                                searchText = ""
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.mint)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                        }
+                        
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+                } else {
+                    // Results Counter
+                    if !searchText.isEmpty {
+                        HStack {
+                            Text("Found \(filteredDoctors.count) doctor(s)")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 10)
+                    }
+                    
+                    VStack(spacing: 15) {
+                        ForEach(filteredDoctors) { doctor in
+                            Button(action: {
+                                selectedDoctor = doctor
+                                showAppointmentBookingModal = true
+                            }) {
+                                doctorCard(doctor: doctor)
+                            }
+                        }
+                    }
+                    .padding()
+                }
+            }
         }
         .navigationTitle("Select Doctor")
         .background(Color.mint.opacity(0.05))
@@ -53,8 +147,8 @@ struct DoctorListView: View {
                     selectedTimeSlot: $selectedTimeSlot,
                     isBookingAppointment: $isBookingAppointment,
                     bookingError: $bookingError,
-                    selectedAppointmentType: $selectedAppointmentType,
-                    onBookAppointment: bookAppointment
+                    onBookAppointment: bookAppointment,
+                    selectedAppointmentType: $selectedAppointmentType
                 )
             }
         }
@@ -69,84 +163,146 @@ struct DoctorListView: View {
         }
     }
     
-    private func bookAppointment() {
-        guard let doctor = selectedDoctor,
-              let appointmentType = selectedAppointmentType else {
+    // Book appointment function
+    func bookAppointment() {
+        guard let timeSlot = selectedTimeSlot else {
+            // Cannot book without a time slot
+            bookingError = NSError(domain: "AppointmentBooking", 
+                                 code: 1, 
+                                 userInfo: [NSLocalizedDescriptionKey: "Please select a time slot"])
             return
         }
         
-        // Validate time slot based on appointment type
-        if appointmentType == .consultation {
-            guard let timeSlot = selectedTimeSlot else { return }
-            // Additional validation for consultation
-        } else if appointmentType == .emergency {
-            // For emergency, ensure time slot is "NOW"
-            guard selectedTimeSlot == "NOW" else { return }
+        // Check if user already has an appointment at this date and time
+        if isTimeSlotAlreadyBooked(date: selectedDate, timeSlot: timeSlot) {
+            bookingError = NSError(domain: "AppointmentBooking", 
+                                 code: 2, 
+                                 userInfo: [NSLocalizedDescriptionKey: "You already have an appointment at this date and time"])
+            return
         }
         
+        // Start booking process
         isBookingAppointment = true
+        bookingError = nil
         
-        Task {
-            do {
-                // TODO: Replace with actual appointment booking method from Supabase controller
-                // Simulating an async booking process
-                try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
-                
-                // Reset and dismiss
-                DispatchQueue.main.async {
-                    isBookingAppointment = false
-                    showAppointmentBookingModal = false
-                    selectedTimeSlot = nil
-                    selectedAppointmentType = nil
-                    dismiss()
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    isBookingAppointment = false
-                    bookingError = error
-                }
+        // Simulate booking process with a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            guard let doctor = self.selectedDoctor else { return }
+            
+            // Prepare appointment details
+            let appointmentDetails: [String: Any] = [
+                "id": UUID().uuidString,
+                "doctorName": doctor.full_name,
+                "doctorSpecialty": self.departmentDetails[doctor.department_id ?? UUID()]?.name ?? "Unknown Specialty",
+                "date": self.selectedDate,
+                "timeSlot": timeSlot,
+                "appointmentType": self.selectedAppointmentType?.rawValue ?? "Consultation",
+                "timestamp": Date() // Add timestamp for latest appointment tracking
+            ]
+            
+            // Get existing appointments
+            var savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
+            
+            // Add new appointment
+            savedAppointments.append(appointmentDetails)
+            
+            // Save to UserDefaults
+            UserDefaults.standard.set(savedAppointments, forKey: "savedAppointments")
+            
+            // Reset state
+            self.isBookingAppointment = false
+            self.showAppointmentBookingModal = false
+            self.selectedTimeSlot = nil
+            self.selectedAppointmentType = nil
+            self.dismiss()
+        }
+    }
+    
+    // Check if user already has an appointment at this date and time
+    private func isTimeSlotAlreadyBooked(date: Date, timeSlot: String) -> Bool {
+        // Get existing appointments
+        let savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
+        
+        // Create calendar for date comparison
+        let calendar = Calendar.current
+        
+        // Check if any appointment matches the date and time slot
+        return savedAppointments.contains { appointment in
+            guard let appointmentDate = appointment["date"] as? Date,
+                  let appointmentTimeSlot = appointment["timeSlot"] as? String else {
+                return false
             }
+            
+            // Compare dates (same day) and time slot
+            let sameDay = calendar.isDate(appointmentDate, inSameDayAs: date)
+            let sameTimeSlot = appointmentTimeSlot == timeSlot
+            
+            return sameDay && sameTimeSlot
         }
     }
     
     // MARK: - Doctor Card UI
     private func doctorCard(doctor: Doctor) -> some View {
         HStack(spacing: 15) {
-            Image(systemName: "person.fill")
-                .resizable()
-                .frame(width: 50, height: 50)
-                .foregroundColor(.mint)
-                .background(Color.mint.opacity(0.2))
-                .clipShape(Circle())
+            // Doctor avatar
+            ZStack {
+                Circle()
+                    .fill(Color.mint.opacity(0.15))
+                    .frame(width: 60, height: 60)
+                
+                Image(systemName: "person.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 28, height: 28)
+                    .foregroundColor(.mint)
+            }
 
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(doctor.full_name)
                     .font(.title3)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
                     .foregroundColor(.primary)
 
-                if let departmentId = doctor.department_id,
-                   let department = departmentDetails[departmentId] {
-                    Text(department.name)
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-
-                    Text("₹\(Int(department.fees))")
-                        .font(.body)
-                        .foregroundColor(.mint)
-                } else {
-                    Text("Department not assigned")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
+                HStack(spacing: 20) {
+                    if let departmentId = doctor.department_id,
+                       let department = departmentDetails[departmentId] {
+                        HStack(spacing: 4) {
+                            Image(systemName: "building.2")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            
+                            Text(department.name)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .lineLimit(1)
+                        }
+                        
+                        HStack(spacing: 4) {
+                            Image(systemName: "indianrupeesign")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            
+                            Text("\(Int(department.fees))")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.mint)
+                        }
+                    }
                 }
             }
             Spacer()
+            
+            // Chevron indicator
+            Image(systemName: "chevron.right")
+                .foregroundColor(.mint)
+                .font(.caption)
         }
-        .frame(maxWidth: .infinity, minHeight: 80)
         .padding()
-        .background(Color.white)
-        .cornerRadius(12)
-        .shadow(color: .mint.opacity(0.3), radius: 4, x: 0, y: 2)
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(Color.white)
+                .shadow(color: .mint.opacity(0.2), radius: 5, x: 0, y: 2)
+        )
     }
 }
 
@@ -157,13 +313,14 @@ struct AppointmentBookingView: View {
     @Binding var selectedTimeSlot: String?
     @Binding var isBookingAppointment: Bool
     @Binding var bookingError: Error?
-    @Binding var selectedAppointmentType: AppointmentType?
     var onBookAppointment: () -> Void
+    @Binding var selectedAppointmentType: AppointmentType?
+    @State private var showTimeSlotWarning = false
+    @State private var timeSlotError = ""
     
     // Appointment Types
     enum AppointmentType: String, CaseIterable {
         case consultation = "Consultation"
-        case emergency = "Emergency"
     }
     
     // Time slots for demonstration
@@ -196,32 +353,22 @@ struct AppointmentBookingView: View {
                         ForEach(AppointmentType.allCases, id: \.self) { type in
                             Button(action: {
                                 selectedAppointmentType = type
-                                // Reset date and time slot when changing type
-                                if type == .emergency {
-                                    selectedDate = Date()
-                                    selectedTimeSlot = "NOW"
-                                } else {
-                                    selectedTimeSlot = nil
-                                }
                             }) {
                                 HStack {
-                                    // Different icons for each appointment type
-                                    Image(systemName: type == .emergency ? "cross.case.fill" : "stethoscope")
+                                    Image(systemName: "stethoscope")
                                         .foregroundColor(.white)
                                         .frame(width: 30, height: 30)
                                         .background(
                                             Circle()
-                                                .fill(iconBackgroundColor(type))
+                                                .fill(Color.mint)
                                         )
                                     
-                                    VStack(alignment: .leading) {
+                                    VStack(alignment: .leading, spacing: 5) {
                                         Text(type.rawValue)
                                             .font(.headline)
                                             .foregroundColor(.primary)
                                         
-                                        Text(type == .emergency ? 
-                                             "Immediate medical attention required" : 
-                                             "Regular consultation with the doctor")
+                                        Text("Regular consultation with the doctor")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
@@ -231,13 +378,21 @@ struct AppointmentBookingView: View {
                                     // Selection indicator
                                     if selectedAppointmentType == type {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(type == .emergency ? .red : .mint)
+                                            .foregroundColor(.mint)
                                     }
                                 }
                                 .padding()
-                                .background(backgroundColorForAppointmentType(type))
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(selectedAppointmentType == type ? 
+                                              Color.mint.opacity(0.1) : 
+                                              Color.gray.opacity(0.1))
+                                )
                                 .overlay(
-                                    overlayForAppointmentType(type)
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(selectedAppointmentType == type ? 
+                                                Color.mint : Color.gray.opacity(0.3), 
+                                                lineWidth: 2)
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())
@@ -246,58 +401,72 @@ struct AppointmentBookingView: View {
                     .padding(.vertical, 10)
                 }
                 
-                // Conditional Date and Time Selection
-                if selectedAppointmentType == .consultation {
-                    // Date Selection Section
-                    Section(header: Text("Select Date")) {
-                        DatePicker("Appointment Date", 
-                                   selection: $selectedDate, 
-                                   in: Date()..., 
-                                   displayedComponents: .date)
-                            .datePickerStyle(GraphicalDatePickerStyle())
-                    }
-                    
-                    // Time Slot Selection Section
-                    Section(header: Text("Select Time Slot")) {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 10) {
-                                ForEach(timeSlots, id: \.self) { slot in
-                                    Button(action: {
-                                        selectedTimeSlot = (selectedTimeSlot == slot) ? nil : slot
-                                    }) {
-                                        Text(slot)
-                                            .padding(10)
-                                            .background(
-                                                selectedTimeSlot == slot ? 
-                                                Color.mint : Color.gray.opacity(0.2)
-                                            )
-                                            .foregroundColor(
-                                                selectedTimeSlot == slot ? 
-                                                .white : .primary
-                                            )
-                                            .cornerRadius(10)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 10)
-                                                    .stroke(selectedTimeSlot == slot ? Color.mint : Color.gray, lineWidth: 2)
-                                            )
+                // Date Selection Section
+                Section(header: Text("Select Date")) {
+                    DatePicker("Appointment Date", 
+                               selection: $selectedDate, 
+                               in: Date()..., 
+                               displayedComponents: .date)
+                        .datePickerStyle(GraphicalDatePickerStyle())
+                        .onChange(of: selectedDate) { _ in
+                            // Reset time slot when date changes
+                            selectedTimeSlot = nil
+                        }
+                }
+                
+                // Time Slot Selection Section
+                Section(header: Text("Select Time Slot")) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(timeSlots, id: \.self) { slot in
+                                Button(action: {
+                                    // Check if this time slot is already booked
+                                    if isTimeSlotAlreadyBooked(date: selectedDate, slot: slot) {
+                                        timeSlotError = "You already have an appointment scheduled at this time slot. Please select a different time."
+                                        showTimeSlotWarning = true
+                                    } else {
+                                        selectedTimeSlot = slot
+                                        showTimeSlotWarning = false
                                     }
+                                }) {
+                                    Text(slot)
+                                        .padding(10)
+                                        .background(
+                                            selectedTimeSlot == slot ? 
+                                            Color.mint : 
+                                            isTimeSlotAlreadyBooked(date: selectedDate, slot: slot) ?
+                                            Color.red.opacity(0.2) : Color.gray.opacity(0.2)
+                                        )
+                                        .foregroundColor(
+                                            selectedTimeSlot == slot ? 
+                                            .white :
+                                            isTimeSlotAlreadyBooked(date: selectedDate, slot: slot) ?
+                                            .red : .primary
+                                        )
+                                        .cornerRadius(10)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(
+                                                    selectedTimeSlot == slot ? Color.mint : 
+                                                    isTimeSlotAlreadyBooked(date: selectedDate, slot: slot) ?
+                                                    Color.red : Color.gray, 
+                                                    lineWidth: 2
+                                                )
+                                        )
                                 }
                             }
                         }
                     }
-                } else if selectedAppointmentType == .emergency {
-                    // Emergency Section
-                    Section(header: Text("Emergency Appointment")) {
+                    
+                    if showTimeSlotWarning {
                         HStack {
-                            Image(systemName: "exclamationmark.circle.fill")
+                            Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.red)
-                            Text("Immediate Assistance")
-                                .font(.headline)
+                            Text(timeSlotError)
+                                .font(.footnote)
                                 .foregroundColor(.red)
                         }
-                        Text("You will be connected to the nearest available doctor immediately.")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                        .padding(.vertical, 5)
                     }
                 }
             }
@@ -307,36 +476,41 @@ struct AppointmentBookingView: View {
                     onBookAppointment()
                 }
                 .disabled(
-                    (selectedAppointmentType == .consultation && 
-                     (selectedTimeSlot == nil || selectedDate == nil)) ||
-                    (selectedAppointmentType == .emergency && selectedTimeSlot != "NOW") ||
+                    selectedTimeSlot == nil || 
+                    selectedAppointmentType == nil || 
                     isBookingAppointment
                 )
             )
+            .alert(isPresented: $showTimeSlotWarning) {
+                Alert(
+                    title: Text("Time Slot Unavailable"),
+                    message: Text(timeSlotError),
+                    dismissButton: .default(Text("Choose Another Time"))
+                )
+            }
         }
     }
     
-    private func backgroundColorForAppointmentType(_ type: AppointmentType) -> Color {
-        guard selectedAppointmentType == type else {
-            return Color.gray.opacity(0.1)
-        }
+    // Check if a time slot is already booked
+    private func isTimeSlotAlreadyBooked(date: Date, slot: String) -> Bool {
+        // Get existing appointments
+        let savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
         
-        switch type {
-        case .consultation:
-            return Color.mint.opacity(0.1)
-        case .emergency:
-            return Color.red.opacity(0.1)
+        // Create calendar for date comparison
+        let calendar = Calendar.current
+        
+        // Check if any appointment matches the date and time slot
+        return savedAppointments.contains { appointment in
+            guard let appointmentDate = appointment["date"] as? Date,
+                  let appointmentTimeSlot = appointment["timeSlot"] as? String else {
+                return false
+            }
+            
+            // Compare dates (same day) and time slot
+            let sameDay = calendar.isDate(appointmentDate, inSameDayAs: date)
+            let sameTimeSlot = appointmentTimeSlot == slot
+            
+            return sameDay && sameTimeSlot
         }
-    }
-    
-    private func overlayForAppointmentType(_ type: AppointmentType) -> some View {
-        RoundedRectangle(cornerRadius: 12)
-            .stroke(selectedAppointmentType == type ? 
-                    (type == .emergency ? Color.red : Color.mint) : Color.gray.opacity(0.3), 
-                    lineWidth: 2)
-    }
-    
-    private func iconBackgroundColor(_ type: AppointmentType) -> Color {
-        return type == .emergency ? Color.red : Color.mint
     }
 }

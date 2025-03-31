@@ -56,6 +56,14 @@ struct DepartmentDetailView: View {
         }
     }
     
+    private var adminName: String {
+        if let hospitalId = department.hospital_id,
+           let admin = viewModel.getAdminByHospital(hospitalId: hospitalId) {
+            return "Hi, \(admin.full_name)"
+        }
+        return "Department Details"
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -158,7 +166,7 @@ struct DepartmentDetailView: View {
             }
             .padding(.vertical)
         }
-        .navigationTitle(department.name)
+        .navigationTitle(adminName)
         .navigationBarTitleDisplayMode(.large)
         .searchable(
             text: $searchText,

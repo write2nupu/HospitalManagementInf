@@ -1,12 +1,35 @@
-//
-//  Dashboard.swift
-//  HospitalManagement
-//
-//  Created by Mariyo on 19/03/25.
-//
+
+
+
+
+
+
+
 
 import SwiftUI
 import PostgREST
+
+struct LocationResponse: Codable {
+    let lat: String
+    let lon: String
+    let display_name: String
+    
+    var addressComponents: [String] {
+        display_name.components(separatedBy: ", ")
+    }
+    
+    var city: String {
+        // Usually city is the third-to-last component
+        let components = addressComponents
+        return components.count >= 3 ? components[components.count - 3] : ""
+    }
+    
+    var state: String {
+        // State is usually the second-to-last component
+        let components = addressComponents
+        return components.count >= 2 ? components[components.count - 2] : ""
+    }
+}
 
 struct HospitalCard: View {
     let hospital: Hospital
@@ -113,8 +136,6 @@ struct SuperAdminProfileButton: View {
     }
 }
 
-
-
 struct AddHospitalView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: HospitalManagementViewModel
@@ -140,6 +161,9 @@ struct AddHospitalView: View {
     @State private var validationMessage = ""
     @State private var isSubmitting = false
     
+    @State private var isLoadingLocation = false
+    @State private var locationError: String? = nil
+    
     var body: some View {
         NavigationView {
             Form {
@@ -150,12 +174,48 @@ struct AddHospitalView: View {
                         .textInputAutocapitalization(.characters)
                     TextField("Address", text: $address)
                         .textInputAutocapitalization(.words)
-                    TextField("City", text: $city)
-                        .textInputAutocapitalization(.words)
-                    TextField("State", text: $state)
-                        .textInputAutocapitalization(.words)
                     TextField("Pincode (6 digits)", text: $pincode)
                         .keyboardType(.numberPad)
+                        .onChange(of: pincode) { newValue in
+                            // Only allow numbers and limit to 6 digits
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered != newValue {
+                                pincode = filtered
+                            }
+                            if filtered.count > 6 {
+                                pincode = String(filtered.prefix(6))
+                            }
+                            
+                            // Clear location if pincode is deleted
+                            if filtered.isEmpty {
+                                city = ""
+                                state = ""
+                                locationError = nil
+                            }
+                            // Fetch location when pincode is 6 digits
+                            else if filtered.count == 6 {
+                                fetchLocationFromPincode(filtered)
+                            }
+                        }
+                    
+                    if let error = locationError {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                    
+                    HStack {
+                        TextField("City", text: $city)
+                            .disabled(isLoadingLocation)
+                        if isLoadingLocation {
+                            ProgressView()
+                                .padding(.horizontal, 8)
+                        }
+                    }
+                    
+                    TextField("State", text: $state)
+                        .disabled(isLoadingLocation)
+                    
                     TextField("Contact (10 digits)", text: $contact)
                         .keyboardType(.phonePad)
                     TextField("Email", text: $email)
@@ -366,7 +426,71 @@ struct AddHospitalView: View {
             return false
         }
         
+        // Additional validation for location
+        if !pincode.isEmpty && locationError != nil {
+            validationMessage = "Please enter a valid pincode"
+            return false
+        }
+        
         return true
+    }
+    
+    private func fetchLocationFromPincode(_ pincode: String) {
+        // Clear existing location data if pincode is empty
+        if pincode.isEmpty {
+            city = ""
+            state = ""
+            locationError = nil
+            return
+        }
+        
+        isLoadingLocation = true
+        locationError = nil
+        
+        let urlString = "https://nominatim.openstreetmap.org/search?postalcode=\(pincode)&countrycodes=IN&format=json"
+        
+        guard let url = URL(string: urlString) else { return }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                isLoadingLocation = false
+                
+                if let error = error {
+                    locationError = "Network error: \(error.localizedDescription)"
+                    city = ""
+                    state = ""
+                    return
+                }
+                
+                guard let data = data else {
+                    locationError = "No data received"
+                    city = ""
+                    state = ""
+                    return
+                }
+                
+                do {
+                    let locations = try JSONDecoder().decode([LocationResponse].self, from: data)
+                    if let location = locations.first {
+                        city = location.city
+                        state = location.state
+                        
+                        // If no city/state found for valid pincode
+                        if city.isEmpty && state.isEmpty {
+                            locationError = "No location found for this pincode"
+                        }
+                    } else {
+                        locationError = "Invalid pincode"
+                        city = ""
+                        state = ""
+                    }
+                } catch {
+                    locationError = "Error processing location data"
+                    city = ""
+                    state = ""
+                }
+            }
+        }.resume()
     }
 }
 
