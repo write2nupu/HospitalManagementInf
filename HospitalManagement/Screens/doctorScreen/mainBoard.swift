@@ -30,12 +30,17 @@ struct mainBoard: View {
                     TabView {
                         DoctorDashBoard()
                             .tabItem {
-                                Label("Dashboard", systemImage: "house.fill")
+                                Label("Home", systemImage: "house.fill")
                             }
                         
                         AppointmentView()
                             .tabItem {
                                 Label("Appointments", systemImage: "calendar")
+                            }
+                        
+                        PatientView()
+                            .tabItem {
+                                Label("Patients", systemImage: "person.fill")
                             }
                     }
                     .accentColor(AppConfig.buttonColor) // ✅ Tab bar icon color
