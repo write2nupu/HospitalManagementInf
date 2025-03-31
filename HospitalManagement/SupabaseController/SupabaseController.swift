@@ -1036,11 +1036,12 @@ class SupabaseController: ObservableObject {
     }
     
     // Add function to create a bed booking
-    func createBedBooking(patientId: UUID, bedId: UUID, startDate: Date, endDate: Date) async throws {
+    func createBedBooking(patientId: UUID, bedId: UUID, hospitalId: UUID, startDate: Date, endDate: Date) async throws {
         let booking: [String: AnyJSON] = [
             "id": .string(UUID().uuidString),
             "patientId": .string(patientId.uuidString),
             "bedId": .string(bedId.uuidString),
+            "hospitalId": .string(hospitalId.uuidString),
             "startDate": .string(ISO8601DateFormatter().string(from: startDate)),
             "endDate": .string(ISO8601DateFormatter().string(from: endDate)),
             "isAvailable": .bool(false)
@@ -1148,6 +1149,103 @@ class SupabaseController: ObservableObject {
         } catch {
             print("Error fetching all invoices: \(error)")
             return []
+        }
+    }
+    
+    func createInvoice(invoice: Invoice) async throws {
+        let invoiceData: [String: AnyJSON] = [
+            "id": .string(invoice.id.uuidString),
+            "createdAt": .string(ISO8601DateFormatter().string(from: invoice.createdAt)),
+            "patientid": .string(invoice.patientid.uuidString),
+            "amount": .double(Double(invoice.amount)),
+            "paymentType": .string(invoice.paymentType.rawValue),
+            "status": .string(invoice.status.rawValue),
+            "hospitalId": .string(invoice.hospitalId!.uuidString)
+        ]
+        
+        try await client
+            .from("Invoice")
+            .insert(invoiceData)
+            .execute()
+    }
+    
+    func getBookingsByPatientId(patientId: UUID) async throws -> [BedBookingWithDetails] {
+        do {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+            dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+            
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .custom { decoder in
+                let container = try decoder.singleValueContainer()
+                let dateString = try container.decode(String.self)
+                
+                // Try parsing with the exact format from the database
+                if let date = dateFormatter.date(from: dateString) {
+                    return date
+                }
+                
+                // If that fails, try with ISO8601
+                let iso8601Formatter = ISO8601DateFormatter()
+                if let date = iso8601Formatter.date(from: dateString) {
+                    return date
+                }
+                
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: "Invalid date format: \(dateString)"
+                )
+            }
+            
+            var query = client
+                .from("BedBooking")
+                .select("""
+                id,
+                patientId,
+                bedId,
+                hospitalId,
+                startDate,
+                endDate,
+                isAvailable,
+                Bed (
+                    id,
+                    type,
+                    price,
+                    hospitalId
+                )
+            """)
+                .eq("patientId", value: patientId.uuidString)
+                .order("startDate", ascending: false)
+            
+            let response = try await query.execute()
+            let bookings = try decoder.decode([BedBooking].self, from: response.data)
+            
+            // Convert raw bookings to BedBookingWithDetails
+            var bookingsWithDetails: [BedBookingWithDetails] = []
+            for booking in bookings {
+                do {
+                    let patient = try await fetchPatientDetails(patientId: booking.patientId)
+                    let bed = try await fetchBedDetails(bedId: booking.bedId)
+                    
+                    if let patient = patient, let bed = bed {
+                        let bookingWithDetails = BedBookingWithDetails(
+                            booking: booking,
+                            patient: patient,
+                            bed: bed
+                        )
+                        bookingsWithDetails.append(bookingWithDetails)
+                    }
+                } catch {
+                    print("Error loading details for booking \(booking.id): \(error)")
+                    continue
+                }
+            }
+            
+            return bookingsWithDetails
+        } catch {
+            print("Error loading bed bookings: \(error)")
+            throw error
         }
     }
 }

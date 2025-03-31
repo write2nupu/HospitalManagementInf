@@ -15,16 +15,19 @@ struct AdminHomeView: View {
     @State private var showAdminProfile = false
     @State private var showAddDepartment = false
     @State private var searchText = ""
+    @State private var departments: [Department] = []
+    @State private var isLoadingDepartments = false
+    @State private var errorMessage: String?
     
-    // Add dummy counters (replace with actual data later)
-    private let emergencyRequestsCount = 5
-    private let bedRequestsCount = 3
+    // Emergency and bed request counts (to be implemented with real data later)
+    @State private var emergencyRequestsCount = 0
+    @State private var bedRequestsCount = 0
     
     var filteredDepartments: [Department] {
         if searchText.isEmpty {
-            return viewModel.departments
+            return departments
         } else {
-            return viewModel.departments.filter { department in
+            return departments.filter { department in
                 department.name.localizedCaseInsensitiveContains(searchText)
             }
         }
@@ -107,7 +110,7 @@ struct AdminHomeView: View {
                             
                             Spacer()
                             
-                            if !viewModel.departments.isEmpty {
+                            if !departments.isEmpty {
                                 NavigationLink {
                                     AllDepartmentsView()
                                 } label: {
@@ -120,7 +123,28 @@ struct AdminHomeView: View {
                         .padding(.horizontal)
                         
                         // Department Cards
-                        if viewModel.departments.isEmpty {
+                        if isLoadingDepartments {
+                            VStack(spacing: 12) {
+                                ProgressView()
+                                Text("Loading departments...")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                        } else if let error = errorMessage {
+                            VStack(spacing: 12) {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.red.opacity(0.3))
+                                Text(error)
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                        } else if departments.isEmpty {
                             VStack(spacing: 12) {
                                 Image(systemName: "building.2")
                                     .font(.system(size: 40))
@@ -240,10 +264,9 @@ struct AdminHomeView: View {
             .sheet(isPresented: $showAdminProfile) {
                 AdminProfileView()
             }
-        }
-        .onAppear {
-            Task {
+            .task {
                 await fetchHospitalName()
+                await loadDepartments()
             }
         }
     }
@@ -265,6 +288,33 @@ struct AdminHomeView: View {
             print("Error fetching hospital and admin:", error.localizedDescription)
             await MainActor.run {
                 hospitalName = "Error Loading Details"
+            }
+        }
+    }
+    
+    private func loadDepartments() async {
+        isLoadingDepartments = true
+        departments = []
+        errorMessage = nil
+        
+        guard let hospitalId = UserDefaults.standard.string(forKey: "hospitalId"),
+              let hospitalUUID = UUID(uuidString: hospitalId) else {
+            errorMessage = "Could not determine hospital ID"
+            isLoadingDepartments = false
+            return
+        }
+        
+        do {
+            let fetchedDepartments = try await supabaseController.fetchHospitalDepartments(hospitalId: hospitalUUID)
+            await MainActor.run {
+                departments = fetchedDepartments
+                isLoadingDepartments = false
+            }
+        } catch {
+            print("Error loading departments: \(error)")
+            await MainActor.run {
+                errorMessage = "Failed to load departments: \(error.localizedDescription)"
+                isLoadingDepartments = false
             }
         }
     }

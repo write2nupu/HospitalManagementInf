@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+
 struct AdminTabView: View {
     @EnvironmentObject private var viewModel: HospitalManagementViewModel
     
@@ -31,7 +32,6 @@ struct AdminTabView: View {
         }
     }
 }
-
 
 struct Services: View {
     @State private var showAdminProfile = false
@@ -67,11 +67,8 @@ struct Services: View {
     }
 }
 
-
-
 #Preview {
     let mockViewModel = HospitalManagementViewModel()
     return AdminTabView()
         .environmentObject(mockViewModel)
-   
 }

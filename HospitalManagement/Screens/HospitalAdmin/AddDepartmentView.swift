@@ -11,8 +11,8 @@ struct AddDepartmentView: View {
     @State private var alertMessage = ""
     
     private var fees: Double? {
-        // Remove "$" and any whitespace, then convert to Double
-        let cleanString = feesString.replacingOccurrences(of: "$", with: "").trimmingCharacters(in: .whitespaces)
+        // Remove "₹" and any whitespace, then convert to Double
+        let cleanString = feesString.replacingOccurrences(of: "₹", with: "").trimmingCharacters(in: .whitespaces)
         return Double(cleanString)
     }
     
@@ -26,7 +26,7 @@ struct AddDepartmentView: View {
                 TextField("Department Name", text: $departmentName)
                     .autocapitalization(.words)
                 TextField("Description", text: $description)
-                TextField("Consultation Fee ($)", text: $feesString)
+                TextField("Consultation Fee (₹)", text: $feesString)
                     .keyboardType(.decimalPad)
                     .onChange(of: feesString) { newValue in
                         // Clean the input to only allow numbers and decimal point
@@ -34,9 +34,9 @@ struct AddDepartmentView: View {
                         if filtered != newValue {
                             feesString = filtered
                         }
-                        // Add "$" prefix if needed
-                        if !feesString.hasPrefix("$") && !feesString.isEmpty {
-                            feesString = "$" + feesString
+                        // Add "₹" prefix if needed
+                        if !feesString.hasPrefix("₹") && !feesString.isEmpty {
+                            feesString = "₹" + feesString
                         }
                     }
             }

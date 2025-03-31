@@ -388,6 +388,8 @@ struct BedBookingWithDetails: Identifiable {
     let patientName: String
     let bedType: BedType
     let amount: Int
+    let startDate: Date
+    let endDate: Date
     
     // Initialize from the existing data model
     init(booking: BedBooking, patient: Patient, bed: Bed) {
@@ -395,14 +397,18 @@ struct BedBookingWithDetails: Identifiable {
         self.patientName = patient.fullname
         self.bedType = bed.type
         self.amount = bed.price
+        self.startDate = booking.startDate
+        self.endDate = booking.endDate
     }
     
     // Convenience initializer for preview or testing
-    init(id: UUID, patientName: String, bedType: BedType, amount: Int) {
+    init(id: UUID, patientName: String, bedType: BedType, amount: Int, startDate: Date = Date(), endDate: Date = Date()) {
         self.id = id
         self.patientName = patientName
         self.bedType = bedType
         self.amount = amount
+        self.startDate = startDate
+        self.endDate = endDate
     }
 }
 
