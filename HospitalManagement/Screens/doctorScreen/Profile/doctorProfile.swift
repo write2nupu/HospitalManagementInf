@@ -47,6 +47,14 @@ struct DoctorProfileView: View {
                 }
                 
                 Section {
+                    NavigationLink(destination: LeaveApplicationView()) {
+                        Text("Doctor Leave")
+                            .foregroundColor(AppConfig.buttonColor)
+                            .fontWeight(.semibold)
+                    }
+                }
+                
+                Section {
                     NavigationLink(destination: updatePassword(doctor: doctorDetails ?? doctor)) {
                         Text("Reset Password")
                             .foregroundColor(AppConfig.buttonColor)
