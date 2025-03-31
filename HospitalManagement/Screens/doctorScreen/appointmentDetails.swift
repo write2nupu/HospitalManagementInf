@@ -162,6 +162,7 @@ struct AppointmentDetailView: View {
     @State private var existingPrescription: PrescriptionData?
     @State private var isLoadingPrescription = true
     @State private var prescriptionError: Error?
+    @State private var isEditable: Bool = false
     
     // Add new state variables for prescription
     @State private var diagnosis: String = ""
@@ -233,7 +234,7 @@ struct AppointmentDetailView: View {
                         // Prescription Section
                         Section(header: Text("Prescription").font(.headline)) {
                             if let prescription = existingPrescription {
-                                // Show existing prescription data
+                                // Show existing prescription data in read-only mode
                                 Text("Diagnosis: \(prescription.diagnosis)")
                                 if let tests = prescription.labTests {
                                     Text("Lab Tests:")
@@ -260,43 +261,47 @@ struct AppointmentDetailView: View {
                                     Text("Additional Notes: \(notes)")
                                 }
                             } else {
-                                // Show prescription input fields
+                                // Show prescription input fields only if no existing prescription
                                 DiagnosisSection(diagnosis: $diagnosis)
+                                    .disabled(!isEditable)
                                 LabTestsSection(selectedLabTests: $selectedLabTests, showingLabTestPicker: $showingLabTestPicker)
-                                
+                                    .disabled(!isEditable)
                                 NotesSection(notes: $additionalNotes)
-                            }
-                        }
-                        
-                        // Medicine Section
-                        Section(header: Text("MEDICINES").font(.headline)) {
-                            HStack {
-                                Text("Selected Medicines")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                                Spacer()
-                                Button(action: {
-                                    showingMedicineSelection = true
-                                }) {
-                                    Label("Add Medicine", systemImage: "plus.circle.fill")
-                                        .foregroundColor(.blue)
-                                }
-                            }
-                            
-                            if prescribedMedicines.isEmpty {
-                                Text("No medicines selected")
-                                    .foregroundColor(.gray)
-                                    .italic()
-                            } else {
-                                ForEach(prescribedMedicines) { medicine in
-                                    VStack(alignment: .leading) {
-                                        Text(medicine.medicine.name)
-                                            .font(.headline)
-                                        Text("\(medicine.dosage) for \(medicine.duration)")
+                                    .disabled(!isEditable)
+                                
+                                // Medicine Section
+                                Section(header: Text("MEDICINES").font(.headline)) {
+                                    HStack {
+                                        Text("Selected Medicines")
                                             .font(.subheadline)
                                             .foregroundColor(.gray)
+                                        Spacer()
+                                        if isEditable {
+                                            Button(action: {
+                                                showingMedicineSelection = true
+                                            }) {
+                                                Label("Add Medicine", systemImage: "plus.circle.fill")
+                                                    .foregroundColor(.blue)
+                                            }
+                                        }
                                     }
-                                    .padding(.vertical, 4)
+                                    
+                                    if prescribedMedicines.isEmpty {
+                                        Text("No medicines selected")
+                                            .foregroundColor(.gray)
+                                            .italic()
+                                    } else {
+                                        ForEach(prescribedMedicines) { medicine in
+                                            VStack(alignment: .leading) {
+                                                Text(medicine.medicine.name)
+                                                    .font(.headline)
+                                                Text("\(medicine.dosage) for \(medicine.duration)")
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.gray)
+                                            }
+                                            .padding(.vertical, 4)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -320,12 +325,20 @@ struct AppointmentDetailView: View {
                 }
             }
             .navigationTitle("Appointment Details")
-            .navigationBarItems(trailing: Button("Save") {
-                savePrescription()
-                presentationMode.wrappedValue.dismiss()
+            .navigationBarItems(trailing: Group {
+                if isEditable && existingPrescription == nil {
+                    Button("Save") {
+                        savePrescription()
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                }
             })
             .task {
                 await loadPrescription()
+            }
+            .onAppear {
+                // Set isEditable based on whether there's an existing prescription
+                isEditable = appointment.prescriptionId == nil
             }
             .sheet(isPresented: $showingLabTestPicker) {
                 LabTestPickerView(selectedTests: $selectedLabTests, availableTests: availableLabTests)
@@ -344,29 +357,31 @@ struct AppointmentDetailView: View {
     private func loadPrescription() async {
         isLoadingPrescription = true
         do {
-            guard let prescriptionId = appointment.prescriptionId else {
-                print("No prescription ID available")
-                isLoadingPrescription = false
-                return
-            }
-            
-            print("Loading prescription for ID:", prescriptionId.uuidString)
-            let prescriptions: [PrescriptionData] = try await supabase.client
-                .from("PrescriptionData")
-                .select()
-                .eq("id", value: prescriptionId.uuidString)
-                .execute()
-                .value
-            
-            if let prescription = prescriptions.first {
-                existingPrescription = prescription
-                diagnosis = prescription.diagnosis
-                selectedLabTests = Set(prescription.labTests ?? [])
-                additionalNotes = prescription.additionalNotes ?? ""
+            if let prescriptionId = appointment.prescriptionId {
+                print("Loading prescription for ID:", prescriptionId.uuidString)
+                let prescriptions: [PrescriptionData] = try await supabase.client
+                    .from("PrescriptionData")
+                    .select()
+                    .eq("id", value: prescriptionId.uuidString)
+                    .execute()
+                    .value
                 
-                if let medicineName = prescription.medicineName {
-                    self.medicineName = medicineName
+                if let prescription = prescriptions.first {
+                    existingPrescription = prescription
+                    // Set the form fields with existing data
+                    diagnosis = prescription.diagnosis
+                    if let tests = prescription.labTests {
+                        selectedLabTests = Set(tests)
+                    }
+                    additionalNotes = prescription.additionalNotes ?? ""
+                    medicineName = prescription.medicineName ?? ""
+                    
+                    // Disable editing since we have an existing prescription
+                    isEditable = false
                 }
+            } else {
+                // No existing prescription, enable editing
+                isEditable = true
             }
         } catch {
             print("Error loading prescription:", error)
@@ -376,6 +391,12 @@ struct AppointmentDetailView: View {
     }
     
     func savePrescription() {
+        // Check if prescription already exists
+        if existingPrescription != nil || appointment.prescriptionId != nil {
+            print("Prescription already exists - skipping save")
+            return
+        }
+        
         print("Starting to save prescription...")
         
         // Create medicine details string
@@ -387,9 +408,9 @@ struct AppointmentDetailView: View {
         let dosageOption = DosageOption(rawValue: prescribedMedicines.first?.dosage ?? "Once Daily") ?? .oneDaily
         let durationOption = DurationOption(rawValue: prescribedMedicines.first?.duration ?? "7 Days") ?? .sevenDays
         
-        // Create prescription data using existing model
+        // Create new prescription with a new UUID
         let prescriptionData = PrescriptionData(
-            id: appointment.prescriptionId ?? UUID(),
+            id: UUID(), // Always create a new UUID for new prescriptions
             patientId: appointment.patientId,
             doctorId: appointment.doctorId,
             diagnosis: diagnosis,
@@ -427,15 +448,13 @@ struct AppointmentDetailView: View {
                     return
                 }
                 
-                // Try to update existing prescription
-                print("Attempting to update prescription...")
+                // Insert new prescription
                 try await supabase.client
                     .from("PrescriptionData")
-                    .update(prescriptionData)
-                    .eq("id", value: appointment.prescriptionId?.uuidString)
+                    .insert(prescriptionData)
                     .execute()
                 
-                print("Successfully updated prescription")
+                print("Successfully inserted new prescription")
                 
                 // Generate PDF with hospital and doctor details
                 if let pdfData = PDFGenerator.generatePrescriptionPDF(data: prescriptionData, doctor: doctor, hospital: hospital) {
@@ -443,21 +462,13 @@ struct AppointmentDetailView: View {
                     showingPrescriptionPreview = true
                     print("PDF generated successfully")
                 }
+                
+                // Update the existingPrescription to prevent further saves
+                existingPrescription = prescriptionData
+                isEditable = false
+                
             } catch {
                 print("Error saving prescription:", error)
-                print("Attempting to insert new prescription...")
-                
-                // If update fails, try to insert new prescription
-                do {
-                    try await supabase.client
-                        .from("PrescriptionData")
-                        .insert(prescriptionData)
-                        .execute()
-                    
-                    print("Successfully inserted new prescription")
-                } catch {
-                    print("Error inserting prescription:", error)
-                }
             }
         }
     }
