@@ -178,19 +178,33 @@ struct BedPaymentView: View {
         }
         .navigationTitle("Payment")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(isProcessingPayment)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                if !isProcessingPayment {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Text("Cancel")
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+        }
+        .interactiveDismissDisabled(isProcessingPayment)
         .overlay {
             if isProcessingPayment {
                 processingOverlay
             }
         }
-        .navigationDestination(isPresented: $showingConfirmation) {
+        .sheet(isPresented: $showingConfirmation) {
             if let invoice = currentInvoice {
-                BedPaymentConfirmationView(
-                    bedBooking: bedBooking,
-                    hospital: hospital,
-                    invoice: invoice
-                )
+                NavigationStack {
+                    BedPaymentConfirmationView(
+                        bedBooking: bedBooking,
+                        hospital: hospital,
+                        invoice: invoice
+                    )
+                }
             }
         }
     }

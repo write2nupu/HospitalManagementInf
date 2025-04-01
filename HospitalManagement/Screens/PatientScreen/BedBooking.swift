@@ -44,7 +44,7 @@ struct BedBookingView: View {
                                     Text("Price")
                                         .font(.headline)
                                         .foregroundColor(.mint)
-                                    Text("₹\(selectedBed?.price ?? 0)")
+                                    Text("₹\(calculateTotalPrice())")
                                         .padding()
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .background(Color.mint.opacity(0.1))
@@ -122,56 +122,64 @@ struct BedBookingView: View {
             }
             .navigationTitle("Book Bed")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(isPresented: $navigateToPayment) {
+            .sheet(isPresented: $navigateToPayment) {
                 if let bedBooking = createBedBooking(), let bed = selectedBed, let currentPatient = patient {
-                    BedPaymentView(
-                        bedBooking: bedBooking,
-                        bed: bed,
-                        hospital: hospital,
-                        onPaymentSuccess: { invoice in
-                            Task {
-                                do {
-                                    // 1. Create the bed booking record in Supabase
-                                    try await supabaseController.createBedBooking(
-                                        patientId: currentPatient.id,
-                                        bedId: bed.id,
-                                        hospitalId: hospital.id,
-                                        startDate: fromDate,
-                                        endDate: toDate
-                                    )
-                                    print("Bed booking created successfully")
+                    NavigationStack {
+                        BedPaymentView(
+                            bedBooking: bedBooking,
+                            bed: Bed(
+                                id: bed.id,
+                                hospitalId: bed.hospitalId,
+                                price: calculateTotalPrice(),
+                                type: bed.type,
+                                isAvailable: bed.isAvailable
+                            ),
+                            hospital: hospital,
+                            onPaymentSuccess: { invoice in
+                                Task {
+                                    do {
+                                        // 1. Create the bed booking record in Supabase
+                                        try await supabaseController.createBedBooking(
+                                            patientId: currentPatient.id,
+                                            bedId: bed.id,
+                                            hospitalId: hospital.id,
+                                            startDate: fromDate,
+                                            endDate: toDate
+                                        )
+                                        print("Bed booking created successfully")
 
-                                    // 2. Update bed availability status in Bed table
-                                    try await supabaseController.updateBedAvailability(
-                                        bedId: bed.id,
-                                        isAvailable: false
-                                    )
-                                    print("Bed availability updated successfully")
+                                        // 2. Update bed availability status in Bed table
+                                        try await supabaseController.updateBedAvailability(
+                                            bedId: bed.id,
+                                            isAvailable: false
+                                        )
+                                        print("Bed availability updated successfully")
 
-                                    // 3. Create invoice record with all required fields
-                                    let updatedInvoice = Invoice(
-                                        id: UUID(),
-                                        createdAt: Date(),
-                                        patientid: currentPatient.id,
-                                        amount: bed.price,
-                                        paymentType: .bed,
-                                        status: .paid,
-                                        hospitalId: hospital.id
-                                    )
-                                    try await supabaseController.createInvoice(invoice: updatedInvoice)
-                                    print("Invoice created successfully")
+                                        // 3. Create invoice record with all required fields
+                                        let updatedInvoice = Invoice(
+                                            id: UUID(),
+                                            createdAt: Date(),
+                                            patientid: currentPatient.id,
+                                            amount: bed.price,
+                                            paymentType: .bed,
+                                            status: .paid,
+                                            hospitalId: hospital.id
+                                        )
+                                        try await supabaseController.createInvoice(invoice: updatedInvoice)
+                                        print("Invoice created successfully")
 
-                                    // Dismiss this view after successful booking
-                                    DispatchQueue.main.async {
-                                        dismiss()
+                                        // Dismiss all the way back to the main view
+                                        DispatchQueue.main.async {
+                                            dismiss()
+                                        }
+                                    } catch {
+                                        print("Error in booking process: \(error.localizedDescription)")
+                                        errorMessage = "Failed to complete booking: \(error.localizedDescription)"
                                     }
-                                } catch {
-                                    print("Error in booking process: \(error.localizedDescription)")
-                                    errorMessage = "Failed to complete booking: \(error.localizedDescription)"
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -233,6 +241,15 @@ struct BedBookingView: View {
         if selectedBed != nil {
             navigateToPayment = true
         }
+    }
+    
+    private func calculateTotalPrice() -> Int {
+        guard let bed = selectedBed else { return 0 }
+        
+        let numberOfDays = Calendar.current.dateComponents([.day], from: fromDate, to: toDate).day ?? 0
+        // Add 1 to include both start and end dates
+        let totalDays = numberOfDays + 1
+        return bed.price * totalDays
     }
 }
 
