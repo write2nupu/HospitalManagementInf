@@ -61,7 +61,7 @@ struct AppointmentView: View {
                                 }
                             }
                         }
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, 18)
                         .padding(.top, 3)
                     }
                 }
@@ -158,7 +158,7 @@ struct AppointmentView: View {
                 .fill(Color.white)
                 .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 6)
         )
-        .frame(width: screenWidth * 0.87)
+        .frame(width: screenWidth * 0.95)
         .frame(height: 150)
         .padding(.vertical, 8)
     }

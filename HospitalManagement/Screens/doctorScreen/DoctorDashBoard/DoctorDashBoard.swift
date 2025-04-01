@@ -69,21 +69,21 @@ struct DoctorDashBoard: View {
                     }
                     
                     // **Emergency Alert Section**
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Emergency")
-                            .font(.title)
-                            .fontWeight(.regular)
-                        
-                        Text("Urgent Need of Psychologist")
-                            .font(.subheadline)
-                            .foregroundColor(.black)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: 150, alignment: .leading)
-                    .padding()
-                    .background(AppConfig.cardColor)
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                    .shadow(color: AppConfig.shadowColor, radius: 6, x: 0, y: 8)
+//                    VStack(alignment: .leading, spacing: 5) {
+//                        Text("Emergency")
+//                            .font(.title)
+//                            .fontWeight(.regular)
+//                        
+//                        Text("Urgent Need of Psychologist")
+//                            .font(.subheadline)
+//                            .foregroundColor(.black)
+//                    }
+//                    .frame(maxWidth: .infinity, maxHeight: 150, alignment: .leading)
+//                    .padding()
+//                    .background(AppConfig.cardColor)
+//                    .cornerRadius(12)
+//                    .padding(.horizontal)
+//                    .shadow(color: AppConfig.shadowColor, radius: 6, x: 0, y: 8)
                     
                     // **Appointments & Patients Stats**
                     HStack(spacing: 16) {
