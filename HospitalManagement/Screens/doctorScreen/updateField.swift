@@ -31,22 +31,22 @@ struct updateFields: View {
             VStack(spacing: 20) {
                 // **Email Section**
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Email")
-                        .font(.headline)
+//                    Text("Email")
+//                        .font(.headline)
                     
-                    TextField("Enter new email", text: isEditing ? $updatedEmail : $email)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding(.horizontal, 10)
-                        .disabled(!isEditing)
-                        .keyboardType(.emailAddress)
-                        .onChange(of: updatedEmail) { _ in validateEmail() }
-                    
-                    if let error = errorMessageEmail {
-                        Text(error)
-                            .foregroundColor(.red)
-                            .font(.caption)
-                            .padding(.horizontal, 10)
-                    }
+//                    TextField("Enter new email", text: isEditing ? $updatedEmail : $email)
+//                        .textFieldStyle(RoundedBorderTextFieldStyle())
+//                        .padding(.horizontal, 10)
+//                        .disabled(!isEditing)
+//                        .keyboardType(.emailAddress)
+//                        .onChange(of: updatedEmail) { _ in validateEmail() }
+//                    
+//                    if let error = errorMessageEmail {
+//                        Text(error)
+//                            .foregroundColor(.red)
+//                            .font(.caption)
+//                            .padding(.horizontal, 10)
+//                    }
                 }
 
                 // **Phone Number Section**

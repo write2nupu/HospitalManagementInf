@@ -18,6 +18,14 @@ struct DoctorDashBoard: View {
     @State private var patientNames: [UUID: String] = [:]
     @AppStorage("currentUserId") private var currentUserId: String = ""
     
+    // Computed property for upcoming appointments
+    private var upcomingAppointments: [Appointment] {
+        let now = Date()
+        return appointments
+            .filter { $0.date > now }
+            .sorted { $0.date < $1.date }
+    }
+    
     var body: some View {
         ScrollView {
             if isLoading {
@@ -84,24 +92,47 @@ struct DoctorDashBoard: View {
                     }
                     .padding(.horizontal)
                     
-                    // **Upcoming Appointments (Horizontal Scroll)**
-                    Text("Upcoming Appointments")
-                        .font(.headline)
-                        .padding(.horizontal)
-                    
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: 16) {
-                            ForEach(appointments) { appointment in
-                                upcomingAppointmentCard(appointment: appointment)
-                                    .frame(width: screenWidth * 0.87)
-                                    .frame(height: 150)
-                                    .padding(.vertical, 8)
-                                    .onTapGesture {
-                                        selectedAppointment = appointment
-                                    }
+                    // **Upcoming Appointments Section**
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Upcoming Appointments")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            
+                            Spacer()
+                            
+                            if !upcomingAppointments.isEmpty {
+                                Text("\(upcomingAppointments.count) upcoming")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
                             }
                         }
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal)
+                        
+                        if upcomingAppointments.isEmpty {
+                            VStack(spacing: 8) {
+                                Image(systemName: "calendar.badge.clock")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.gray)
+                                Text("No upcoming appointments")
+                                    .font(.headline)
+                                    .foregroundColor(.gray)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                        } else {
+                            ScrollView(.vertical, showsIndicators: false) {
+                                VStack(spacing: 12) {
+                                    ForEach(upcomingAppointments) { appointment in
+                                        upcomingAppointmentCard(appointment: appointment)
+                                            .onTapGesture {
+                                                selectedAppointment = appointment
+                                            }
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
                     }
                 }
                 .padding(.top, 10)
@@ -193,65 +224,91 @@ struct DoctorDashBoard: View {
         .shadow(color: AppConfig.shadowColor, radius: 5, x: 0, y: 4)
     }
     
-    // **Upcoming Appointment Card**
+    // Updated appointment card with better UI
     func upcomingAppointmentCard(appointment: Appointment) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "person.fill")
-                    .foregroundColor(AppConfig.buttonColor)
-                    .font(.title2)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center, spacing: 12) {
+                // Patient Icon with Background
+                Circle()
+                    .fill(AppConfig.buttonColor.opacity(0.1))
+                    .frame(width: 45, height: 45)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .foregroundColor(AppConfig.buttonColor)
+                            .font(.system(size: 20))
+                    )
                 
-                Text(patientNames[appointment.patientId] ?? "Loading...")
-                    .font(.headline)
-                    .foregroundColor(.black)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(patientNames[appointment.patientId] ?? "Loading...")
+                        .font(.headline)
+                    
+                    Text(appointment.type.rawValue)
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
                 
                 Spacer()
                 
+                // Status Badge
                 Text(appointment.status.rawValue)
-                    .font(.subheadline)
-                    .foregroundColor(AppConfig.fontColor)
+                    .font(.caption)
+                    .fontWeight(.medium)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .clipShape(RoundedRectangle(cornerRadius: 15))
+                    .background(
+                        RoundedRectangle(cornerRadius: 15)
+                            .fill(statusColor(for: appointment.status).opacity(0.1))
+                    )
+                    .foregroundColor(statusColor(for: appointment.status))
             }
             
-            // Visit Type & Date
-            HStack {
-                HStack {
+            Divider()
+            
+            // Date and Time with Icons
+            HStack(spacing: 16) {
+                // Date
+                HStack(spacing: 8) {
                     Image(systemName: "calendar")
                         .foregroundColor(AppConfig.buttonColor)
-                    Text(appointment.type.rawValue)
-                        .font(.footnote)
-                        .fontWeight(.bold)
+                    Text(formatDate(appointment.date, format: "MMM d, yyyy"))
+                        .font(.subheadline)
                 }
                 
                 Spacer()
                 
-                HStack {
+                // Time
+                HStack(spacing: 8) {
                     Image(systemName: "clock.fill")
                         .foregroundColor(AppConfig.buttonColor)
-                    Text(formatDate(appointment.date))
-                        .font(.footnote)
-                        .foregroundColor(.black)
+                    Text(formatDate(appointment.date, format: "h:mm a"))
+                        .font(.subheadline)
                 }
             }
+            .foregroundColor(.gray)
         }
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 15)
-                .fill(AppConfig.cardColor)
-                .shadow(color: AppConfig.shadowColor.opacity(0.3), radius: 8, x: 0, y: 6)
-        )
-        .frame(width: screenWidth * 0.87)
-        .frame(height: 150)
-        .padding(.vertical, 8)
+        .background(Color(.systemBackground))
+        .cornerRadius(15)
+        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
-
-    // ✅ Format Date Function
-    func formatDate(_ date: Date) -> String {
+    
+    // Helper function to format date with custom format
+    func formatDate(_ date: Date, format: String) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, yyyy - h:mm a" // Example: "Mar 26, 2025 - 10:30 AM"
+        formatter.dateFormat = format
         return formatter.string(from: date)
+    }
+    
+    // Helper function to determine status color
+    func statusColor(for status: AppointmentStatus) -> Color {
+        switch status {
+        case .scheduled:
+            return .blue
+        case .completed:
+            return .green
+        case .cancelled:
+            return .red
+        }
     }
 }
 
