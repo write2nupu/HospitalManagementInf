@@ -7,6 +7,8 @@
 
 import Foundation
 import Supabase
+// Add this import if TimeSlot is in a separate file
+// import YourModuleName where TimeSlot is defined
 
 // Add this import if AppointmentShift is in a separate module
 // import YourModuleName
@@ -1466,19 +1468,18 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
         }
     }
     
-    func createAppointment(appointment: Appointment) async throws {
+    func createAppointment(appointment: Appointment, timeSlot: TimeSlot) async throws {
         let dateFormatter = ISO8601DateFormatter()
         
-        // Create appointment data with prescriptionId as null
         let appointmentData: [String: AnyJSON] = [
             "id": .string(appointment.id.uuidString),
             "patientId": .string(appointment.patientId.uuidString),
             "doctorId": .string(appointment.doctorId.uuidString),
-            "date": .string(dateFormatter.string(from: appointment.date)),
+            "date": .string(dateFormatter.string(from: timeSlot.startTime)),
             "status": .string(appointment.status.rawValue),
-            //"createdAt": .string(dateFormatter.string(from: appointment.createdAt)),
             "type": .string(appointment.type.rawValue),
-            "prescriptionId": .null  // Explicitly set prescriptionId to null
+            "prescriptionId": .null,
+            "createdAt": .string(dateFormatter.string(from: Date()))
         ]
         
         try await client
@@ -1487,100 +1488,72 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
             .execute()
     }
     
-    func checkTimeSlotAvailability(doctorId: UUID, date: Date, timeSlot: String) async throws -> Bool {
+    func getBookedTimeSlots(doctorId: UUID, date: Date) async throws -> [TimeSlot] {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        
         let appointments: [Appointment] = try await client
             .from("Appointment")
             .select()
             .eq("doctorId", value: doctorId.uuidString)
-            .eq("date", value: ISO8601DateFormatter().string(from: date))
-            .eq("timeSlot", value: timeSlot)
+            .gte("date", value: startOfDay)
+            .lt("date", value: endOfDay)
             .execute()
             .value
         
-        return appointments.isEmpty
-    }
-    
-    func getAvailableTimeSlots(doctorId: UUID, date: Date) async throws -> [String] {
-        // Get all appointments for the doctor on the given date
-        let appointments: [Appointment] = try await client
-            .from("Appointment")
-            .select()
-            .eq("doctorId", value: doctorId.uuidString)
-            .eq("date", value: ISO8601DateFormatter().string(from: date))
-            .execute()
-            .value
-        
-        // Define all possible time slots
-        let allSlots = [
-            "09:00 AM", "10:00 AM", "11:00 AM",
-            "02:00 PM", "03:00 PM", "04:00 PM"
-        ]
-        
-        // Get booked time slots from appointments
-        let bookedSlots = appointments.compactMap { appointment -> String? in
-            // Convert the appointment's createdAt date to a time string
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "hh:mm a"
-            return dateFormatter.string(from: appointment.createdAt)
-        }
-        
-        // Return available slots (all slots except booked ones)
-        return allSlots.filter { timeSlot in
-            !bookedSlots.contains(timeSlot)
+        return appointments.map { appointment in
+            TimeSlot(
+                startTime: appointment.date,
+                endTime: Calendar.current.date(byAdding: .minute, value: 20, to: appointment.date)!
+            )
         }
     }
 }
 
 extension SupabaseController {
-    func checkShiftAvailability(doctorId: UUID, date: Date, shift: AppointmentShift) async throws -> Bool {
-        var calendar = Calendar.current
-        calendar.timeZone = TimeZone.current // Set to device's time zone
-        
-        let startOfDay = calendar.startOfDay(for: date)
-        let shiftTimeRange = shift.timeRange
-        
-        // Create proper time range for the selected date
-        let shiftStart = calendar.date(
-            bySettingHour: calendar.component(.hour, from: shiftTimeRange.start),
-            minute: 0,
-            second: 0,
-            of: date // Use selected date instead of now
-        )!
-        
-        let shiftEnd = calendar.date(
-            bySettingHour: calendar.component(.hour, from: shiftTimeRange.end),
-            minute: 0,
-            second: 0,
-            of: date // Use selected date instead of now
-        )!
-        
-        // Add debug logging with proper time formatting
-        let debugFormatter = DateFormatter()
-        debugFormatter.dateFormat = "yyyy-MM-dd hh:mm a"
-        debugFormatter.timeZone = TimeZone.current
-        
-        print("Debug Info:")
-        print("Selected Date:", debugFormatter.string(from: date))
-        print("Shift:", shift.rawValue)
-        print("Shift Start:", debugFormatter.string(from: shiftStart))
-        print("Shift End:", debugFormatter.string(from: shiftEnd))
+    func checkTimeSlotAvailability(doctorId: UUID, timeSlot: TimeSlot) async throws -> Bool {
+        let calendar: Calendar = {
+            var cal = Calendar(identifier: .gregorian)
+            cal.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+            return cal
+        }()
         
         // Format dates for Supabase query
         let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.timeZone = TimeZone.current
         
-        // Check for existing appointments in this shift
+        // Check for existing appointments in this time slot
         let appointments: [Appointment] = try await client
             .from("Appointment")
             .select()
             .eq("doctorId", value: doctorId.uuidString)
-            .eq("date", value: isoFormatter.string(from: date))
-            .gte("createdAt", value: isoFormatter.string(from: shiftStart))
-            .lt("createdAt", value: isoFormatter.string(from: shiftEnd))
+            .gte("date", value: isoFormatter.string(from: timeSlot.startTime))
+            .lt("date", value: isoFormatter.string(from: timeSlot.endTime))
             .execute()
             .value
         
-        print("Found \(appointments.count) appointments in this shift")
-        return appointments.isEmpty
+        // If there are any appointments in this time slot, it's not available
+        let isAvailable = appointments.isEmpty
+        
+        print("Time slot \(timeSlot.formattedTimeRange) is \(isAvailable ? "available" : "booked")")
+        return isAvailable
+    }
+    
+    func getAvailableTimeSlots(doctorId: UUID, date: Date) async throws -> [TimeSlot] {
+        // Generate all possible time slots for the date
+        let allTimeSlots = TimeSlot.generateTimeSlots(for: date)
+        
+        // Get booked slots
+        let bookedSlots = try await getBookedTimeSlots(doctorId: doctorId, date: date)
+        
+        // Filter out booked slots
+        let availableSlots = allTimeSlots.filter { slot in
+            !bookedSlots.contains { bookedSlot in
+                // Check if the slots overlap
+                slot.startTime >= bookedSlot.startTime && slot.startTime < bookedSlot.endTime
+            }
+        }
+        
+        return availableSlots
     }
 }
