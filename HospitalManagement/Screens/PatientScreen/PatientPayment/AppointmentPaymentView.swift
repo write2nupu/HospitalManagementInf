@@ -15,6 +15,11 @@ struct PaymentView: View {
     @State private var showPaymentConfirmation = false
     @State private var invoice: Invoice?
     @StateObject private var coordinator = NavigationCoordinator.shared
+    
+    // Format the fee to show correct value with two decimal places
+    private var formattedFee: String {
+        String(format: "%.2f", department.fees)
+    }
 
     var body: some View {
         NavigationView {
@@ -51,7 +56,7 @@ struct PaymentView: View {
                     }) {
                         HStack {
                             Image(systemName: "lock.fill")
-                            Text("Pay ₹\(department.fees)")
+                            Text("Pay ₹\(formattedFee)")
                         }
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
@@ -100,7 +105,7 @@ struct PaymentView: View {
     }
 
     private func processPayment() {
-        // Create a paid invoice
+        // Create a paid invoice with correctly formatted fee
         let paidInvoice = Invoice(
             id: UUID(),
             createdAt: Date(),
@@ -134,7 +139,7 @@ struct PaymentView: View {
             HStack {
                 Text("Total Amount:")
                 Spacer()
-                Text("₹\(department.fees)")
+                Text("₹\(formattedFee)")
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(.mint)

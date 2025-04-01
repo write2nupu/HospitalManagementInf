@@ -217,14 +217,14 @@ struct RescheduleView: View {
     
     @Environment(\.dismiss) private var dismiss
     @State private var selectedDate: Date
-    @State private var selectedTimeSlot: String
+    @State private var selectedTimeSlot: TimeSlot?
     @State private var showingAlert = false
     @State private var errorMessage = "Please select both a valid date and time slot."
-    
-    private let timeSlots = [
-        "09:00 AM", "10:00 AM", "11:00 AM",
-        "02:00 PM", "03:00 PM", "04:00 PM"
-    ]
+    @StateObject private var supabaseController = SupabaseController()
+    @State private var availableTimeSlots: [TimeSlot] = []
+    @State private var isLoading = false
+    @State private var selectedTime = Date()
+    @State private var showTimePicker = false
     
     init(appointment: [String: Any], onComplete: @escaping (Date, String) -> Void) {
         self.appointment = appointment
@@ -234,17 +234,15 @@ struct RescheduleView: View {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
         let initialDate = dateFormatter.date(from: appointment["date"] as? String ?? "") ?? Date()
-        let initialTimeSlot = appointment["timeSlot"] as? String ?? ""
         
         _selectedDate = State(initialValue: initialDate)
-        _selectedTimeSlot = State(initialValue: initialTimeSlot)
     }
     
     private var isValidSelection: Bool {
-        !selectedTimeSlot.isEmpty && selectedDate >= Calendar.current.startOfDay(for: Date())
+        selectedTimeSlot != nil && selectedDate >= Calendar.current.startOfDay(for: Date())
     }
     
-    private func isTimeSlotAlreadyBooked(date: Date, timeSlot: String) -> Bool {
+    private func isTimeSlotAlreadyBooked(date: Date, timeSlot: TimeSlot) -> Bool {
         let savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
         let currentAppointmentId = appointment["id"] as? String
         
@@ -259,15 +257,17 @@ struct RescheduleView: View {
             }
             
             guard let appointmentDateStr = existingAppointment["date"] as? String,
-                  let appointmentDate = dateFormatter.date(from: appointmentDateStr),
-                  let appointmentTimeSlot = existingAppointment["timeSlot"] as? String else {
+                  let appointmentDate = dateFormatter.date(from: appointmentDateStr) else {
                 return false
             }
             
-            let sameDay = calendar.isDate(appointmentDate, inSameDayAs: date)
-            let sameTimeSlot = appointmentTimeSlot == timeSlot
+            let appointmentStartTime = appointmentDate
+            let appointmentEndTime = calendar.date(byAdding: .minute, value: 20, to: appointmentStartTime)!
             
-            return sameDay && sameTimeSlot
+            // Check if there's any overlap
+            return (timeSlot.startTime >= appointmentStartTime && timeSlot.startTime < appointmentEndTime) ||
+                   (timeSlot.endTime > appointmentStartTime && timeSlot.endTime <= appointmentEndTime) ||
+                   (timeSlot.startTime <= appointmentStartTime && timeSlot.endTime >= appointmentEndTime)
         }
     }
     
@@ -286,8 +286,14 @@ struct RescheduleView: View {
                         HStack {
                             Text("Current Time:")
                             Spacer()
-                            Text(appointment["timeSlot"] as? String ?? "")
-                                .foregroundColor(.secondary)
+                            if let dateStr = appointment["date"] as? String,
+                               let date = dateFormatter.date(from: dateStr) {
+                                Text(formatTime(date))
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text("Unknown")
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
                     
@@ -298,24 +304,68 @@ struct RescheduleView: View {
                             in: Date()...,
                             displayedComponents: .date
                         )
+                        .onChange(of: selectedDate) { _ in
+                            selectedTimeSlot = nil
+                            loadAvailableTimeSlots()
+                        }
                     }
                     
                     Section(header: Text("NEW TIME")) {
-                        ForEach(timeSlots, id: \.self) { slot in
+                        VStack {
                             Button(action: {
-                                selectedTimeSlot = slot
+                                showTimePicker = true
                             }) {
                                 HStack {
-                                    Text(slot)
+                                    Text("Selected Time:")
                                         .foregroundColor(.primary)
                                     Spacer()
-                                    if selectedTimeSlot == slot {
-                                        Image(systemName: "checkmark")
-                                            .foregroundColor(.blue)
+                                    if let slot = selectedTimeSlot {
+                                        Text(formatTime(slot.startTime))
+                                            .foregroundColor(.mint)
+                                    } else {
+                                        Text("Select a time")
+                                            .foregroundColor(.gray)
                                     }
                                 }
                             }
-                            .buttonStyle(BorderlessButtonStyle())
+                            
+                            if showTimePicker {
+                                if isLoading {
+                                    ProgressView("Loading available times...")
+                                        .padding()
+                                } else {
+                                    VStack {
+                                        Text("Choose an available time")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                            .padding(.bottom, 4)
+                                        
+                                        DatePicker("",
+                                                 selection: $selectedTime,
+                                                 displayedComponents: .hourAndMinute)
+                                            .datePickerStyle(.wheel)
+                                            .labelsHidden()
+                                            .environment(\.timeZone, TimeZone(identifier: "Asia/Kolkata")!)
+                                            .onChange(of: selectedTime) { newTime in
+                                                updateSelectedTimeSlot(time: newTime)
+                                            }
+                                        
+                                        Button("Confirm Time") {
+                                            showTimePicker = false
+                                        }
+                                        .foregroundColor(.mint)
+                                        .padding(.top)
+                                    }
+                                    .padding(.vertical)
+                                }
+                            }
+                            
+                            if !TimeSlot.isValidTime(selectedTime) {
+                                Text("Please select a time between 9 AM - 1 PM or 2 PM - 7 PM")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                    .padding(.top, 4)
+                            }
                         }
                     }
                 }
@@ -336,13 +386,25 @@ struct RescheduleView: View {
                             return
                         }
                         
-                        if isTimeSlotAlreadyBooked(date: selectedDate, timeSlot: selectedTimeSlot) {
+                        guard let timeSlot = selectedTimeSlot else {
+                            errorMessage = "Please select a time slot."
+                            showingAlert = true
+                            return
+                        }
+                        
+                        if isTimeSlotAlreadyBooked(date: selectedDate, timeSlot: timeSlot) {
                             errorMessage = "You already have another appointment at this date and time."
                             showingAlert = true
                             return
                         }
                         
-                        onComplete(selectedDate, selectedTimeSlot)
+                        // Format the time slot as a string for the onComplete callback
+                        let formatter = DateFormatter()
+                        formatter.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+                        formatter.timeStyle = .short
+                        let timeSlotString = formatter.string(from: timeSlot.startTime)
+                        
+                        onComplete(selectedDate, timeSlotString)
                         dismiss()
                     }
                     .frame(maxWidth: .infinity)
@@ -361,20 +423,93 @@ struct RescheduleView: View {
             } message: {
                 Text(errorMessage)
             }
+            .onAppear {
+                loadAvailableTimeSlots()
+            }
         }
     }
+    
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+        return formatter
+    }()
     
     private func formatDate(_ dateString: String?) -> String {
         guard let dateStr = dateString else { return "N/A" }
         
-        let inputFormatter = DateFormatter()
-        inputFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
-        
-        guard let date = inputFormatter.date(from: dateStr) else { return "N/A" }
+        guard let date = dateFormatter.date(from: dateStr) else { return "N/A" }
         
         let outputFormatter = DateFormatter()
         outputFormatter.dateStyle = .medium
         return outputFormatter.string(from: date)
+    }
+    
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+    
+    private func loadAvailableTimeSlots() {
+        isLoading = true
+        
+        Task {
+            do {
+                guard let doctorIdString = appointment["doctorId"] as? String,
+                      let doctorId = UUID(uuidString: doctorIdString) else {
+                    throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid doctor ID"])
+                }
+                
+                let slots = try await supabaseController.getAvailableTimeSlots(
+                    doctorId: doctorId,
+                    date: selectedDate
+                )
+                
+                await MainActor.run {
+                    availableTimeSlots = slots
+                    isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Error loading time slots: \(error.localizedDescription)"
+                    showingAlert = true
+                    isLoading = false
+                }
+            }
+        }
+    }
+    
+    private func updateSelectedTimeSlot(time: Date) {
+        if TimeSlot.isValidTime(time) {
+            let calendar = Calendar.current
+            var components = calendar.dateComponents([.year, .month, .day], from: selectedDate)
+            let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
+            
+            components.hour = timeComponents.hour
+            components.minute = timeComponents.minute
+            
+            if let slotStart = calendar.date(from: components) {
+                let slotEnd = calendar.date(byAdding: .minute, value: 20, to: slotStart)!
+                let newSlot = TimeSlot(startTime: slotStart, endTime: slotEnd)
+                
+                // Check if the slot is available
+                let isAvailable = availableTimeSlots.contains { slot in
+                    slot.startTime == newSlot.startTime && slot.endTime == newSlot.endTime
+                }
+                
+                if isAvailable {
+                    selectedTimeSlot = newSlot
+                    errorMessage = ""
+                } else {
+                    selectedTimeSlot = nil
+                    errorMessage = "This time slot is not available"
+                }
+            }
+        } else {
+            selectedTimeSlot = nil
+        }
     }
 }
 

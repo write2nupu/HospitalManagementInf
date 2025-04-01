@@ -1513,45 +1513,89 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
 
 extension SupabaseController {
     func checkTimeSlotAvailability(doctorId: UUID, timeSlot: TimeSlot) async throws -> Bool {
-        let calendar: Calendar = {
-            var cal = Calendar(identifier: .gregorian)
-            cal.timeZone = TimeZone(identifier: "Asia/Kolkata")!
-            return cal
-        }()
+        // Create a mutable calendar
+        var calendar = Calendar.current
+        // Set the timezone
+        calendar.timeZone = TimeZone(identifier: "Asia/Kolkata")!
         
         // Format dates for Supabase query
         let isoFormatter = ISO8601DateFormatter()
         
-        // Check for existing appointments in this time slot
+        // Get the start of the day for the appointment date
+        let startOfDay = calendar.startOfDay(for: timeSlot.startTime)
+        
+        // Get all appointments for this doctor on this date
         let appointments: [Appointment] = try await client
             .from("Appointment")
             .select()
             .eq("doctorId", value: doctorId.uuidString)
-            .gte("date", value: isoFormatter.string(from: timeSlot.startTime))
-            .lt("date", value: isoFormatter.string(from: timeSlot.endTime))
+            .gte("date", value: isoFormatter.string(from: startOfDay))
+            .lt("date", value: isoFormatter.string(from: calendar.date(byAdding: .day, value: 1, to: startOfDay)!))
             .execute()
             .value
         
-        // If there are any appointments in this time slot, it's not available
-        let isAvailable = appointments.isEmpty
+        // Check if there's any overlap with existing appointments
+        for appointment in appointments {
+            let appointmentStart = appointment.date
+            let appointmentEnd = calendar.date(byAdding: .minute, value: 20, to: appointmentStart)!
+            
+            // Check if the requested slot overlaps with an existing appointment
+            if (timeSlot.startTime >= appointmentStart && timeSlot.startTime < appointmentEnd) ||
+               (timeSlot.endTime > appointmentStart && timeSlot.endTime <= appointmentEnd) ||
+               (timeSlot.startTime <= appointmentStart && timeSlot.endTime >= appointmentEnd) {
+                print("Time slot \(timeSlot.formattedTimeRange) overlaps with existing appointment at \(appointment.date)")
+                return false
+            }
+        }
         
-        print("Time slot \(timeSlot.formattedTimeRange) is \(isAvailable ? "available" : "booked")")
-        return isAvailable
+        print("Time slot \(timeSlot.formattedTimeRange) is available")
+        return true
     }
     
     func getAvailableTimeSlots(doctorId: UUID, date: Date) async throws -> [TimeSlot] {
         // Generate all possible time slots for the date
         let allTimeSlots = TimeSlot.generateTimeSlots(for: date)
         
-        // Get booked slots
-        let bookedSlots = try await getBookedTimeSlots(doctorId: doctorId, date: date)
+        // Create a mutable calendar
+        var calendar = Calendar.current
+        // Set the timezone
+        calendar.timeZone = TimeZone(identifier: "Asia/Kolkata")!
         
-        // Filter out booked slots
+        // Format dates for Supabase query
+        let isoFormatter = ISO8601DateFormatter()
+        
+        // Get the start of the day for the appointment date
+        let startOfDay = calendar.startOfDay(for: date)
+        
+        // Get all appointments for this doctor on this date
+        let appointments: [Appointment] = try await client
+            .from("Appointment")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .gte("date", value: isoFormatter.string(from: startOfDay))
+            .lt("date", value: isoFormatter.string(from: calendar.date(byAdding: .day, value: 1, to: startOfDay)!))
+            .execute()
+            .value
+        
+        // Create a list of booked time slots
+        var bookedTimeSlots: [TimeSlot] = []
+        for appointment in appointments {
+            let appointmentStart = appointment.date
+            let appointmentEnd = calendar.date(byAdding: .minute, value: 20, to: appointmentStart)!
+            bookedTimeSlots.append(TimeSlot(startTime: appointmentStart, endTime: appointmentEnd))
+        }
+        
+        // Filter out booked time slots
         let availableSlots = allTimeSlots.filter { slot in
-            !bookedSlots.contains { bookedSlot in
-                // Check if the slots overlap
-                slot.startTime >= bookedSlot.startTime && slot.startTime < bookedSlot.endTime
+            for bookedSlot in bookedTimeSlots {
+                // Check for any kind of overlap
+                if (slot.startTime >= bookedSlot.startTime && slot.startTime < bookedSlot.endTime) ||
+                   (slot.endTime > bookedSlot.startTime && slot.endTime <= bookedSlot.endTime) ||
+                   (slot.startTime <= bookedSlot.startTime && slot.endTime >= bookedSlot.endTime) {
+                    return false
+                }
             }
+            return true
         }
         
         return availableSlots

@@ -57,7 +57,7 @@ struct DoctorListView: View {
                         searchText: searchText,
                         onClearSearch: { searchText = "" }
                     )
-                } else {
+        } else {
                     FilteredDoctorListView(
                         doctors: filteredDoctors,
                         departmentDetails: departmentDetails,
@@ -175,31 +175,31 @@ struct SearchBarView: View {
     @Binding var searchText: String
     
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 16))
-                .foregroundColor(.gray)
-            
-            TextField("Search by doctor name", text: $searchText)
-                .font(.body)
-            
-            if !searchText.isEmpty {
-                Button(action: {
-                    searchText = ""
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(.gray)
+            HStack(spacing: 12) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16))
+                    .foregroundColor(.gray)
+                
+                TextField("Search by doctor name", text: $searchText)
+                    .font(.body)
+                
+                if !searchText.isEmpty {
+                    Button(action: {
+                        searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.gray)
+                    }
                 }
             }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(.systemGray6))
-        )
-        .padding(.horizontal)
-        .padding(.top)
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(.systemGray6))
+            )
+            .padding(.horizontal)
+            .padding(.top)
     }
 }
 
@@ -209,38 +209,38 @@ struct EmptyStateView: View {
     let onClearSearch: () -> Void
     
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer().frame(height: 60)
-            
-            if searchText.isEmpty {
-                Image(systemName: "person.2.slash")
-                    .font(.system(size: 50))
-                    .foregroundColor(.gray)
-                
-                Text("No doctors available")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-            } else {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 50))
-                    .foregroundColor(.gray)
-                
-                Text("No doctors match '\(searchText)'")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-                
+                    VStack(spacing: 20) {
+                        Spacer().frame(height: 60)
+                        
+                        if searchText.isEmpty {
+                            Image(systemName: "person.2.slash")
+                                .font(.system(size: 50))
+                                .foregroundColor(.gray)
+                            
+                            Text("No doctors available")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 50))
+                                .foregroundColor(.gray)
+                            
+                            Text("No doctors match '\(searchText)'")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            
                 Button("Clear Search", action: onClearSearch)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Color.mint)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-            }
-            
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 40)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.mint)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                        }
+                        
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
     }
 }
 
@@ -464,28 +464,85 @@ struct TimeSlotSectionView: View {
     @Binding var timeSlotError: String
     let doctor: Doctor
     @StateObject private var supabaseController = SupabaseController()
-    @State private var availableTimeSlots: [TimeSlot] = []
+    @State private var selectedTime = Date()
+    @State private var showTimePicker = false
+    @State private var bookedTimeRanges: [String] = []
     @State private var isLoading = false
     
     var body: some View {
-        Section(header: Text("Select Time Slot")) {
-            if isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, alignment: .center)
-            } else {
-                LazyVGrid(columns: [
-                    GridItem(.flexible()),
-                    GridItem(.flexible())
-                ], spacing: 10) {
-                    ForEach(availableTimeSlots) { slot in
-                        TimeSlotButton(
-                            slot: slot,
-                            isSelected: selectedTimeSlot == slot,
-                            action: { selectedTimeSlot = slot }
-                        )
+        Section(header: Text("Select Time")) {
+            VStack {
+                        Button(action: {
+                    showTimePicker = true
+                    loadBookedTimeSlots()
+                }) {
+                    HStack {
+                        Text("Selected Time:")
+                            .foregroundColor(.primary)
+                        Spacer()
+                        if let slot = selectedTimeSlot {
+                            Text(slot.formattedTimeRange)
+                                .foregroundColor(.mint)
+                        } else {
+                            Text("Select a time")
+                                .foregroundColor(.gray)
+                        }
                     }
                 }
-                .padding(.vertical, 5)
+                
+                if showTimePicker {
+                    if isLoading {
+                        ProgressView("Loading available times...")
+                            .padding()
+                            } else {
+                        VStack {
+                            Text("Choose an available time")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .padding(.bottom, 4)
+                            
+                            DatePicker("",
+                                     selection: $selectedTime,
+                                     displayedComponents: .hourAndMinute)
+                                .datePickerStyle(.wheel)
+                                .labelsHidden()
+                                .environment(\.timeZone, TimeZone(identifier: "Asia/Kolkata")!)
+                                .onChange(of: selectedTime) { newTime in
+                                    updateSelectedTimeSlot(time: newTime)
+                                }
+                            
+                            if !bookedTimeRanges.isEmpty {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Booked time slots:")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                    
+                                    ForEach(bookedTimeRanges, id: \.self) { range in
+                                        Text(range)
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+                                }
+                                .padding(.top, 4)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            
+                            Button("Confirm Time") {
+                                showTimePicker = false
+                            }
+                            .foregroundColor(.mint)
+                            .padding(.top)
+                        }
+                        .padding(.vertical)
+                    }
+                }
+                
+                if !TimeSlot.isValidTime(selectedTime) {
+                    Text("Please select a time between 9 AM - 1 PM or 2 PM - 7 PM")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding(.top, 4)
+                }
             }
             
             if showTimeSlotWarning {
@@ -493,56 +550,114 @@ struct TimeSlotSectionView: View {
             }
         }
         .onAppear {
-            loadAvailableTimeSlots()
+            // Set initial time to 9 AM
+            var components = Calendar.current.dateComponents([.year, .month, .day], from: selectedDate)
+            components.hour = 9
+            components.minute = 0
+            if let initialTime = Calendar.current.date(from: components) {
+                selectedTime = initialTime
+                updateSelectedTimeSlot(time: initialTime)
+            }
         }
         .onChange(of: selectedDate) { _ in
-            loadAvailableTimeSlots()
+            selectedTimeSlot = nil
+            bookedTimeRanges = []
+            
+            // Reset time to 9 AM when date changes
+            var components = Calendar.current.dateComponents([.year, .month, .day], from: selectedDate)
+            components.hour = 9
+            components.minute = 0
+            if let initialTime = Calendar.current.date(from: components) {
+                selectedTime = initialTime
+                updateSelectedTimeSlot(time: initialTime)
+            }
         }
     }
     
-    private func loadAvailableTimeSlots() {
+    private func loadBookedTimeSlots() {
         isLoading = true
+        bookedTimeRanges = []
+        
         Task {
             do {
-                let slots = try await supabaseController.getAvailableTimeSlots(
+                let allSlots = TimeSlot.generateTimeSlots(for: selectedDate)
+                let availableSlots = try await supabaseController.getAvailableTimeSlots(
                     doctorId: doctor.id,
                     date: selectedDate
                 )
+                
+                // Find booked slots (all slots minus available slots)
+                let bookedSlots = allSlots.filter { slot in
+                    !availableSlots.contains { availableSlot in
+                        availableSlot.startTime == slot.startTime && availableSlot.endTime == slot.endTime
+                    }
+                }
+                
+                // Format booked slots for display
+                let formatter = DateFormatter()
+                formatter.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+                formatter.timeStyle = .short
+                
+                let bookedRanges = bookedSlots.map { slot in
+                    "\(formatter.string(from: slot.startTime)) - \(formatter.string(from: slot.endTime))"
+                }
+                
                 await MainActor.run {
-                    availableTimeSlots = slots
+                    bookedTimeRanges = bookedRanges
                     isLoading = false
                 }
             } catch {
                 await MainActor.run {
-                    timeSlotError = "Error loading time slots: \(error.localizedDescription)"
+                    timeSlotError = "Error loading booked time slots"
                     showTimeSlotWarning = true
                     isLoading = false
                 }
             }
         }
     }
-}
-
-struct TimeSlotButton: View {
-    let slot: TimeSlot
-    let isSelected: Bool
-    let action: () -> Void
     
-    var body: some View {
-        Button(action: action) {
-            Text(slot.formattedTimeRange)
-                .font(.footnote)
-                .padding(8)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(isSelected ? Color.mint.opacity(0.1) : Color.white)
-                )
-                .foregroundColor(isSelected ? .mint : .primary)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(isSelected ? Color.mint : Color.gray.opacity(0.3), lineWidth: 1)
-                )
+    private func updateSelectedTimeSlot(time: Date) {
+        if TimeSlot.isValidTime(time) {
+            let calendar = Calendar.current
+            var components = calendar.dateComponents([.year, .month, .day], from: selectedDate)
+            let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
+            
+            components.hour = timeComponents.hour
+            components.minute = timeComponents.minute
+            
+            if let slotStart = calendar.date(from: components) {
+                let slotEnd = calendar.date(byAdding: .minute, value: 20, to: slotStart)!
+                let newSlot = TimeSlot(startTime: slotStart, endTime: slotEnd)
+                
+                // Check availability
+                Task {
+                    do {
+                        let isAvailable = try await supabaseController.checkTimeSlotAvailability(
+                            doctorId: doctor.id,
+                            timeSlot: newSlot
+                        )
+                        
+                        await MainActor.run {
+                            if isAvailable {
+                                selectedTimeSlot = newSlot
+                                showTimeSlotWarning = false
+                            } else {
+                                timeSlotError = "This time slot is already booked. Please select a different time."
+                                showTimeSlotWarning = true
+                                selectedTimeSlot = nil
+                            }
+                        }
+                    } catch {
+                        await MainActor.run {
+                            timeSlotError = "Error checking time slot availability"
+                            showTimeSlotWarning = true
+                            selectedTimeSlot = nil
+                        }
+                    }
+                }
+            }
+        } else {
+            selectedTimeSlot = nil
         }
     }
 }
@@ -612,6 +727,9 @@ struct AppointmentBookingView: View {
                               displayedComponents: .date)
                         .datePickerStyle(GraphicalDatePickerStyle())
                         .environment(\.timeZone, TimeZone(identifier: "Asia/Kolkata")!)
+                        .onChange(of: selectedDate) { _ in
+                            selectedTimeSlot = nil
+                        }
                 }
                 
                 TimeSlotSectionView(
@@ -645,18 +763,19 @@ struct AppointmentBookingView: View {
             await loadAvailableTimeSlots()
             await fetchDepartmentAndHospitalDetails()
         }
-        .sheet(isPresented: $showPaymentView) {
+        .fullScreenCover(isPresented: $showPaymentView, onDismiss: {
+            // Only dismiss the booking view if payment is completed or canceled
+            dismiss()
+        }) {
             if let appointment = createdAppointment,
                let department = departmentDetails,
                let hospital = hospitalDetails {
-                NavigationView {
                     PaymentView(
                         appointment: appointment,
                         doctor: doctor,
                         department: department,
                         hospital: hospital
                     )
-                }
             }
         }
         .onChange(of: coordinator.shouldDismissToRoot) { shouldDismiss in
@@ -701,13 +820,13 @@ struct AppointmentBookingView: View {
         Task {
             isBookingAppointment = true
             do {
-                let newAppointment = Appointment(
-                    id: UUID(),
+        let newAppointment = Appointment(
+            id: UUID(),
                     patientId: patientId,
-                    doctorId: doctor.id,
+            doctorId: doctor.id,
                     date: selectedSlot.startTime,
-                    status: .scheduled,
-                    createdAt: Date(),
+            status: .scheduled,
+            createdAt: Date(),
                     type: .Consultation
                 )
                 
@@ -719,7 +838,12 @@ struct AppointmentBookingView: View {
                 
                 await MainActor.run {
                     isBookingAppointment = false
-                    dismiss()
+                    
+                    // Set the created appointment for payment view
+        createdAppointment = newAppointment
+        
+                    // Show the payment view instead of dismissing
+        showPaymentView = true
                 }
             } catch {
                 await MainActor.run {
