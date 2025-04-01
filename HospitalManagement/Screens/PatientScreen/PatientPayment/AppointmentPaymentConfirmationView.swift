@@ -1,9 +1,10 @@
 import SwiftUI
 
-struct PaymentConfirmationView: View {
+struct AppointmentPaymentConfirmationView: View {
     @Environment(\.dismiss) var dismiss
     @State private var showInvoice = false
     @StateObject private var coordinator = NavigationCoordinator.shared
+    @Environment(\.presentationMode) var presentationMode
     
     let appointment: Appointment
     let doctor: Doctor
@@ -62,24 +63,54 @@ struct PaymentConfirmationView: View {
                     Button(action: {
                         print("👆 PaymentConfirmationView: Done button tapped")
                         
-                        // Post notification to switch to appointments tab
-                        NotificationCenter.default.post(name: NSNotification.Name("NavigateToDashboard"), object: nil)
-                        print("📨 PaymentConfirmationView: Posted NavigateToDashboard notification")
-                        
-                        // Set coordinator state
-                        print("🔄 PaymentConfirmationView: Setting activeTab to 1")
-                        coordinator.activeTab = 1 // Switch to appointments tab
-                        
-                        print("🔄 PaymentConfirmationView: Setting shouldDismissToRoot to true")
-                        coordinator.shouldDismissToRoot = true
-                        
-                        // Clear navigation path
-                        print("🔄 PaymentConfirmationView: Clearing navigation path")
-                        coordinator.navigationPath = NavigationPath()
-                        
-                        // Dismiss current view
-                        print("👋 PaymentConfirmationView: Dismissing view")
+                        // First dismiss this sheet
                         dismiss()
+                        
+                        // Handle navigation and update appointments
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            // Switch to appointments tab
+                            coordinator.activeTab = 1
+                            
+                            // Reset navigation state
+                            coordinator.resetNavigation()
+                            coordinator.isNavigatingBack = true
+                            
+                            // Create appointment dictionary
+                            let dateFormatter = DateFormatter()
+                            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+                            
+                            // Create time formatter for time slot
+                            let timeFormatter = DateFormatter()
+                            timeFormatter.dateFormat = "hh:mm a"
+                            
+                            let appointmentDict: [String: Any] = [
+                                "id": appointment.id.uuidString,
+                                "patientId": appointment.patientId.uuidString,
+                                "doctorId": appointment.doctorId.uuidString,
+                                "date": dateFormatter.string(from: appointment.date),
+                                "timeSlot": timeFormatter.string(from: appointment.date),
+                                "type": appointment.type.rawValue,
+                                "status": appointment.status.rawValue,
+                                "createdAt": dateFormatter.string(from: appointment.createdAt),
+                                "doctorName": doctor.full_name,
+                                "departmentName": department.name,
+                                "hospitalName": hospital.name,
+                                "amount": invoice.amount
+                            ]
+                            
+                            // Post notification to update appointments tab
+                            NotificationCenter.default.post(
+                                name: NSNotification.Name("AppointmentBooked"),
+                                object: nil,
+                                userInfo: ["appointment": appointmentDict]
+                            )
+                            
+                            // Post notification for navigation
+                            NotificationCenter.default.post(
+                                name: NSNotification.Name("NavigateToSelectDoctor"),
+                                object: nil
+                            )
+                        }
                     }) {
                         Text("Done")
                             .fontWeight(.semibold)
@@ -303,7 +334,7 @@ struct PaymentConfirmationView_Previews: PreviewProvider {
         )
 
         NavigationView {
-            PaymentConfirmationView(
+            AppointmentPaymentConfirmationView(
                 appointment: sampleAppointment,
                 doctor: sampleDoctor,
                 department: sampleDepartment,

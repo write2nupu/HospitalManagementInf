@@ -14,41 +14,14 @@ extension EnvironmentValues {
 class NavigationCoordinator: ObservableObject {
     static let shared = NavigationCoordinator()
     
-    @Published var activeTab: Int = 0 {
-        didSet {
-            print("🔄 NavigationCoordinator: activeTab changed from \(oldValue) to \(activeTab)")
-        }
-    }
-    
-    @Published var shouldDismissToRoot: Bool = false {
-        didSet {
-            print("🔄 NavigationCoordinator: shouldDismissToRoot changed from \(oldValue) to \(shouldDismissToRoot)")
-        }
-    }
-    
-    @Published var navigationPath = NavigationPath() {
-        didSet {
-            print("🔄 NavigationCoordinator: navigationPath changed")
-        }
-    }
-    
-    @Published var isDismissingToRoot: Bool = false {
-        didSet {
-            print("🔄 NavigationCoordinator: isDismissingToRoot changed from \(oldValue) to \(isDismissingToRoot)")
-        }
-    }
-    
-    @Published var shouldDismissDepartmentList: Bool = false {
-        didSet {
-            print("🔄 NavigationCoordinator: shouldDismissDepartmentList changed from \(oldValue) to \(shouldDismissDepartmentList)")
-        }
-    }
-    
-    @Published var selectedTab: Tab = .home {
-        didSet {
-            print("🔄 NavigationCoordinator: selectedTab changed from \(oldValue) to \(selectedTab)")
-        }
-    }
+    @Published var navigationPath = NavigationPath()
+    @Published var activeTab: Int = 0
+    @Published var shouldDismissToRoot: Bool = false
+    @Published var isDismissingToRoot: Bool = false
+    @Published var shouldDismissDepartmentList: Bool = false
+    @Published var selectedTab: Tab = .home
+    @Published var preserveDoctorList = false
+    @Published var isNavigatingBack = false
     
     enum Tab {
         case home
@@ -62,6 +35,45 @@ class NavigationCoordinator: ObservableObject {
             case .profile: return 2
             }
         }
+    }
+    
+    private init() {
+        // Listen for navigation notifications
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleNavigateToSelectDoctor),
+            name: NSNotification.Name("NavigateToSelectDoctor"),
+            object: nil
+        )
+    }
+    
+    @objc private func handleNavigateToSelectDoctor(_ notification: Notification) {
+        print("🔄 NavigationCoordinator: Handling NavigateToSelectDoctor")
+        
+        // Set navigation flags
+        isNavigatingBack = true
+        shouldDismissToRoot = true
+        shouldDismissDepartmentList = false
+        
+        // Clear navigation path
+        DispatchQueue.main.async {
+            self.navigationPath = NavigationPath()
+            
+            // Reset states after a delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.shouldDismissToRoot = false
+                self.isNavigatingBack = false
+                print("🔄 NavigationCoordinator: Reset navigation states")
+            }
+        }
+    }
+    
+    func resetNavigation() {
+        shouldDismissToRoot = false
+        isDismissingToRoot = false
+        shouldDismissDepartmentList = false
+        isNavigatingBack = false
+        navigationPath = NavigationPath()
     }
     
     func navigateToDashboard() {

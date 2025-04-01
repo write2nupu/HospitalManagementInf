@@ -68,7 +68,7 @@ struct DoctorListView: View {
             .padding(.horizontal)
             .padding(.top)
             
-            ScrollView {
+        ScrollView {
                 if filteredDoctors.isEmpty {
                     VStack(spacing: 20) {
                         Spacer().frame(height: 60)
@@ -117,17 +117,17 @@ struct DoctorListView: View {
                         .padding(.top, 10)
                     }
                     
-                    VStack(spacing: 15) {
+            VStack(spacing: 15) {
                         ForEach(filteredDoctors) { doctor in
-                            Button(action: {
-                                selectedDoctor = doctor
+                    Button(action: {
+                        selectedDoctor = doctor
                                 showAppointmentBookingModal = true
-                            }) {
-                                doctorCard(doctor: doctor)
-                            }
-                        }
+                    }) {
+                        doctorCard(doctor: doctor)
                     }
-                    .padding()
+                }
+            }
+            .padding()
                 }
             }
         }
@@ -257,7 +257,7 @@ struct DoctorListView: View {
             return sameDay && sameTimeSlot
         }
     }
-    
+
     // MARK: - Doctor Card UI
     private func doctorCard(doctor: Doctor) -> some View {
         HStack(spacing: 15) {
@@ -267,11 +267,11 @@ struct DoctorListView: View {
                     .fill(Color.mint.opacity(0.15))
                     .frame(width: 60, height: 60)
                 
-                Image(systemName: "person.fill")
-                    .resizable()
+            Image(systemName: "person.fill")
+                .resizable()
                     .scaledToFit()
                     .frame(width: 28, height: 28)
-                    .foregroundColor(.mint)
+                .foregroundColor(.mint)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -281,14 +281,14 @@ struct DoctorListView: View {
                     .foregroundColor(.primary)
 
                 HStack(spacing: 20) {
-                    if let departmentId = doctor.department_id,
-                       let department = departmentDetails[departmentId] {
+                if let departmentId = doctor.department_id,
+                   let department = departmentDetails[departmentId] {
                         HStack(spacing: 4) {
                             Image(systemName: "building.2")
                                 .font(.caption)
                                 .foregroundColor(.gray)
                             
-                            Text(department.name)
+                    Text(department.name)
                                 .font(.caption)
                                 .foregroundColor(.gray)
                                 .lineLimit(1)
@@ -297,12 +297,12 @@ struct DoctorListView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "indianrupeesign")
                                 .font(.caption)
-                                .foregroundColor(.gray)
-                            
+                        .foregroundColor(.gray)
+
                             Text("\(Int(department.fees))")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.mint)
+                        .foregroundColor(.mint)
                         }
                     }
                 }

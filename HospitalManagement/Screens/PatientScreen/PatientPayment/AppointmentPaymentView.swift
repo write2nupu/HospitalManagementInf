@@ -74,10 +74,14 @@ struct PaymentView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .navigationViewStyle(StackNavigationViewStyle())
-        .sheet(isPresented: $showPaymentConfirmation) {
+        .sheet(isPresented: $showPaymentConfirmation, onDismiss: {
+            if coordinator.isNavigatingBack {
+                dismiss()
+            }
+        }) {
             if let generatedInvoice = invoice {
                 NavigationView {
-                    PaymentConfirmationView(
+                    AppointmentPaymentConfirmationView(
                         appointment: appointment,
                         doctor: doctor,
                         department: department,
@@ -87,9 +91,9 @@ struct PaymentView: View {
                 }
             }
         }
-        .onChange(of: coordinator.shouldDismissToRoot) { shouldDismiss in
-            if shouldDismiss {
-                dismiss()
+        .onChange(of: coordinator.isNavigatingBack) { isNavigating in
+            if isNavigating {
+                showPaymentConfirmation = false
             }
         }
         .background(Color.white.edgesIgnoringSafeArea(.all))
