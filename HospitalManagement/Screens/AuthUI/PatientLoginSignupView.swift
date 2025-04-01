@@ -15,6 +15,7 @@ struct PatientLoginSignupView: View {
     @State private var alertMessage = ""
     @State private var navigateToDashboard = false
     @State private var isLoading = false
+    @State private var showForgotPassword = false
     @AppStorage("isLoggedIn") private var isUserLoggedIn = false
     @AppStorage("currentUserId") private var currentUserId: String = ""
     @StateObject private var supabaseController = SupabaseController()
@@ -44,6 +45,18 @@ struct PatientLoginSignupView: View {
                 VStack(spacing: 20) {
                     customTextField(icon: "envelope.fill", placeholder: "Enter Email", text: $email, keyboardType: .emailAddress)
                     passwordField(icon: "lock.fill", placeholder: "Enter Password", text: $password)
+                    
+                    // Forgot Password Button
+                    Button(action: {
+                        showForgotPassword = true
+                    }) {
+                        Text("Forgot Password?")
+                            .font(.subheadline)
+                            .foregroundColor(.mint)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.horizontal)
+                    .padding(.top, -10)
                 }
                 .padding(.top, 20)
                 
@@ -95,6 +108,9 @@ struct PatientLoginSignupView: View {
                 if let patient = currentPatient {
                     PatientDashboard(patient: patient)
                 }
+            }
+            .sheet(isPresented: $showForgotPassword) {
+                ForgotPasswordView()
             }
         }
     }

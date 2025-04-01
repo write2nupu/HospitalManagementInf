@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct SuperAdminLoginView: View {
     var message: String
@@ -7,19 +8,20 @@ struct SuperAdminLoginView: View {
     @State private var showAlert = false
     @State private var errorMessage = ""
     @State private var isLoggedIn = false
+    @State private var shouldShowDashboard = false
     @State private var isPasswordVisible = false
     @State private var isLoading = false
+    @State private var showForgotPassword = false
     @StateObject private var supabaseController = SupabaseController()
     @AppStorage("currentUserId") private var currentUserId: String = ""
     @AppStorage("isLoggedIn") private var isUserLoggedIn = false
     @State private var superAdminUser: users? = nil
-    @State private var shouldShowDashboard = false
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 30) {
                 // App Logo
-                Image(systemName: "building.2.fill")
+                Image(systemName: "building.columns.fill")
                     .resizable()
                     .frame(width: 100, height: 100)
                     .foregroundColor(.mint)
@@ -40,6 +42,19 @@ struct SuperAdminLoginView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     passwordField(icon: "lock.fill", placeholder: "Enter Password", text: $password)
                 }
+                
+                // Forgot Password Button
+                Button(action: {
+                    showForgotPassword = true
+                }) {
+                    Text("Forgot Password?")
+                        .font(.subheadline)
+                        .foregroundColor(.mint)
+                }
+                .padding(.top, -15)
+                .padding(.bottom, 15)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.horizontal)
 
                 // Login Button
                 Button(action: {
@@ -79,6 +94,9 @@ struct SuperAdminLoginView: View {
             }
             .navigationDestination(isPresented: $shouldShowDashboard) {
                 ContentView()
+            }
+            .sheet(isPresented: $showForgotPassword) {
+                ForgotPasswordView()
             }
         }
     }
