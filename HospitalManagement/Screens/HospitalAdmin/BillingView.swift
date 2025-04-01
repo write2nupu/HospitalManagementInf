@@ -189,11 +189,23 @@ struct BillingView: View {
         isLoading = true
         errorMessage = nil
         
-        do {
-            let result = try await supabaseController.fetchHospitalAndAdmin()
-            processHospitalResult(result)
-        } catch {
-            handleHospitalError(error)
+        // Get hospital ID from UserDefaults (stored during login)
+        if let hospitalIdString = UserDefaults.standard.string(forKey: "hospitalId"),
+           let hospitalId = UUID(uuidString: hospitalIdString) {
+            print("Retrieved hospital ID from UserDefaults: \(hospitalId)")
+            
+            DispatchQueue.main.async {
+                self.hospitalId = hospitalId
+                self.loadInvoices()
+            }
+        } else {
+            // Fallback to old method if no hospital ID in UserDefaults
+            do {
+                let result = try await supabaseController.fetchHospitalAndAdmin()
+                processHospitalResult(result)
+            } catch {
+                handleHospitalError(error)
+            }
         }
     }
     

@@ -1,11 +1,18 @@
 import SwiftUI
 
 struct DoctorDetailView: View {
-    let doctor: Doctor
+    @State private var doctor: Doctor
+    @Environment(\.presentationMode) var presentationMode
     @StateObject private var supabaseController = SupabaseController()
     @State private var showStatusConfirmation = false
     @State private var showStatusChangeAlert = false
     @State private var departmentName: String = ""
+    @State private var isUpdating = false
+    @State private var errorMessage: String? = nil
+    
+    init(doctor: Doctor) {
+        _doctor = State(initialValue: doctor)
+    }
     
     var body: some View {
         List {
@@ -29,11 +36,27 @@ struct DoctorDetailView: View {
                     
                     Spacer()
                     
-                    Toggle("", isOn: Binding(
-                        get: { doctor.is_active },
-                        set: { _ in showStatusConfirmation = true }
-                    ))
-                    .labelsHidden()
+                    if isUpdating {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                    } else {
+                        Toggle("", isOn: Binding(
+                            get: { doctor.is_active },
+                            set: { _ in showStatusConfirmation = true }
+                        ))
+                        .labelsHidden()
+                    }
+                }
+                
+                if let error = errorMessage {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                    .padding(.vertical, 4)
                 }
             }
             
@@ -64,9 +87,12 @@ struct DoctorDetailView: View {
                 "Do you want to activate Dr. \(doctor.full_name)?")
         }
         .alert("Status Updated", isPresented: $showStatusChangeAlert) {
-            Button("OK", role: .cancel) { }
+            Button("OK", role: .cancel) { 
+                // Dismiss the view to return to the previous screen
+                presentationMode.wrappedValue.dismiss()
+            }
         } message: {
-            Text("\(doctor.full_name) has been \(doctor.is_active ? "deactivated" : "activated")")
+            Text("Dr. \(doctor.full_name) has been \(doctor.is_active ? "activated" : "deactivated") successfully.")
         }
         .task {
             if let departmentId = doctor.department_id {
@@ -75,23 +101,35 @@ struct DoctorDetailView: View {
                 }
             }
         }
+        .disabled(isUpdating)
     }
     
     private func toggleDoctorStatus() async {
+        isUpdating = true
+        errorMessage = nil
+        
+        // Create a copy of the doctor with toggled active status
         var updatedDoctor = doctor
         updatedDoctor.is_active.toggle()
         
         do {
+            // Use the correct table name "Doctor" (not "Doctors")
             try await supabaseController.client
-                .from("Doctors")
+                .from("Doctor")
                 .update(updatedDoctor)
-                .eq("id", value: updatedDoctor.id)
+                .eq("id", value: updatedDoctor.id.uuidString)
                 .execute()
             
+            // Update the local state
+            doctor = updatedDoctor
             showStatusChangeAlert = true
+            print("Successfully updated doctor status to: \(updatedDoctor.is_active)")
         } catch {
-            print("Error updating doctor status: \(error)")
+            print("Error updating doctor status: \(error.localizedDescription)")
+            errorMessage = "Failed to update status: \(error.localizedDescription)"
         }
+        
+        isUpdating = false
     }
 }
 

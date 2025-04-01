@@ -4,51 +4,33 @@ struct EmergencyRequestsView: View {
     @EnvironmentObject private var viewModel: HospitalManagementViewModel
     
     var body: some View {
-        List {
-            ForEach(0..<10) { _ in // Replace with actual emergency requests data
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Emergency Request #123")
-                            .font(.headline)
-                        Spacer()
-                        Text("2h ago")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+        ScrollView {
+            VStack(spacing: 20) {
+                VStack(spacing: 16) {
+                    Image(systemName: "cross.case.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(.red.opacity(0.3))
                     
-                    HStack(spacing: 8) {
-                        Image(systemName: "person.fill")
-                            .foregroundColor(.mint)
-                        Text("John Doe")
-                            .font(.subheadline)
-                    }
+                    Text("No Emergency Requests")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
                     
-                    HStack(spacing: 8) {
-                        Image(systemName: "cross.case.fill")
-                            .foregroundColor(.red)
-                        Text("Cardiac Emergency")
-                            .font(.subheadline)
-                            .foregroundColor(.red)
-                    }
-                    
-                    Button(action: {
-                        // Handle response action
-                    }) {
-                        Text("Respond")
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                            .background(Color.mint)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
+                    Text("When emergency requests are received, they will appear here")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }
-                .padding()
-                .background(Color(.systemBackground))
-                .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.1), radius: 5)
+                .padding(.vertical, 60)
+                .frame(maxWidth: .infinity)
             }
         }
-        .listStyle(.plain)
         .navigationTitle("Emergency Requests")
     }
+}
+
+#Preview {
+    EmergencyRequestsView()
+        .environmentObject(HospitalManagementViewModel())
 } 

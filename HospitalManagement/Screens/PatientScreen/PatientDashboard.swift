@@ -56,12 +56,16 @@ struct PatientDashboard: View {
                         .tag(2)
                     
                     // MARK: - Invoices Tab
-                    InvoicesTabView(selectedHospitalId: $selectedHospitalId)
+                    InvoiceListView(patientId: patient.id)
                         .tabItem {
                             Label("Invoices", systemImage: "doc.text.fill")
                         }
                         .tag(3)
                 }
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: 0)
+                }
+                .edgesIgnoringSafeArea(.bottom)
                 
                 // Sticky header only visible in home tab
                 if selectedTab == 0 {

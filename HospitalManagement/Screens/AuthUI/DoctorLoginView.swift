@@ -100,7 +100,7 @@ struct DoctorLoginView: View {
             print("Attempting to login with email:", emailOrPhone)
             
             // First check if user exists in Doctor table
-            let doctors: [Doctor] = try await supabaseController.client.database
+            let doctors: [Doctor] = try await supabaseController.client
                 .from("Doctor")
                 .select()
                 .eq("email_address", value: emailOrPhone)
@@ -131,7 +131,7 @@ struct DoctorLoginView: View {
                     }
                     
                     // Check users table for existing user
-                    let existingUsers: [users] = try await supabaseController.client.database
+                    let existingUsers: [users] = try await supabaseController.client
                         .from("users")
                         .select()
                         .eq("id", value: authResponse.user.id.uuidString)

@@ -16,6 +16,7 @@ struct PatientLoginSignupView: View {
     @State private var navigateToDashboard = false
     @State private var isLoading = false
     @AppStorage("isLoggedIn") private var isUserLoggedIn = false
+    @AppStorage("currentUserId") private var currentUserId: String = ""
     @StateObject private var supabaseController = SupabaseController()
     
     @State private var currentPatient: Patient?
@@ -110,6 +111,7 @@ struct PatientLoginSignupView: View {
         
         do {
             currentPatient = try await supabaseController.signInPatient(email: email, password: password)
+            currentUserId = currentPatient?.id.uuidString ?? ""
             isUserLoggedIn = true
             navigateToDashboard = true
         } catch {
