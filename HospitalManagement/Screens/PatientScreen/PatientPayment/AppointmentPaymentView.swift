@@ -273,7 +273,8 @@ struct PaymentView_Previews: PreviewProvider {
             date: Date(),
             status: .scheduled,
             createdAt: Date(),
-            type: .Consultation
+            type: .Consultation,
+            prescriptionId: UUID()
         )
 
         NavigationView {

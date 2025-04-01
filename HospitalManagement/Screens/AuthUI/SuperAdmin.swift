@@ -96,7 +96,7 @@ struct SuperAdminLoginView: View {
             print("Attempting to login with email:", email)
             
             // First check if user exists in Users table with super_admin role
-            let superAdmins: [users] = try await supabaseController.client.database
+            let superAdmins: [users] = try await supabaseController.client
                 .from("users")
                 .select()
                 .eq("email", value: email)
