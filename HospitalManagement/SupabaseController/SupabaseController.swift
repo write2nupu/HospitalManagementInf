@@ -693,39 +693,206 @@ func signInPatient(email: String, password: String) async throws -> Patient {
     return patient
 }
 
-// Add this function to the SupabaseController class
-func fetchHospitalAndAdmin() async throws -> (Hospital, String)? {
-    print("Fetching hospital and admin details")
-    
-    // First get all hospitals with their assigned admins
-    let hospitals: [Hospital] = try await client
-        .from("Hospital")
-        .select("*")
+// MARK: - Doctor Profile and Appointments
+func fetchDoctorProfile(doctorId: UUID) async throws -> Doctor {
+    let doctors: [Doctor] = try await client
+        .from("Doctor")
+        .select("""
+            id,
+            full_name,
+            department_id,
+            hospital_id,
+            experience,
+            qualifications,
+            is_active,
+            is_first_login,
+            phone_num,
+            email_address,
+            gender,
+            license_num,
+            Department (
+                name,
+                fees
+            ),
+            Hospital (
+                name
+            )
+        """)
+        .eq("id", value: doctorId.uuidString)
         .execute()
         .value
     
-    guard let hospital = hospitals.first else {
-        print("No hospital found")
-        return nil
+    guard let doctor = doctors.first else {
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Doctor not found"])
     }
     
-    // Get admin details using assigned_admin_id from hospital
-    if let assignedAdminId = hospital.assigned_admin_id {
-        let admins: [Admin] = try await client
-            .from("Admin")
-            .select("*")
-            .eq("id", value: assignedAdminId.uuidString)
+    return doctor
+}
+
+func fetchDoctorAppointments(doctorId: UUID) async throws -> [Appointment] {
+    let appointments: [Appointment] = try await client
+        .from("Appointment")
+        .select("""
+            id,
+            patientId,
+            doctorId,
+            date,
+            status,
+            createdAt,
+            type,
+            prescriptionId,
+            Patient!inner (
+                id,
+                fullname,
+                gender,
+                dateofbirth,
+                contactno,
+                email
+            )
+        """)
+        .eq("doctorId", value: doctorId.uuidString)
+        .order("date")
+        .execute()
+        .value
+    
+    return appointments
+}
+
+func fetchDoctorStats(doctorId: UUID) async throws -> (completedAppointments: Int, activePatients: Int) {
+    // Get completed appointments count
+    let completedAppointments: [Appointment] = try await client
+        .from("Appointment")
+        .select()
+        .eq("doctorId", value: doctorId.uuidString)
+        .eq("status", value: AppointmentStatus.completed.rawValue)
+        .execute()
+        .value
+    
+    // Get unique patients count from active appointments
+    let activeAppointments: [Appointment] = try await client
+        .from("Appointment")
+        .select()
+        .eq("doctorId", value: doctorId.uuidString)
+        .eq("status", value: AppointmentStatus.scheduled.rawValue)
+        .execute()
+        .value
+    
+    let uniquePatients = Set(activeAppointments.map { $0.patientId })
+    
+    return (completedAppointments.count, uniquePatients.count)
+}
+
+// MARK: - Department Operations
+func fetchDepartmentDetails(departmentId: UUID) async throws -> Department {
+    let departments: [Department] = try await client
+        .from("Department")
+        .select()
+        .eq("id", value: departmentId.uuidString)
+        .execute()
+        .value
+    
+    guard let department = departments.first else {
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Department not found"])
+    }
+    
+    return department
+}
+
+// MARK: - Prescription Operations
+func fetchPrescription(prescriptionId: UUID) async throws -> PrescriptionData {
+    let prescriptions: [PrescriptionData] = try await client
+        .from("Prescription")
+        .select("""
+            id,
+            patientId,
+            doctorId,
+            diagnosis,
+            labTests,
+            additionalNotes
+        """)
+        .eq("id", value: prescriptionId.uuidString)
+        .execute()
+        .value
+    
+    guard let prescription = prescriptions.first else {
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Prescription not found"])
+    }
+    
+    return prescription
+}
+
+func savePrescription(_ prescription: PrescriptionData) async throws {
+    try await client
+        .from("Prescription")
+        .upsert(prescription)
+        .execute()
+}
+
+// MARK: - Patient Operations
+func fetchPatientById(patientId: UUID) async throws -> Patient {
+    let patients: [Patient] = try await client
+        .from("Patient")
+        .select()
+        .eq("id", value: patientId.uuidString)
+        .execute()
+        .value
+    
+    guard let patient = patients.first else {
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Patient not found"])
+    }
+    
+    return patient
+}
+
+// MARK: - Hospital Operations
+    func fetchHospitalById(hospitalId: UUID) async throws -> Hospital {
+        let hospitals: [Hospital] = try await client
+            .from("Hospital")
+            .select()
+            .eq("id", value: hospitalId.uuidString)
             .execute()
             .value
         
-        if let admin = admins.first {
-            print("Found hospital: \(hospital.name) with admin: \(admin.full_name)")
-            return (hospital, admin.full_name)
+        guard let hospital = hospitals.first else {
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Hospital not found"])
         }
+        return hospital
     }
+
     
-    return nil
-}
+    func fetchHospitalAndAdmin() async throws -> (Hospital, String)? {
+        print("Fetching hospital and admin details")
+        
+        // First get all hospitals with their assigned admins
+        let hospitals: [Hospital] = try await client
+            .from("Hospital")
+            .select("*")
+            .execute()
+            .value
+        guard let hospital = hospitals.first else {
+            print("No hospital found")
+            return nil
+        }
+    
+    // Get admin details using assigned_admin_id from hospital
+        if let assignedAdminId = hospital.assigned_admin_id {
+            let admins: [Admin] = try await client
+                .from("Admin")
+                .select("*")
+                .eq("id", value: assignedAdminId.uuidString)
+                .execute()
+                .value
+            
+            if let admin = admins.first {
+                print("Found hospital: \(hospital.name) with admin: \(admin.full_name)")
+                return (hospital, admin.full_name)
+            }
+        }
+    
+        return nil
+    }
+
+        
 
 // Add function to sign in admin and store their ID
 func signInAdmin(email: String, password: String) async throws -> Admin {

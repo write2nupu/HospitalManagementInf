@@ -9,6 +9,14 @@ struct PaymentConfirmationView: View {
     let department: Department
     let hospital: Hospital
     let invoice: Invoice
+    
+    init(appointment: Appointment, doctor: Doctor, department: Department, hospital: Hospital, invoice: Invoice) {
+        self.appointment = appointment
+        self.doctor = doctor
+        self.department = department
+        self.hospital = hospital
+        self.invoice = invoice
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -227,6 +235,8 @@ struct PaymentConfirmationView_Previews: PreviewProvider {
             experience: 10,
             qualifications: "MBBS, MD",
             is_active: true,
+            is_first_login: true,
+            initial_password: "password123",
             phone_num: "9876543210",
             email_address: "dr.ramesh@example.com",
             gender: "Male",
@@ -251,7 +261,8 @@ struct PaymentConfirmationView_Previews: PreviewProvider {
             mobile_number: "9876543210",
             email: "contact@apollo.com",
             license_number: "HOSP12345",
-            is_active: true
+            is_active: true,
+            assigned_admin_id: nil
         )
 
         let sampleAppointment = Appointment(
@@ -259,9 +270,10 @@ struct PaymentConfirmationView_Previews: PreviewProvider {
             patientId: UUID(),
             doctorId: UUID(),
             date: Date(),
-            status: .scheduled,
+            status: AppointmentStatus.scheduled,
             createdAt: Date(),
-            type: .Consultation
+            type: AppointmentType.Consultation,
+            prescriptionId: UUID()
         )
 
         let sampleInvoice = Invoice(
