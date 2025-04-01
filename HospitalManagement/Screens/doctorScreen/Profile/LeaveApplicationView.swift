@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct LeaveApplicationView: View {
+    
+    var Doctor: Doctor
+    
     let leaveTypes = [
         "Sick Leave", "Casual Leave", "Annual Leave",
         "Emergency Leave", "Maternity/Paternity Leave", "Conference Leave"
@@ -166,7 +169,7 @@ struct LeaveApplicationView: View {
             return
         }
         
-        pendingLeave = Leave(type: selectedLeaveType, reason: reason, startDate: startDate, endDate: endDate, status: .pending)
+        pendingLeave = Leave(DoctorID: Doctor.id ,HospitalID: Doctor.hospital_id ?? UUID() ,type: selectedLeaveType, reason: reason, startDate: startDate, endDate: endDate, status: .pending)
         isLeaveApproved = false
     }
     
@@ -181,6 +184,10 @@ struct LeaveApplicationView: View {
 }
 
 struct Leave {
+//    Doctor ID
+    var DoctorID: UUID
+//    Hospital ID
+    var HospitalID: UUID
     var type: String
     var reason: String
     var startDate: Date
@@ -194,6 +201,13 @@ enum LeaveStatus {
     case rejected
 }
 
-#Preview {
-    LeaveApplicationView()
+enum leaveType {
+    case sickLeave
+    case casualLeave
+    case annualLeave
+    case emergencyLeave
+    case maternityPaternityLeave
+    case conferenceLeave
+
 }
+

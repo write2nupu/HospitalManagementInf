@@ -30,34 +30,30 @@ struct PatientView: View {
     }
     
     var body: some View {
-        NavigationView {
-            ZStack(alignment: .top) {
-                Color(.systemGray5)
-                    .opacity(0.2)
-                    .ignoresSafeArea()
+        ZStack(alignment: .top) {
+            Color(.systemGray5)
+                .opacity(0.2)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Fixed search bar at top
+                PatientSearchBar(text: $searchText)
+                    .padding(.vertical, 50)
+                    .background(Color.white)
+                    .zIndex(1) // Ensures search bar stays on top
                 
-                VStack(spacing: 0) {
-                    // Fixed search bar at top
-                    PatientSearchBar(text: $searchText)
-                        .padding(.vertical, 8)
-                        .background(Color.white)
-                        .zIndex(1) // Ensures search bar stays on top
-                    
-                    // Scrollable content
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            ForEach(filteredPatients, id: \.id) { patient in
-                                patientNavigationLink(patient)
-                            }
+                // Scrollable content
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(filteredPatients, id: \.id) { patient in
+                            patientNavigationLink(patient)
                         }
-                        .padding(.top, 5)
                     }
+                    .padding()
                 }
             }
-            .navigationTitle("Patients")
-            .frame(height: screenHeight - 130)
-            .navigationBarTitleDisplayMode(.inline)
         }
+        .frame(height: screenHeight - 130)
     }
     
     private func patientNavigationLink(_ patient: Patient) -> some View {

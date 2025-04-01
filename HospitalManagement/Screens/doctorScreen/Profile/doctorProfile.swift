@@ -47,7 +47,7 @@ struct DoctorProfileView: View {
                 }
                 
                 Section {
-                    NavigationLink(destination: LeaveApplicationView()) {
+                    NavigationLink(destination: LeaveApplicationView(Doctor: doctorDetails ?? doctor)) {
                         Text("Doctor Leave")
                             .foregroundColor(AppConfig.buttonColor)
                             .fontWeight(.semibold)

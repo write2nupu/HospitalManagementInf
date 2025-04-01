@@ -9,7 +9,7 @@ struct mainBoard: View {
     @State private var errorMessage: String?
     
     // Track selected tab
-    @State private var selectedTab: Int?
+    @State private var selectedTab: Int = 0
     
     // Titles for different screens
     var tabTitles = ["Dashboard", "Appointments", "Patients"]
@@ -19,7 +19,7 @@ struct mainBoard: View {
         if selectedTab == 0 {
             return "Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")"
         } else {
-            return tabTitles[selectedTab ?? 0]
+            return tabTitles[selectedTab]
         }
     }
     
@@ -42,31 +42,34 @@ struct mainBoard: View {
                     }
                 } else  {
                     TabView(selection: $selectedTab) {
-                        DoctorDashBoard()
-                            .tag(0)
-                            .tabItem {
-                                Label("Home", systemImage: "house.fill")
-                            }
-                            .onAppear { selectedTab = 0 }
+                        NavigationStack {
+                            DoctorDashBoard()
+                        }
+                        .tag(0)
+                        .tabItem {
+                            Label("Home", systemImage: "house.fill")
+                        }
 
-                        AppointmentView()
-                            .tag(1)
-                            .tabItem {
-                                Label("Appointments", systemImage: "calendar")
-                            }
-                            .onAppear { selectedTab = 1 }
+                        NavigationStack {
+                            AppointmentView()
+                        }
+                        .tag(1)
+                        .tabItem {
+                            Label("Appointments", systemImage: "calendar")
+                        }
 
-                        PatientView()
-                            .tag(2)
-                            .tabItem {
-                                Label("Patients", systemImage: "person.fill")
-                            }
-                            .onAppear { selectedTab = 2 }
+                        NavigationStack {
+                            PatientView()
+                        }
+                        .tag(2)
+                        .tabItem {
+                            Label("Patients", systemImage: "person.fill")
+                        }
                     }
                     .accentColor(AppConfig.buttonColor)
                 }
             }
-            .navigationTitle(dynamicTitle) // ✅ Dynamic Title
+            .navigationTitle(dynamicTitle)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
