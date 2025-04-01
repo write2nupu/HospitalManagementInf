@@ -24,7 +24,7 @@ struct MedicineSelectionView: View {
         NavigationView {
             VStack(spacing: 0) {
                 // Search Bar - Fixed at top
-                SearchBar(text: $searchText, isSearching: $isSearching)
+                MedicineSearchBar(text: $searchText, isSearching: $isSearching)
                     .background(Color.white)
                     .onChange(of: searchText) { newValue in
                         if !newValue.isEmpty && newValue.count >= 2 {
@@ -173,7 +173,7 @@ struct MedicineCard: View {
     }
 }
 
-struct SearchBar: View {
+struct MedicineSearchBar: View {
     @Binding var text: String
     @Binding var isSearching: Bool
     
