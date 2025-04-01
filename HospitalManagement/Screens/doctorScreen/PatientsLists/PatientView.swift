@@ -3,6 +3,10 @@ import SwiftUI
 struct PatientView: View {
     @State private var searchText: String = ""
     
+    var screenHeight: CGFloat {
+        UIScreen.main.bounds.height
+    }
+    
     var patientDetails: PatientDetails = PatientDetails(
         id: UUID(),
         blood_group: "O+",
@@ -27,28 +31,35 @@ struct PatientView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {  // 🔹 Tightens layout
-                PatientSearchBar(text: $searchText)
+            ZStack(alignment: .top) {
+                Color(.systemGray5)
+                    .opacity(0.2)
+                    .ignoresSafeArea()
                 
-                patientListView
+                VStack(spacing: 0) {
+                    // Fixed search bar at top
+                    PatientSearchBar(text: $searchText)
+                        .padding(.vertical, 8)
+                        .background(Color.white)
+                        .zIndex(1) // Ensures search bar stays on top
+                    
+                    // Scrollable content
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(filteredPatients, id: \.id) { patient in
+                                patientNavigationLink(patient)
+                            }
+                        }
+                        .padding(.top, 5)
+                    }
+                }
             }
-            .background(Color(.systemGray5).opacity(0.2))
             .navigationTitle("Patients")
-            .navigationBarTitleDisplayMode(.inline) // 🔹 Keeps title compact
+            .frame(height: screenHeight - 130)
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
     
-    private var patientListView: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(filteredPatients, id: \.id) { patient in
-                    patientNavigationLink(patient)
-                }
-            }
-            .padding(.top, 5)  // Small spacing before first card
-        }
-    }
-
     private func patientNavigationLink(_ patient: Patient) -> some View {
         NavigationLink(destination: PatientDetailView(patient: patient, patientDetails: patientDetails)) {
             PatientCard(patient: patient)
