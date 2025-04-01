@@ -262,19 +262,62 @@ struct AdminHomeView: View {
     
     private func fetchHospitalName() async {
         do {
-            if let (hospital, adminName) = try await supabaseController.fetchHospitalAndAdmin() {
-                print("Successfully fetched hospital:", hospital)
-                await MainActor.run {
-                    hospitalName = "Welcome, \(adminName)"
+            // Get hospital ID from UserDefaults (stored during login)
+            if let hospitalIdString = UserDefaults.standard.string(forKey: "hospitalId"),
+               let hospitalId = UUID(uuidString: hospitalIdString) {
+                print("Fetching hospital with ID: \(hospitalId)")
+                
+                // Fetch the specific hospital by ID
+                let hospitals: [Hospital] = try await supabaseController.client
+                    .from("Hospital")
+                    .select("*")
+                    .eq("id", value: hospitalId.uuidString)
+                    .execute()
+                    .value
+                
+                if let hospital = hospitals.first {
+                    print("Successfully fetched hospital for logged-in admin:", hospital)
+                    
+                    // Get admin name from assigned_admin_id
+                    var adminName = "Admin"
+                    if let adminId = hospital.assigned_admin_id {
+                        let admins: [Admin] = try await supabaseController.client
+                            .from("Admin")
+                            .select("*")
+                            .eq("id", value: adminId.uuidString)
+                            .execute()
+                            .value
+                        
+                        if let admin = admins.first {
+                            adminName = admin.full_name
+                        }
+                    }
+                    
+                    await MainActor.run {
+                        hospitalName = "Welcome, \(adminName)"
+                    }
+                } else {
+                    print("No hospital found with ID: \(hospitalId)")
+                    await MainActor.run {
+                        hospitalName = "Welcome"
+                    }
                 }
             } else {
-                print("No hospital or admin found")
-                await MainActor.run {
-                    hospitalName = "Welcome"
+                // Fallback to old method if hospital ID is not in UserDefaults
+                if let (hospital, adminName) = try await supabaseController.fetchHospitalAndAdmin() {
+                    print("Successfully fetched hospital:", hospital)
+                    await MainActor.run {
+                        hospitalName = "Welcome, \(adminName)"
+                    }
+                } else {
+                    print("No hospital or admin found")
+                    await MainActor.run {
+                        hospitalName = "Welcome"
+                    }
                 }
             }
         } catch {
-            print("Error fetching hospital and admin:", error.localizedDescription)
+            print("Error fetching hospital info:", error.localizedDescription)
             await MainActor.run {
                 hospitalName = "Welcome"
             }

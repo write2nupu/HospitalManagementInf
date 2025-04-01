@@ -760,34 +760,79 @@ class SupabaseController: ObservableObject {
     func fetchAdminProfile() async throws -> (Admin, Hospital)? {
         print("Fetching admin profile details")
         
-        // First get the hospital with assigned admin
+        // Get current admin ID from UserDefaults
+        guard let currentAdminId = UserDefaults.standard.string(forKey: "currentAdminId"),
+              let adminUUID = UUID(uuidString: currentAdminId) else {
+            print("No current admin ID found in UserDefaults")
+            
+            // If no admin ID in UserDefaults, try to get it from hospitalId
+            if let hospitalIdString = UserDefaults.standard.string(forKey: "hospitalId"),
+               let hospitalId = UUID(uuidString: hospitalIdString) {
+                
+                // Fetch hospital by ID
+                let hospitals: [Hospital] = try await client
+                    .from("Hospital")
+                    .select("*")
+                    .eq("id", value: hospitalId.uuidString)
+                    .execute()
+                    .value
+                
+                guard let hospital = hospitals.first,
+                      let assignedAdminId = hospital.assigned_admin_id else {
+                    print("No hospital or assigned admin found")
+                    return nil
+                }
+                
+                // Fetch admin by ID
+                let admins: [Admin] = try await client
+                    .from("Admin")
+                    .select("*")
+                    .eq("id", value: assignedAdminId.uuidString)
+                    .execute()
+                    .value
+                
+                if let admin = admins.first {
+                    print("Found admin profile using hospital ID")
+                    return (admin, hospital)
+                }
+            }
+            
+            return nil
+        }
+        
+        // Fetch admin by ID
+        let admins: [Admin] = try await client
+            .from("Admin")
+            .select("*")
+            .eq("id", value: adminUUID.uuidString)
+            .execute()
+            .value
+        
+        guard let admin = admins.first else {
+            print("Admin not found with ID: \(adminUUID)")
+            return nil
+        }
+        
+        // Fetch hospital using admin's hospital_id
+        guard let hospitalId = admin.hospital_id else {
+            print("Admin has no associated hospital ID")
+            return nil
+        }
+        
         let hospitals: [Hospital] = try await client
             .from("Hospital")
             .select("*")
+            .eq("id", value: hospitalId.uuidString)
             .execute()
             .value
         
         guard let hospital = hospitals.first else {
-            print("No hospital found")
+            print("Hospital not found with ID: \(hospitalId)")
             return nil
         }
         
-        // Get admin details using assigned_admin_id from hospital
-        if let assignedAdminId = hospital.assigned_admin_id {
-            let admins: [Admin] = try await client
-                .from("Admin")
-                .select("*")
-                .eq("id", value: assignedAdminId.uuidString)
-                .execute()
-                .value
-            
-            if let admin = admins.first {
-                print("Found admin profile with hospital details")
-                return (admin, hospital)
-            }
-        }
-        
-        return nil
+        print("Successfully fetched admin profile and associated hospital")
+        return (admin, hospital)
     }
     
     func updateAdmin(_ admin: Admin) async throws {

@@ -71,24 +71,45 @@ struct AdminTabView: View {
     
     private func fetchHospitalName() async {
         do {
-            if let (hospital, adminName) = try await supabaseController.fetchHospitalAndAdmin() {
-                print("Successfully fetched hospital:", hospital)
-                await MainActor.run {
-                    hospitalName = hospital.name
-                    hospitalLocation = "\(hospital.city), \(hospital.state)"
+            // Get the hospital ID of the logged-in admin from UserDefaults
+            if let hospitalIdString = UserDefaults.standard.string(forKey: "hospitalId"),
+               let hospitalId = UUID(uuidString: hospitalIdString) {
+                print("Fetching hospital with ID: \(hospitalId)")
+                
+                // Fetch the specific hospital by ID
+                let hospitals: [Hospital] = try await supabaseController.client
+                    .from("Hospital")
+                    .select("*")
+                    .eq("id", value: hospitalId.uuidString)
+                    .execute()
+                    .value
+                
+                if let hospital = hospitals.first {
+                    print("Successfully fetched hospital for logged-in admin:", hospital)
+                    await MainActor.run {
+                        hospitalName = hospital.name
+                        hospitalLocation = "\(hospital.city), \(hospital.state)"
+                    }
+                } else {
+                    print("No hospital found with ID: \(hospitalId)")
+                    await MainActor.run {
+                        hospitalName = "Your Hospital"
+                        hospitalLocation = "Location not found"
+                        errorMessage = "Could not find hospital details"
+                    }
                 }
             } else {
-                print("No hospital or admin found")
+                print("No hospital ID found for logged-in admin")
                 await MainActor.run {
-                    hospitalName = "Hospital"
+                    hospitalName = "Your Hospital"
                     hospitalLocation = "Location not found"
-                    errorMessage = "Could not find hospital details"
+                    errorMessage = "Could not find hospital ID"
                 }
             }
         } catch {
-            print("Error fetching hospital and admin:", error.localizedDescription)
+            print("Error fetching hospital details:", error.localizedDescription)
             await MainActor.run {
-                hospitalName = "Hospital"
+                hospitalName = "Your Hospital"
                 hospitalLocation = "Location not found"
                 errorMessage = "Error loading hospital details"
             }
