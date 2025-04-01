@@ -4,14 +4,14 @@ struct LeaveApplicationView: View {
     
     var Doctor: Doctor
     
-    let leaveTypes = [
-        "Sick Leave", "Casual Leave", "Annual Leave",
-        "Emergency Leave", "Maternity/Paternity Leave", "Conference Leave"
+    let leaveTypes: [LeaveType] = [
+        .sickLeave, .casualLeave, .annualLeave,
+        .emergencyLeave, .maternityPaternityLeave, .conferenceLeave
     ]
     
-    @State private var selectedLeaveType: String? = nil
+    @State private var selectedLeaveType: LeaveType? = nil
     @State private var reason = ""
-    @State private var leaveDays: Int? = 1
+    @State private var leaveDays: Int = 1
     @State private var startDate = Date()
     @State private var endDate = Date()
     @State private var pendingLeave: Leave? = nil
@@ -21,53 +21,42 @@ struct LeaveApplicationView: View {
 
     var body: some View {
         NavigationStack {
-            VStack {
+            Form {
                 if let leave = pendingLeave {
                     leaveStatusSection(leave)
                 } else {
-                    Form {
-                        Section(header: Text("Leave Type")) {
-                            Picker("Select Leave Type", selection: $selectedLeaveType) {
-                                Text("Select Leave Type").tag(Optional<String>(nil))
-                                ForEach(leaveTypes, id: \.self) { leave in
-                                    Text(leave).tag(Optional(leave))
-                                }
+                    Section(header: Text("Leave Type")) {
+                        Picker("Select Leave Type", selection: $selectedLeaveType) {
+                            Text("Select Leave Type").tag(Optional<LeaveType>(nil))
+                            ForEach(leaveTypes, id: \.self) { leave in
+                                Text(leave.displayName).tag(Optional(leave))
                             }
-                            .pickerStyle(MenuPickerStyle())
                         }
-                        
-                        Section(header: Text("Reason for Leave")) {
-                            TextField("Enter reason...", text: $reason)
-                        }
-                        
-                        Section(header: Text("Leave Duration")) {
-                            HStack {
-                                Stepper(value: Binding(
-                                    get: { leaveDays ?? 1 },
-                                    set: { newValue in
-                                        leaveDays = newValue
-                                        endDate = Calendar.current.date(byAdding: .day, value: newValue, to: startDate) ?? startDate
-                                    }),
-                                    in: 1...30
-                                ) {
-                                    Text("Days: \(leaveDays ?? 1)")
-                                }
-                            }
-                            
-                            DatePicker("Start Date", selection: $startDate, in: Date()..., displayedComponents: .date)
-                                .onChange(of: startDate) {  updateLeaveDays() }
-                            
-                            DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
-                                .onChange(of: endDate) { updateLeaveDays() }
-                        }
+                        .pickerStyle(MenuPickerStyle())
                     }
-                    .background(Color(UIColor.systemGroupedBackground))
+                    
+                    Section(header: Text("Reason for Leave")) {
+                        TextField("Enter reason...", text: $reason)
+                    }
+                    
+                    Section(header: Text("Leave Duration")) {
+//                        Stepper(value: $leaveDays, in: 1...30) {
+//                            Text("Days: \(leaveDays)")
+//                        }
+                        
+                        Text("Number days: \(leaveDays)")
+                        
+                        DatePicker("Start Date", selection: $startDate, in: Date()..., displayedComponents: .date)
+                            .onChange(of: startDate) { updateLeaveDays() }
+                        
+                        DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                            .onChange(of: endDate) { updateLeaveDays() }
+                    }
                 }
             }
+            .navigationTitle("Apply For Leave")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Apply For Leave").font(.headline)
-                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Apply") {
                         applyForLeave()
@@ -84,6 +73,7 @@ struct LeaveApplicationView: View {
         }
     }
     
+    // MARK: - Leave Status View
     @ViewBuilder
     private func leaveStatusSection(_ leave: Leave) -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -105,7 +95,7 @@ struct LeaveApplicationView: View {
                 Text("🗂 Type:")
                     .font(.headline)
                     .foregroundColor(.secondary)
-                Text(leave.type)
+                Text(leave.type.displayName)
                     .fontWeight(.semibold)
             }
             
@@ -145,9 +135,10 @@ struct LeaveApplicationView: View {
         .padding(.horizontal)
     }
     
+    // MARK: - Helper Functions
     private func updateLeaveDays() {
         if let days = Calendar.current.dateComponents([.day], from: startDate, to: endDate).day {
-            leaveDays = max(1, days)
+            leaveDays = max(1, days + 1) // ✅ Include both start and end days
         }
     }
     
@@ -160,7 +151,7 @@ struct LeaveApplicationView: View {
             showError("Please enter a reason for your leave.")
             return
         }
-        guard let leaveDays = leaveDays, leaveDays > 0 else {
+        guard leaveDays > 0 else {
             showError("Invalid leave duration.")
             return
         }
@@ -169,7 +160,15 @@ struct LeaveApplicationView: View {
             return
         }
         
-        pendingLeave = Leave(DoctorID: Doctor.id ,HospitalID: Doctor.hospital_id ?? UUID() ,type: selectedLeaveType, reason: reason, startDate: startDate, endDate: endDate, status: .pending)
+        pendingLeave = Leave(
+            DoctorID: Doctor.id,
+            HospitalID: Doctor.hospital_id ?? UUID(),
+            type: selectedLeaveType,
+            reason: reason,
+            startDate: startDate,
+            endDate: endDate,
+            status: .pending
+        )
         isLeaveApproved = false
     }
     
@@ -183,31 +182,34 @@ struct LeaveApplicationView: View {
     }
 }
 
+// MARK: - Leave Data Model
 struct Leave {
-//    Doctor ID
     var DoctorID: UUID
-//    Hospital ID
     var HospitalID: UUID
-    var type: String
+    var type: LeaveType
     var reason: String
     var startDate: Date
     var endDate: Date
     var status: LeaveStatus
 }
 
+// MARK: - Leave Status Enum
 enum LeaveStatus {
     case pending
     case approved
     case rejected
 }
 
-enum leaveType {
-    case sickLeave
-    case casualLeave
-    case annualLeave
-    case emergencyLeave
-    case maternityPaternityLeave
-    case conferenceLeave
-
+// MARK: - Leave Types Enum
+enum LeaveType: String, CaseIterable, Identifiable {
+    case sickLeave = "Sick Leave"
+    case casualLeave = "Casual Leave"
+    case annualLeave = "Annual Leave"
+    case emergencyLeave = "Emergency Leave"
+    case maternityPaternityLeave = "Maternity/Paternity Leave"
+    case conferenceLeave = "Conference Leave"
+    
+    var id: String { self.rawValue } // ✅ Conforms to Identifiable
+    var displayName: String { self.rawValue }
 }
 
