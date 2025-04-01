@@ -22,7 +22,7 @@ struct AppointmentView: View {
                 DatePicker("Select Date", selection: $selectedDate, displayedComponents: .date)
                     .datePickerStyle(.compact)
                     .padding(.horizontal)
-                    .onChange(of: selectedDate) { _ in
+                    .onChange(of: selectedDate) { 
                         Task {
                             await loadAppointments()
                         }

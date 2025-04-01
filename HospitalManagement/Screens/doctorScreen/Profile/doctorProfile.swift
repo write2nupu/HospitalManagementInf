@@ -47,6 +47,14 @@ struct DoctorProfileView: View {
                 }
                 
                 Section {
+                    NavigationLink(destination: LeaveApplicationView(Doctor: doctorDetails ?? doctor)) {
+                        Text("Doctor Leave")
+                            .foregroundColor(AppConfig.buttonColor)
+                            .fontWeight(.semibold)
+                    }
+                }
+                
+                Section {
                     NavigationLink(destination: updatePassword(doctor: doctorDetails ?? doctor)) {
                         Text("Reset Password")
                             .foregroundColor(AppConfig.buttonColor)
@@ -100,7 +108,7 @@ struct DoctorProfileView: View {
     private func fetchDoctorDetails() async {
         // Fetch updated doctor details
         do {
-            let doctors: [Doctor] = try await supabaseController.client.database
+            let doctors: [Doctor] = try await supabaseController.client
                 .from("Doctor")
                 .select()
                 .eq("id", value: doctor.id.uuidString)

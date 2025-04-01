@@ -1,4 +1,3 @@
-import SwiftUICore
 import SwiftUI
 
 struct mainBoard: View {
@@ -8,6 +7,21 @@ struct mainBoard: View {
     @State private var doctor: Doctor?
     @State private var isLoading = true
     @State private var errorMessage: String?
+    
+    // Track selected tab
+    @State private var selectedTab: Int = 0
+    
+    // Titles for different screens
+    var tabTitles = ["Dashboard", "Appointments", "Patients"]
+    
+    // Dynamic Title based on Selected Tab
+    var dynamicTitle: String {
+        if selectedTab == 0 {
+            return "Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")"
+        } else {
+            return tabTitles[selectedTab]
+        }
+    }
     
     var body: some View {
         NavigationStack {
@@ -26,22 +40,36 @@ struct mainBoard: View {
                             }
                         }
                     }
-                } else if let doctor = doctor {
-                    TabView {
-                        DoctorDashBoard()
-                            .tabItem {
-                                Label("Dashboard", systemImage: "house.fill")
-                            }
-                        
-                        AppointmentView()
-                            .tabItem {
-                                Label("Appointments", systemImage: "calendar")
-                            }
+                } else  {
+                    TabView(selection: $selectedTab) {
+                        NavigationStack {
+                            DoctorDashBoard()
+                        }
+                        .tag(0)
+                        .tabItem {
+                            Label("Home", systemImage: "house.fill")
+                        }
+
+                        NavigationStack {
+                            AppointmentView()
+                        }
+                        .tag(1)
+                        .tabItem {
+                            Label("Appointments", systemImage: "calendar")
+                        }
+
+                        NavigationStack {
+                            PatientView()
+                        }
+                        .tag(2)
+                        .tabItem {
+                            Label("Patients", systemImage: "person.fill")
+                        }
                     }
-                    .accentColor(AppConfig.buttonColor) // ✅ Tab bar icon color
+                    .accentColor(AppConfig.buttonColor)
                 }
             }
-            .navigationTitle("Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")")
+            .navigationTitle(dynamicTitle)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -80,7 +108,7 @@ struct mainBoard: View {
                 return
             }
             
-            let doctors: [Doctor] = try await supabaseController.client.database
+            let doctors: [Doctor] = try await supabaseController.client
                 .from("Doctor")
                 .select()
                 .eq("id", value: doctorId)
