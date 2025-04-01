@@ -162,8 +162,8 @@ struct LeaveApplicationView: View {
         
         pendingLeave = Leave(
             id: UUID(),
-            DoctorID: Doctor.id,
-            HospitalID: Doctor.hospital_id ?? UUID(),
+            doctorId: Doctor.id,
+            hospitalId: Doctor.hospital_id ?? UUID(),
             type: selectedLeaveType,
             reason: reason,
             startDate: startDate,
