@@ -34,7 +34,7 @@ struct PatientDashboard: View {
                             selectedHospital: $selectedHospital,
                             departments: $departments
                         )
-                        .padding(.top, 50) // Add padding to account for sticky header
+                        .padding(.top, 80) // Increase padding to account for sticky header
                     }
                     .tabItem {
                         Label("Home", systemImage: "house.fill")
@@ -71,11 +71,11 @@ struct PatientDashboard: View {
                 if selectedTab == 0 {
                     VStack {
                         Text("Hi, \(patient.fullname)")
-                            .font(.largeTitle)
+                            .font(.title)  // Changed from .largeTitle to .title
                             .fontWeight(.bold)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal)
-                            .padding(.top, 10)
+                            .padding(.top, 15) // Adjusted top padding
                             .background(Color(.systemBackground))
                         
                         Divider()

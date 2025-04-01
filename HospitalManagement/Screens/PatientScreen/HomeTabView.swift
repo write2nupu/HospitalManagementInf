@@ -14,6 +14,7 @@ struct HomeTabView: View {
                         .fontWeight(.bold)
                         .foregroundColor(AppConfig.fontColor)
                         .padding(.horizontal)
+                        .padding(.top, 20)
                     
                     NavigationLink(destination: HospitalListView()) {
                         VStack(spacing: 12) {

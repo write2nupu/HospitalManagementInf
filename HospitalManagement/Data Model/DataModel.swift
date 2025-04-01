@@ -397,3 +397,35 @@ enum DurationOption: String, CaseIterable, Codable {
     case continuous = "Continuous"
 }
 
+// MARK: - Leave Data Model.
+struct Leave {
+    let id: UUID
+    let DoctorID: UUID
+    let HospitalID: UUID
+    var type: LeaveType
+    let reason: String
+    let startDate: Date
+    let endDate: Date
+    var status: LeaveStatus
+}
+
+// MARK: - Leave Status Enum
+enum LeaveStatus {
+    case pending
+    case approved
+    case rejected
+}
+
+// MARK: - Leave Types Enum
+enum LeaveType: String, CaseIterable, Identifiable {
+    case sickLeave = "Sick Leave"
+    case casualLeave = "Casual Leave"
+    case annualLeave = "Annual Leave"
+    case emergencyLeave = "Emergency Leave"
+    case maternityPaternityLeave = "Maternity/Paternity Leave"
+    case conferenceLeave = "Conference Leave"
+    
+    var id: String { self.rawValue } // ✅ Conforms to Identifiable
+    var displayName: String { self.rawValue }
+}
+
