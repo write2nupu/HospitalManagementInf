@@ -28,120 +28,53 @@ struct DoctorListView: View {
     private var filteredDoctors: [Doctor] {
         if searchText.isEmpty {
             return doctors
-        } else {
-            return doctors.filter { doctor in
-                let name = doctor.full_name.lowercased()
-                let search = searchText.lowercased()
-                
-                // Filter by name only since 'specialization' doesn't exist
-                return name.contains(search)
-            }
         }
+        
+        let searchQuery = searchText.lowercased()
+            return doctors.filter { doctor in
+            // Break down the filtering logic into simpler steps
+            let nameMatch = doctor.full_name.lowercased().contains(searchQuery)
+            return nameMatch
+        }
+    }
+    
+    // If you need to filter by other properties, you can add them like this:
+    private func doctorMatchesSearch(_ doctor: Doctor, _ searchQuery: String) -> Bool {
+        let nameMatch = doctor.full_name.lowercased().contains(searchQuery)
+        
+        // Add other filter conditions if needed
+        // let specialtyMatch = doctor.specialty?.lowercased().contains(searchQuery) ?? false
+        
+        return nameMatch // || specialtyMatch
     }
     
     var body: some View {
         VStack(spacing: 0) {
-            // Custom Search Bar
-            HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16))
-                    .foregroundColor(.gray)
-                
-                TextField("Search by doctor name", text: $searchText)
-                    .font(.body)
-                
-                if !searchText.isEmpty {
-                    Button(action: {
-                        searchText = ""
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(.gray)
-                    }
-                }
-            }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(.systemGray6))
-            )
-            .padding(.horizontal)
-            .padding(.top)
+            SearchBarView(searchText: $searchText)
             
         ScrollView {
                 if filteredDoctors.isEmpty {
-                    VStack(spacing: 20) {
-                        Spacer().frame(height: 60)
-                        
-                        if searchText.isEmpty {
-                            Image(systemName: "person.2.slash")
-                                .font(.system(size: 50))
-                                .foregroundColor(.gray)
-                            
-                            Text("No doctors available")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                        } else {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 50))
-                                .foregroundColor(.gray)
-                            
-                            Text("No doctors match '\(searchText)'")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                            
-                            Button("Clear Search") {
-                                searchText = ""
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(Color.mint)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                        }
-                        
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 40)
+                    EmptyStateView(
+                        searchText: searchText,
+                        onClearSearch: { searchText = "" }
+                    )
                 } else {
-                    // Results Counter
-                    if !searchText.isEmpty {
-                        HStack {
-                            Text("Found \(filteredDoctors.count) doctor(s)")
-                                .font(.footnote)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                        }
-                        .padding(.horizontal)
-                        .padding(.top, 10)
-                    }
-                    
-            VStack(spacing: 15) {
-                        ForEach(filteredDoctors) { doctor in
-                    Button(action: {
+                    FilteredDoctorListView(
+                        doctors: filteredDoctors,
+                        departmentDetails: departmentDetails,
+                        onDoctorSelect: { doctor in
                         selectedDoctor = doctor
                                 showAppointmentBookingModal = true
-                    }) {
-                        doctorCard(doctor: doctor)
-                    }
-                }
-            }
-            .padding()
+                        },
+                        searchText: searchText
+                    )
                 }
             }
         }
         .navigationTitle("Select Doctor")
         .background(Color.mint.opacity(0.05))
         .task {
-            // Fetch department details for each doctor
-            for doctor in doctors {
-                if let departmentId = doctor.department_id {
-                    if let department = await supabaseController.fetchDepartmentDetails(departmentId: departmentId) {
-                        departmentDetails[departmentId] = department
-                    }
-                }
-            }
+            await loadDepartmentDetails()
         }
         .onChange(of: coordinator.shouldDismissToRoot) { shouldDismiss in
             print("🔄 DoctorListView: shouldDismissToRoot changed to \(shouldDismiss)")
@@ -164,6 +97,7 @@ struct DoctorListView: View {
                     selectedTimeSlot: $selectedTimeSlot,
                     isBookingAppointment: $isBookingAppointment,
                     bookingError: $bookingError,
+                    initialDepartmentDetails: departmentDetails[doctor.department_id ?? UUID()],
                     onBookAppointment: bookAppointment,
                     selectedAppointmentType: $selectedAppointmentType
                 )
@@ -180,86 +114,144 @@ struct DoctorListView: View {
         }
     }
     
-    // Book appointment function
-    func bookAppointment() {
-        guard let timeSlot = selectedTimeSlot else {
-            // Cannot book without a time slot
-            bookingError = NSError(domain: "AppointmentBooking", 
-                                 code: 1, 
-                                 userInfo: [NSLocalizedDescriptionKey: "Please select a time slot"])
-            return
-        }
-        
-        // Check if user already has an appointment at this date and time
-        if isTimeSlotAlreadyBooked(date: selectedDate, timeSlot: timeSlot) {
-            bookingError = NSError(domain: "AppointmentBooking", 
-                                 code: 2, 
-                                 userInfo: [NSLocalizedDescriptionKey: "You already have an appointment at this date and time"])
-            return
-        }
-        
-        // Start booking process
-        isBookingAppointment = true
-        bookingError = nil
-        
-        // Simulate booking process with a delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            guard let doctor = self.selectedDoctor else { return }
-            
-            // Prepare appointment details
-            let appointmentDetails: [String: Any] = [
-                "id": UUID().uuidString,
-                "doctorName": doctor.full_name,
-                "doctorSpecialty": self.departmentDetails[doctor.department_id ?? UUID()]?.name ?? "Unknown Specialty",
-                "date": self.selectedDate,
-                "timeSlot": timeSlot,
-                "appointmentType": self.selectedAppointmentType?.rawValue ?? "Consultation",
-                "timestamp": Date() // Add timestamp for latest appointment tracking
-            ]
-            
-            // Get existing appointments
-            var savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
-            
-            // Add new appointment
-            savedAppointments.append(appointmentDetails)
-            
-            // Save to UserDefaults
-            UserDefaults.standard.set(savedAppointments, forKey: "savedAppointments")
-            
-            // Reset state
-            self.isBookingAppointment = false
-            self.showAppointmentBookingModal = false
-            self.selectedTimeSlot = nil
-            self.selectedAppointmentType = nil
-            self.dismiss()
+    private func loadDepartmentDetails() async {
+        for doctor in doctors {
+            if let departmentId = doctor.department_id {
+                if let department = await supabaseController.fetchDepartmentDetails(departmentId: departmentId) {
+                    departmentDetails[departmentId] = department
+                }
+            }
         }
     }
     
-    // Check if user already has an appointment at this date and time
-    private func isTimeSlotAlreadyBooked(date: Date, timeSlot: String) -> Bool {
-        // Get existing appointments
-        let savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
+    // Book appointment function
+    func bookAppointment() {
+        guard let timeSlot = selectedTimeSlot,
+              let doctor = selectedDoctor,
+              let appointmentType = selectedAppointmentType else {
+            bookingError = NSError(domain: "AppointmentBooking", 
+                                 code: 1, 
+                                 userInfo: [NSLocalizedDescriptionKey: "Please select all required fields"])
+            return
+        }
         
-        // Create calendar for date comparison
-        let calendar = Calendar.current
+        Task {
+        isBookingAppointment = true
+        bookingError = nil
         
-        // Check if any appointment matches the date and time slot
-        return savedAppointments.contains { appointment in
-            guard let appointmentDate = appointment["date"] as? Date,
-                  let appointmentTimeSlot = appointment["timeSlot"] as? String else {
-                return false
+            do {
+                // Create the appointment using actual API call
+                let appointment = Appointment(
+                    id: UUID(),
+                    patientId: UUID(), // Replace with actual patient ID
+                    doctorId: doctor.id,
+                    date: selectedDate,
+                    status: .scheduled,
+                    createdAt: Date(),
+                    type: .Consultation
+                )
+                
+                // Save the appointment to Supabase
+                // Add the appropriate method to SupabaseController to save appointments
+                // try await supabaseController.createAppointment(appointment)
+                
+                await MainActor.run {
+                    isBookingAppointment = false
+                    showAppointmentBookingModal = false
+                    selectedTimeSlot = nil
+                    selectedAppointmentType = nil
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    bookingError = error
+                    isBookingAppointment = false
+                }
             }
-            
-            // Compare dates (same day) and time slot
-            let sameDay = calendar.isDate(appointmentDate, inSameDayAs: date)
-            let sameTimeSlot = appointmentTimeSlot == timeSlot
-            
-            return sameDay && sameTimeSlot
         }
     }
+}
 
-    // MARK: - Doctor Card UI
-    private func doctorCard(doctor: Doctor) -> some View {
+// MARK: - Search Bar Component
+struct SearchBarView: View {
+    @Binding var searchText: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 16))
+                .foregroundColor(.gray)
+            
+            TextField("Search by doctor name", text: $searchText)
+                .font(.body)
+            
+            if !searchText.isEmpty {
+                Button(action: {
+                    searchText = ""
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(.systemGray6))
+        )
+        .padding(.horizontal)
+        .padding(.top)
+    }
+}
+
+// MARK: - Empty State View
+struct EmptyStateView: View {
+    let searchText: String
+    let onClearSearch: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer().frame(height: 60)
+            
+            if searchText.isEmpty {
+                Image(systemName: "person.2.slash")
+                    .font(.system(size: 50))
+                    .foregroundColor(.gray)
+                
+                Text("No doctors available")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+            } else {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 50))
+                    .foregroundColor(.gray)
+                
+                Text("No doctors match '\(searchText)'")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                
+                Button("Clear Search", action: onClearSearch)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.mint)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+            }
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 40)
+    }
+}
+
+// MARK: - Doctor Card View
+struct DoctorCardView: View {
+    let doctor: Doctor
+    let departmentDetails: [UUID: Department]
+    
+    var body: some View {
         HStack(spacing: 15) {
             // Doctor avatar
             ZStack {
@@ -280,36 +272,16 @@ struct DoctorListView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
 
-                HStack(spacing: 20) {
                 if let departmentId = doctor.department_id,
                    let department = departmentDetails[departmentId] {
-                        HStack(spacing: 4) {
-                            Image(systemName: "building.2")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            
-                    Text(department.name)
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                                .lineLimit(1)
-                        }
-                        
-                        HStack(spacing: 4) {
-                            Image(systemName: "indianrupeesign")
-                                .font(.caption)
-                        .foregroundColor(.gray)
-
-                            Text("\(Int(department.fees))")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                        .foregroundColor(.mint)
-                        }
+                    HStack(spacing: 20) {
+                        DepartmentInfoView(department: department)
+                        FeeInfoView(department: department)
                     }
                 }
             }
             Spacer()
             
-            // Chevron indicator
             Image(systemName: "chevron.right")
                 .foregroundColor(.mint)
                 .font(.caption)
@@ -323,9 +295,79 @@ struct DoctorListView: View {
     }
 }
 
+// MARK: - Department Info View
+struct DepartmentInfoView: View {
+    let department: Department
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "building.2")
+                .font(.caption)
+                .foregroundColor(.gray)
+            
+            Text(department.name)
+                .font(.caption)
+                .foregroundColor(.gray)
+                .lineLimit(1)
+        }
+    }
+}
+
+// MARK: - Fee Info View
+struct FeeInfoView: View {
+    let department: Department
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "indianrupeesign")
+                .font(.caption)
+                .foregroundColor(.gray)
+            
+            Text("\(Int(department.fees))")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(.mint)
+        }
+    }
+}
+
+// MARK: - Filtered Doctor List View
+struct FilteredDoctorListView: View {
+    let doctors: [Doctor]
+    let departmentDetails: [UUID: Department]
+    let onDoctorSelect: (Doctor) -> Void
+    let searchText: String
+    
+    var body: some View {
+        VStack {
+            if !searchText.isEmpty {
+                HStack {
+                    Text("Found \(doctors.count) doctor(s)")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.top, 10)
+            }
+            
+            VStack(spacing: 15) {
+                ForEach(doctors) { doctor in
+                    Button(action: { onDoctorSelect(doctor) }) {
+                        DoctorCardView(doctor: doctor, departmentDetails: departmentDetails)
+                    }
+                }
+            }
+            .padding()
+        }
+    }
+}
+
 // MARK: - Doctor Details Section View
 struct DoctorDetailsSectionView: View {
     let doctor: Doctor
+    @State private var departmentDetails: Department?
+    @StateObject private var supabaseController = SupabaseController()
     
     var body: some View {
         Section(header: Text("Doctor Details")) {
@@ -335,10 +377,17 @@ struct DoctorDetailsSectionView: View {
                 VStack(alignment: .leading) {
                     Text(doctor.full_name)
                         .font(.headline)
-                    Text("Consultation Fee: ₹20")
+                    if let department = departmentDetails {
+                        Text("Consultation Fee: ₹\(String(format: "%.2f", department.fees))")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
+                }
+            }
+        }
+        .task {
+            if let departmentId = doctor.department_id {
+                departmentDetails = await supabaseController.fetchDepartmentDetails(departmentId: departmentId)
             }
         }
     }
@@ -407,7 +456,8 @@ struct TimeSlotSectionView: View {
     @Binding var selectedTimeSlot: String?
     @Binding var showTimeSlotWarning: Bool
     @Binding var timeSlotError: String
-    let isTimeSlotAlreadyBooked: (Date, String) -> Bool
+    let doctor: Doctor
+    @StateObject private var supabaseController = SupabaseController()
     
     var body: some View {
         Section(header: Text("Select Time Slot")) {
@@ -415,35 +465,24 @@ struct TimeSlotSectionView: View {
                 HStack(spacing: 10) {
                     ForEach(timeSlots, id: \.self) { slot in
                         Button(action: {
-                            if isTimeSlotAlreadyBooked(selectedDate, slot) {
-                                timeSlotError = "You already have an appointment scheduled at this time slot. Please select a different time."
-                                showTimeSlotWarning = true
-                            } else {
-                                selectedTimeSlot = slot
-                                showTimeSlotWarning = false
-                            }
+                            checkAndSelectTimeSlot(slot)
                         }) {
                             Text(slot)
                                 .padding(10)
                                 .background(
                                     selectedTimeSlot == slot ?
                                     Color.mint :
-                                    isTimeSlotAlreadyBooked(selectedDate, slot) ?
-                                    Color.red.opacity(0.2) : Color.gray.opacity(0.2)
+                                    Color.gray.opacity(0.2)
                                 )
                                 .foregroundColor(
                                     selectedTimeSlot == slot ?
-                                    .white :
-                                    isTimeSlotAlreadyBooked(selectedDate, slot) ?
-                                    .red : .primary
+                                    .white : .primary
                                 )
                                 .cornerRadius(10)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 10)
                                         .stroke(
-                                            selectedTimeSlot == slot ? Color.mint :
-                                            isTimeSlotAlreadyBooked(selectedDate, slot) ?
-                                            Color.red : Color.gray,
+                                            selectedTimeSlot == slot ? Color.mint : Color.gray,
                                             lineWidth: 2
                                         )
                                 )
@@ -464,6 +503,33 @@ struct TimeSlotSectionView: View {
             }
         }
     }
+    
+    private func checkAndSelectTimeSlot(_ slot: String) {
+        Task {
+            do {
+                let isAvailable = try await supabaseController.checkTimeSlotAvailability(
+                    doctorId: doctor.id,
+                    date: selectedDate,
+                    timeSlot: slot
+                )
+                
+                await MainActor.run {
+                    if isAvailable {
+                        selectedTimeSlot = slot
+                        showTimeSlotWarning = false
+                    } else {
+                        timeSlotError = "This time slot is already booked. Please select another time."
+                        showTimeSlotWarning = true
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    timeSlotError = "Error checking time slot availability"
+                    showTimeSlotWarning = true
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Appointment Booking Modal View
@@ -475,27 +541,44 @@ struct AppointmentBookingView: View {
     @Binding var selectedTimeSlot: String?
     @Binding var isBookingAppointment: Bool
     @Binding var bookingError: Error?
+    @State private var departmentDetails: Department?
     var onBookAppointment: () -> Void
     @Binding var selectedAppointmentType: AppointmentType?
     @State private var showTimeSlotWarning = false
     @State private var timeSlotError = ""
     @State private var showPaymentView = false
     @State private var createdAppointment: Appointment?
-    @State private var departmentDetails: Department?
     @State private var hospitalDetails: Hospital?
     @StateObject private var coordinator = NavigationCoordinator.shared
     @Environment(\.rootNavigation) private var rootNavigation
+    @StateObject private var supabaseController = SupabaseController()
     
     // Appointment Types
     enum AppointmentType: String, CaseIterable {
         case consultation = "Consultation"
     }
     
-    private let timeSlots = [
-        "09:00 AM", "10:00 AM", "11:00 AM",
-        "02:00 PM", "03:00 PM", "04:00 PM"
-    ]
-    // Time slots for demonstration
+    // Remove hardcoded timeSlots and fetch from your data source if needed
+    @State private var availableTimeSlots: [String] = []
+    
+    // Add an initializer to set the initial department details
+    init(doctor: Doctor,
+         selectedDate: Binding<Date>,
+         selectedTimeSlot: Binding<String?>,
+         isBookingAppointment: Binding<Bool>,
+         bookingError: Binding<Error?>,
+         initialDepartmentDetails: Department?,
+         onBookAppointment: @escaping () -> Void,
+         selectedAppointmentType: Binding<AppointmentType?>) {
+        self.doctor = doctor
+        self._selectedDate = selectedDate
+        self._selectedTimeSlot = selectedTimeSlot
+        self._isBookingAppointment = isBookingAppointment
+        self._bookingError = bookingError
+        self._departmentDetails = State(initialValue: initialDepartmentDetails)
+        self.onBookAppointment = onBookAppointment
+        self._selectedAppointmentType = selectedAppointmentType
+    }
 
     var body: some View {
         NavigationView {
@@ -519,12 +602,12 @@ struct AppointmentBookingView: View {
                 }
                 
                 TimeSlotSectionView(
-                    timeSlots: timeSlots,
+                    timeSlots: availableTimeSlots,
                     selectedDate: selectedDate,
                     selectedTimeSlot: $selectedTimeSlot,
                     showTimeSlotWarning: $showTimeSlotWarning,
                     timeSlotError: $timeSlotError,
-                    isTimeSlotAlreadyBooked: isTimeSlotAlreadyBooked
+                    doctor: doctor
                 )
             }
             .navigationTitle("Book Appointment")
@@ -547,6 +630,7 @@ struct AppointmentBookingView: View {
             }
         }
         .task {
+            await loadAvailableTimeSlots()
             await fetchDepartmentAndHospitalDetails()
         }
         .sheet(isPresented: $showPaymentView) {
@@ -580,79 +664,79 @@ struct AppointmentBookingView: View {
     
     private func fetchDepartmentAndHospitalDetails() async {
         if let departmentId = doctor.department_id {
-            // Fetch department details from your data source
-            // This is a placeholder - replace with actual implementation
-            departmentDetails = Department(
-                id: departmentId,
-                name: "General Medicine",
-                description: "General Medical Department",
-                hospital_id: doctor.hospital_id ?? UUID(),
-                fees: 2000
-            )
+            do {
+                // Use existing method from SupabaseController
+                if let department = try await supabaseController.fetchDepartmentDetails(departmentId: departmentId) {
+                    departmentDetails = department
+                }
             
             if let hospitalId = doctor.hospital_id {
-                // Fetch hospital details from your data source
-                // This is a placeholder - replace with actual implementation
-                hospitalDetails = Hospital(
-                    id: hospitalId,
-                    name: "City Hospital",
-                    address: "123 Main Street",
-                    city: "City",
-                    state: "State",
-                    pincode: "12345",
-                    mobile_number: "1234567890",
-                    email: "hospital@example.com",
-                    license_number: "LIC123",
-                    is_active: true
-                )
+                    // Use existing method from SupabaseController
+                    hospitalDetails = try await supabaseController.fetchHospitalById(hospitalId: hospitalId)
+                }
+            } catch {
+                print("Error fetching details: \(error)")
             }
         }
     }
     
     private func createAppointmentAndProceed() {
         guard let department = departmentDetails,
-              let hospital = hospitalDetails else {
+              let hospital = hospitalDetails,
+              let timeSlot = selectedTimeSlot,
+              let appointmentType = selectedAppointmentType else {
             return
+        }
+        
+        Task {
+            do {
+                // Get current patient ID from UserDefaults or your auth system
+                guard let patientId = UserDefaults.standard.string(forKey: "currentPatientId"),
+                      let patientUUID = UUID(uuidString: patientId) else {
+                    throw NSError(domain: "", code: -1, 
+                                userInfo: [NSLocalizedDescriptionKey: "Patient ID not found"])
         }
         
         // Create the appointment
         let newAppointment = Appointment(
             id: UUID(),
-            patientId: UUID(), // Replace with actual patient ID
+                    patientId: patientUUID,
             doctorId: doctor.id,
             date: selectedDate,
             status: .scheduled,
             createdAt: Date(),
-            type: selectedAppointmentType == .consultation ? .Consultation : .Consultation
+                    type: .Consultation
         )
         
-        // Store the created appointment
+                // Store the created appointment using Supabase
+                try await supabaseController.createAppointment(appointment: newAppointment)
+                
+                // Store the created appointment for payment view
         createdAppointment = newAppointment
         
+                await MainActor.run {
         // Show payment view
         showPaymentView = true
     }
-    
-    // Check if a time slot is already booked
-    private func isTimeSlotAlreadyBooked(date: Date, slot: String) -> Bool {
-        // Get existing appointments
-        let savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
-        
-        // Create calendar for date comparison
-        let calendar = Calendar.current
-        
-        // Check if any appointment matches the date and time slot
-        return savedAppointments.contains { appointment in
-            guard let appointmentDate = appointment["date"] as? Date,
-                  let appointmentTimeSlot = appointment["timeSlot"] as? String else {
-                return false
+            } catch {
+                await MainActor.run {
+                    bookingError = error
+                    showTimeSlotWarning = true
+                    timeSlotError = error.localizedDescription
+                }
             }
-            
-            // Compare dates (same day) and time slot
-            let sameDay = calendar.isDate(appointmentDate, inSameDayAs: date)
-            let sameTimeSlot = appointmentTimeSlot == slot
-            
-            return sameDay && sameTimeSlot
+        }
+    }
+    
+    private func loadAvailableTimeSlots() async {
+        do {
+            availableTimeSlots = try await supabaseController.getAvailableTimeSlots(
+                doctorId: doctor.id,
+                date: selectedDate
+            )
+        } catch {
+            print("Error loading time slots: \(error)")
+            availableTimeSlots = []
         }
     }
 }

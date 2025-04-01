@@ -1459,4 +1459,54 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
             throw error
         }
     }
+    
+    func createAppointment(appointment: Appointment) async throws {
+        try await client
+            .from("Appointment")
+            .insert(appointment)
+            .execute()
+    }
+    
+    func checkTimeSlotAvailability(doctorId: UUID, date: Date, timeSlot: String) async throws -> Bool {
+        let appointments: [Appointment] = try await client
+            .from("Appointment")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .eq("date", value: ISO8601DateFormatter().string(from: date))
+            .eq("timeSlot", value: timeSlot)
+            .execute()
+            .value
+        
+        return appointments.isEmpty
+    }
+    
+    func getAvailableTimeSlots(doctorId: UUID, date: Date) async throws -> [String] {
+        // Get all appointments for the doctor on the given date
+        let appointments: [Appointment] = try await client
+            .from("Appointment")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .eq("date", value: ISO8601DateFormatter().string(from: date))
+            .execute()
+            .value
+        
+        // Define all possible time slots
+        let allSlots = [
+            "09:00 AM", "10:00 AM", "11:00 AM",
+            "02:00 PM", "03:00 PM", "04:00 PM"
+        ]
+        
+        // Get booked time slots from appointments
+        let bookedSlots = appointments.compactMap { appointment -> String? in
+            // Convert the appointment's createdAt date to a time string
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "hh:mm a"
+            return dateFormatter.string(from: appointment.createdAt)
+        }
+        
+        // Return available slots (all slots except booked ones)
+        return allSlots.filter { timeSlot in
+            !bookedSlots.contains(timeSlot)
+        }
+    }
 }
