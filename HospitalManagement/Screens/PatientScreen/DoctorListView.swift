@@ -17,6 +17,8 @@ struct DoctorListView: View {
     @State private var searchText = ""
     @StateObject private var coordinator = NavigationCoordinator.shared
     @Environment(\.rootNavigation) private var rootNavigation
+    @State private var showTimeSlotWarning = false
+    @State private var timeSlotError = ""
     
     // Time slots for demonstration
     private let timeSlots = [
@@ -29,12 +31,9 @@ struct DoctorListView: View {
         if searchText.isEmpty {
             return doctors
         }
-        
         let searchQuery = searchText.lowercased()
-            return doctors.filter { doctor in
-            // Break down the filtering logic into simpler steps
-            let nameMatch = doctor.full_name.lowercased().contains(searchQuery)
-            return nameMatch
+        return doctors.filter { doctor in
+            doctor.full_name.lowercased().contains(searchQuery)
         }
     }
     
@@ -52,7 +51,7 @@ struct DoctorListView: View {
         VStack(spacing: 0) {
             SearchBarView(searchText: $searchText)
             
-        ScrollView {
+            ScrollView {
                 if filteredDoctors.isEmpty {
                     EmptyStateView(
                         searchText: searchText,
@@ -63,10 +62,12 @@ struct DoctorListView: View {
                         doctors: filteredDoctors,
                         departmentDetails: departmentDetails,
                         onDoctorSelect: { doctor in
-                        selectedDoctor = doctor
-                                showAppointmentBookingModal = true
+                            selectedDoctor = doctor
+                            showAppointmentBookingModal = true
                         },
-                        searchText: searchText
+                        searchText: searchText,
+                        showTimeSlotWarning: $showTimeSlotWarning,
+                        timeSlotError: $timeSlotError
                     )
                 }
             }
@@ -77,17 +78,9 @@ struct DoctorListView: View {
             await loadDepartmentDetails()
         }
         .onChange(of: coordinator.shouldDismissToRoot) { shouldDismiss in
-            print("🔄 DoctorListView: shouldDismissToRoot changed to \(shouldDismiss)")
             if shouldDismiss {
-                print("👋 DoctorListView: Dismissing view")
                 dismiss()
             }
-        }
-        .onAppear {
-            print("👀 DoctorListView: View appeared")
-        }
-        .onDisappear {
-            print("👋 DoctorListView: View disappeared")
         }
         .sheet(isPresented: $showAppointmentBookingModal) {
             if let doctor = selectedDoctor {
@@ -124,7 +117,6 @@ struct DoctorListView: View {
         }
     }
     
-    // Book appointment function
     func bookAppointment() {
         guard let timeSlot = selectedTimeSlot,
               let doctor = selectedDoctor,
@@ -136,14 +128,19 @@ struct DoctorListView: View {
         }
         
         Task {
-        isBookingAppointment = true
-        bookingError = nil
-        
+            isBookingAppointment = true
+            bookingError = nil
+            
             do {
-                // Create the appointment using actual API call
+                guard let patientId = UserDefaults.standard.string(forKey: "currentPatientId"),
+                      let patientUUID = UUID(uuidString: patientId) else {
+                    throw NSError(domain: "", code: -1, 
+                                userInfo: [NSLocalizedDescriptionKey: "Patient ID not found"])
+                }
+                
                 let appointment = Appointment(
                     id: UUID(),
-                    patientId: UUID(), // Replace with actual patient ID
+                    patientId: patientUUID,
                     doctorId: doctor.id,
                     date: selectedDate,
                     status: .scheduled,
@@ -151,9 +148,7 @@ struct DoctorListView: View {
                     type: .Consultation
                 )
                 
-                // Save the appointment to Supabase
-                // Add the appropriate method to SupabaseController to save appointments
-                // try await supabaseController.createAppointment(appointment)
+                try await supabaseController.createAppointment(appointment: appointment)
                 
                 await MainActor.run {
                     isBookingAppointment = false
@@ -337,6 +332,8 @@ struct FilteredDoctorListView: View {
     let departmentDetails: [UUID: Department]
     let onDoctorSelect: (Doctor) -> Void
     let searchText: String
+    @Binding var showTimeSlotWarning: Bool
+    @Binding var timeSlotError: String
     
     var body: some View {
         VStack {
@@ -353,7 +350,14 @@ struct FilteredDoctorListView: View {
             
             VStack(spacing: 15) {
                 ForEach(doctors) { doctor in
-                    Button(action: { onDoctorSelect(doctor) }) {
+                    Button(action: {
+                        if UserDefaults.standard.string(forKey: "currentPatientId") == nil {
+                            timeSlotError = "Please log in to book an appointment"
+                            showTimeSlotWarning = true
+                        } else {
+                            onDoctorSelect(doctor)
+                        }
+                    }) {
                         DoctorCardView(doctor: doctor, departmentDetails: departmentDetails)
                     }
                 }
@@ -451,84 +455,121 @@ struct AppointmentTypeSectionView: View {
 
 // MARK: - Time Slot Section View
 struct TimeSlotSectionView: View {
-    let timeSlots: [String]
     let selectedDate: Date
-    @Binding var selectedTimeSlot: String?
+    @Binding var selectedShift: AppointmentShift?
     @Binding var showTimeSlotWarning: Bool
     @Binding var timeSlotError: String
     let doctor: Doctor
     @StateObject private var supabaseController = SupabaseController()
+    @State private var isCheckingAvailability = false
     
     var body: some View {
-        Section(header: Text("Select Time Slot")) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(timeSlots, id: \.self) { slot in
-                        Button(action: {
-                            checkAndSelectTimeSlot(slot)
-                        }) {
-                            Text(slot)
-                                .padding(10)
-                                .background(
-                                    selectedTimeSlot == slot ?
-                                    Color.mint :
-                                    Color.gray.opacity(0.2)
-                                )
-                                .foregroundColor(
-                                    selectedTimeSlot == slot ?
-                                    .white : .primary
-                                )
-                                .cornerRadius(10)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(
-                                            selectedTimeSlot == slot ? Color.mint : Color.gray,
-                                            lineWidth: 2
-                                        )
-                                )
+        Section(header: Text("Select Shift")) {
+            VStack(spacing: 15) {
+                ForEach(AppointmentShift.allCases) { shift in
+                    ShiftButton(
+                        shift: shift,
+                        isSelected: selectedShift == shift,
+                        isLoading: isCheckingAvailability && selectedShift == shift,
+                        action: {
+                            if !isCheckingAvailability {
+                                checkAndSelectShift(shift)
+                            }
                         }
-                    }
+                    )
                 }
             }
+            .padding(.vertical, 5)
             
             if showTimeSlotWarning {
-                HStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
-                    Text(timeSlotError)
-                        .font(.footnote)
-                        .foregroundColor(.red)
-                }
-                .padding(.vertical, 5)
+                WarningMessage(message: timeSlotError)
             }
         }
     }
     
-    private func checkAndSelectTimeSlot(_ slot: String) {
+    private func checkAndSelectShift(_ shift: AppointmentShift) {
+        isCheckingAvailability = true
+        showTimeSlotWarning = false
+        
         Task {
             do {
-                let isAvailable = try await supabaseController.checkTimeSlotAvailability(
+                let isAvailable = try await supabaseController.checkShiftAvailability(
                     doctorId: doctor.id,
                     date: selectedDate,
-                    timeSlot: slot
+                    shift: shift
                 )
                 
                 await MainActor.run {
                     if isAvailable {
-                        selectedTimeSlot = slot
+                        selectedShift = shift
                         showTimeSlotWarning = false
                     } else {
-                        timeSlotError = "This time slot is already booked. Please select another time."
+                        timeSlotError = "This shift is already booked. Please select another shift."
                         showTimeSlotWarning = true
                     }
+                    isCheckingAvailability = false
                 }
             } catch {
                 await MainActor.run {
-                    timeSlotError = "Error checking time slot availability"
+                    timeSlotError = "Error checking shift availability"
                     showTimeSlotWarning = true
+                    isCheckingAvailability = false
                 }
             }
         }
+    }
+}
+
+// Helper Views to break up complex expressions
+struct ShiftButton: View {
+    let shift: AppointmentShift
+    let isSelected: Bool
+    let isLoading: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(shift.rawValue)
+                        .font(.headline)
+                }
+                Spacer()
+                
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                } else if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.mint)
+                }
+            }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isSelected ? Color.mint.opacity(0.1) : Color.gray.opacity(0.1))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? Color.mint : Color.gray, lineWidth: 1)
+            )
+        }
+        .disabled(isLoading)
+    }
+}
+
+struct WarningMessage: View {
+    let message: String
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.red)
+            Text(message)
+                .font(.footnote)
+                .foregroundColor(.red)
+        }
+        .padding(.vertical, 5)
     }
 }
 
@@ -552,6 +593,7 @@ struct AppointmentBookingView: View {
     @StateObject private var coordinator = NavigationCoordinator.shared
     @Environment(\.rootNavigation) private var rootNavigation
     @StateObject private var supabaseController = SupabaseController()
+    @State private var selectedShift: AppointmentShift?
     
     // Appointment Types
     enum AppointmentType: String, CaseIterable {
@@ -597,14 +639,13 @@ struct AppointmentBookingView: View {
                               displayedComponents: .date)
                         .datePickerStyle(GraphicalDatePickerStyle())
                         .onChange(of: selectedDate) { _ in
-                            selectedTimeSlot = nil
+                            selectedShift = nil
                         }
                 }
                 
                 TimeSlotSectionView(
-                    timeSlots: availableTimeSlots,
                     selectedDate: selectedDate,
-                    selectedTimeSlot: $selectedTimeSlot,
+                    selectedShift: $selectedShift,
                     showTimeSlotWarning: $showTimeSlotWarning,
                     timeSlotError: $timeSlotError,
                     doctor: doctor
@@ -616,7 +657,7 @@ struct AppointmentBookingView: View {
                     createAppointmentAndProceed()
                 }
                 .disabled(
-                    selectedTimeSlot == nil ||
+                    selectedShift == nil ||
                     selectedAppointmentType == nil ||
                     isBookingAppointment
                 )
@@ -648,17 +689,9 @@ struct AppointmentBookingView: View {
             }
         }
         .onChange(of: coordinator.shouldDismissToRoot) { shouldDismiss in
-            print("🔄 AppointmentBookingView: shouldDismissToRoot changed to \(shouldDismiss)")
             if shouldDismiss {
-                print("👋 AppointmentBookingView: Dismissing view")
                 dismiss()
             }
-        }
-        .onAppear {
-            print("👀 AppointmentBookingView: View appeared")
-        }
-        .onDisappear {
-            print("👋 AppointmentBookingView: View disappeared")
         }
     }
     
@@ -681,48 +714,49 @@ struct AppointmentBookingView: View {
     }
     
     private func createAppointmentAndProceed() {
-        guard let department = departmentDetails,
-              let hospital = hospitalDetails,
-              let timeSlot = selectedTimeSlot,
-              let appointmentType = selectedAppointmentType else {
+        guard let shift = selectedShift else {
+            timeSlotError = "Please select a shift"
+            showTimeSlotWarning = true
+            return
+        }
+        
+        guard let patientIdString = UserDefaults.standard.string(forKey: "currentPatientId"),
+              let patientId = UUID(uuidString: patientIdString) else {
+            timeSlotError = "Patient ID not found. Please log in again."
+            showTimeSlotWarning = true
             return
         }
         
         Task {
+            isBookingAppointment = true
             do {
-                // Get current patient ID from UserDefaults or your auth system
-                guard let patientId = UserDefaults.standard.string(forKey: "currentPatientId"),
-                      let patientUUID = UUID(uuidString: patientId) else {
-                    throw NSError(domain: "", code: -1, 
-                                userInfo: [NSLocalizedDescriptionKey: "Patient ID not found"])
-        }
-        
-        // Create the appointment
-        let newAppointment = Appointment(
-            id: UUID(),
-                    patientId: patientUUID,
-            doctorId: doctor.id,
-            date: selectedDate,
-            status: .scheduled,
-            createdAt: Date(),
-                    type: .Consultation
-        )
-        
-                // Store the created appointment using Supabase
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.timeZone = TimeZone.current
+                
+                let appointmentDate = calendar.startOfDay(for: selectedDate)
+                
+                let newAppointment = Appointment(
+                    id: UUID(),
+                    patientId: patientId,
+                    doctorId: doctor.id,
+                    date: appointmentDate,
+                    status: .scheduled,
+                    createdAt: shift.timeRange.start,
+                    type: .Consultation,
+                    prescriptionId: nil  // Set prescriptionId to nil
+                )
+                
                 try await supabaseController.createAppointment(appointment: newAppointment)
                 
-                // Store the created appointment for payment view
-        createdAppointment = newAppointment
-        
                 await MainActor.run {
-        // Show payment view
-        showPaymentView = true
-    }
+                    isBookingAppointment = false
+                    dismiss()
+                }
             } catch {
                 await MainActor.run {
-                    bookingError = error
+                    timeSlotError = "Error booking appointment: \(error.localizedDescription)"
                     showTimeSlotWarning = true
-                    timeSlotError = error.localizedDescription
+                    isBookingAppointment = false
                 }
             }
         }

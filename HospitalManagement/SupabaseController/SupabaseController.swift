@@ -8,6 +8,9 @@
 import Foundation
 import Supabase
 
+// Add this import if AppointmentShift is in a separate module
+// import YourModuleName
+
 class SupabaseController: ObservableObject {
     let client: SupabaseClient
     private let encoder: JSONEncoder
@@ -689,7 +692,10 @@ func signInPatient(email: String, password: String) async throws -> Patient {
         throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Patient account not found. Please contact support."])
     }
     
-    print("Patient found:", patient.fullname)
+    // Store the patient ID in UserDefaults
+    UserDefaults.standard.set(patient.id.uuidString, forKey: "currentPatientId")
+    print("Stored patient ID in UserDefaults:", patient.id.uuidString)
+    
     return patient
 }
 
@@ -1461,9 +1467,23 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
     }
     
     func createAppointment(appointment: Appointment) async throws {
+        let dateFormatter = ISO8601DateFormatter()
+        
+        // Create appointment data with prescriptionId as null
+        let appointmentData: [String: AnyJSON] = [
+            "id": .string(appointment.id.uuidString),
+            "patientId": .string(appointment.patientId.uuidString),
+            "doctorId": .string(appointment.doctorId.uuidString),
+            "date": .string(dateFormatter.string(from: appointment.date)),
+            "status": .string(appointment.status.rawValue),
+            //"createdAt": .string(dateFormatter.string(from: appointment.createdAt)),
+            "type": .string(appointment.type.rawValue),
+            "prescriptionId": .null  // Explicitly set prescriptionId to null
+        ]
+        
         try await client
             .from("Appointment")
-            .insert(appointment)
+            .insert(appointmentData)
             .execute()
     }
     
@@ -1508,5 +1528,59 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
         return allSlots.filter { timeSlot in
             !bookedSlots.contains(timeSlot)
         }
+    }
+}
+
+extension SupabaseController {
+    func checkShiftAvailability(doctorId: UUID, date: Date, shift: AppointmentShift) async throws -> Bool {
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone.current // Set to device's time zone
+        
+        let startOfDay = calendar.startOfDay(for: date)
+        let shiftTimeRange = shift.timeRange
+        
+        // Create proper time range for the selected date
+        let shiftStart = calendar.date(
+            bySettingHour: calendar.component(.hour, from: shiftTimeRange.start),
+            minute: 0,
+            second: 0,
+            of: date // Use selected date instead of now
+        )!
+        
+        let shiftEnd = calendar.date(
+            bySettingHour: calendar.component(.hour, from: shiftTimeRange.end),
+            minute: 0,
+            second: 0,
+            of: date // Use selected date instead of now
+        )!
+        
+        // Add debug logging with proper time formatting
+        let debugFormatter = DateFormatter()
+        debugFormatter.dateFormat = "yyyy-MM-dd hh:mm a"
+        debugFormatter.timeZone = TimeZone.current
+        
+        print("Debug Info:")
+        print("Selected Date:", debugFormatter.string(from: date))
+        print("Shift:", shift.rawValue)
+        print("Shift Start:", debugFormatter.string(from: shiftStart))
+        print("Shift End:", debugFormatter.string(from: shiftEnd))
+        
+        // Format dates for Supabase query
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.timeZone = TimeZone.current
+        
+        // Check for existing appointments in this shift
+        let appointments: [Appointment] = try await client
+            .from("Appointment")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .eq("date", value: isoFormatter.string(from: date))
+            .gte("createdAt", value: isoFormatter.string(from: shiftStart))
+            .lt("createdAt", value: isoFormatter.string(from: shiftEnd))
+            .execute()
+            .value
+        
+        print("Found \(appointments.count) appointments in this shift")
+        return appointments.isEmpty
     }
 }
