@@ -69,8 +69,11 @@ struct BedPaymentConfirmationView: View {
             
             // Bottom Done Button
             Button(action: {
-                // Pop to root view (BookedBedView)
+                // Dismiss both sheets
                 dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    NotificationCenter.default.post(name: NSNotification.Name("DismissAllSheets"), object: nil)
+                }
             }) {
                 Text("Done")
                     .fontWeight(.semibold)
@@ -82,7 +85,18 @@ struct BedPaymentConfirmationView: View {
             }
             .padding()
         }
-        .navigationBarBackButtonHidden(true)
+        .navigationTitle("Booking Confirmation")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    dismiss()
+                }) {
+                    Text("Cancel")
+                        .foregroundColor(.red)
+                }
+            }
+        }
     }
     
     private func detailRow(icon: String, title: String) -> some View {
