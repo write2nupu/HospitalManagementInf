@@ -738,7 +738,7 @@ struct AppointmentDetailView: View {
                             
                             TextField("Search medicines...", text: $searchText)
                                 .textFieldStyle(PlainTextFieldStyle())
-                                .onChange(of: searchText) { newValue in
+                                .onChange(of: searchText) { _, newValue in
                                     if !newValue.isEmpty && newValue.count >= 2 {
                                         // Use debouncer for search
                                         isSearching = true // Show loading immediately

@@ -40,7 +40,7 @@ struct mainBoard: View {
                             }
                         }
                     }
-                } else if let doctor = doctor {
+                } else  {
                     TabView(selection: $selectedTab) {
                         DoctorDashBoard()
                             .tag(0)

@@ -52,10 +52,10 @@ struct LeaveApplicationView: View {
                             }
                             
                             DatePicker("Start Date", selection: $startDate, in: Date()..., displayedComponents: .date)
-                                .onChange(of: startDate) { _ in updateLeaveDays() }
+                                .onChange(of: startDate) {  updateLeaveDays() }
                             
                             DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
-                                .onChange(of: endDate) { _ in updateLeaveDays() }
+                                .onChange(of: endDate) { updateLeaveDays() }
                         }
                     }
                     .background(Color(UIColor.systemGroupedBackground))
