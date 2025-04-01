@@ -105,7 +105,7 @@ struct mainBoard: View {
                 return
             }
             
-            let doctors: [Doctor] = try await supabaseController.client.database
+            let doctors: [Doctor] = try await supabaseController.client
                 .from("Doctor")
                 .select()
                 .eq("id", value: doctorId)

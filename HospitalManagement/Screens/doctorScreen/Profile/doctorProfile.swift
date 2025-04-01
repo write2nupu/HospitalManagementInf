@@ -108,7 +108,7 @@ struct DoctorProfileView: View {
     private func fetchDoctorDetails() async {
         // Fetch updated doctor details
         do {
-            let doctors: [Doctor] = try await supabaseController.client.database
+            let doctors: [Doctor] = try await supabaseController.client
                 .from("Doctor")
                 .select()
                 .eq("id", value: doctor.id.uuidString)
