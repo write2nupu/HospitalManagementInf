@@ -30,30 +30,30 @@ struct PatientView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .top) {
-            Color(.systemGray5)
-                .opacity(0.2)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Fixed search bar at top
+        VStack(spacing: 8) {
+            // Header and Search
+            VStack(spacing: 8) {
                 PatientSearchBar(text: $searchText)
-                    .padding(.vertical, 50)
-                    .background(Color.white)
-                    .zIndex(1) // Ensures search bar stays on top
-                
-                // Scrollable content
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(filteredPatients, id: \.id) { patient in
-                            patientNavigationLink(patient)
-                        }
+                    .padding(.horizontal)
+                    .padding(.bottom, 3)
+            }
+            .background(Color.white)
+            .shadow(color: AppConfig.shadowColor, radius: 2, x: 0, y: 2)
+            .zIndex(1) // Keeps the search bar on top
+            
+            // Scrollable Content
+            ScrollView {
+                LazyVStack(spacing: 15) {
+                    ForEach(filteredPatients, id: \.id) { patient in
+                        patientNavigationLink(patient)
                     }
-                    .padding()
                 }
+                .padding(.top, 8)
+                .padding(.horizontal)
             }
         }
-        .frame(height: screenHeight - 130)
+        .background(Color(.systemGray6).opacity(0.2))
+        .ignoresSafeArea(.all, edges: .bottom)
     }
     
     private func patientNavigationLink(_ patient: Patient) -> some View {
@@ -72,14 +72,15 @@ struct PatientSearchBar: View {
                 .foregroundColor(.gray)
             TextField("Search patients...", text: $text)
                 .foregroundColor(.primary)
-                .padding(8)
+                .font(.subheadline) // 🔹 Reduced font size
+                .padding(6) // 🔹 Decreased padding
         }
-        .padding(10)
+        .padding(8) // 🔹 Reduced overall height
         .background(Color(.systemGray6))
-        .cornerRadius(10)
-        .padding(.horizontal)  // Ensures it aligns with title
+        .cornerRadius(8) // 🔹 Slightly reduced corner radius
     }
 }
+
 
 // 🔹 Patient Card View
 struct PatientCard: View {
@@ -87,9 +88,8 @@ struct PatientCard: View {
     
     var body: some View {
         HStack(spacing: 15) {
-          
             VStack(alignment: .leading, spacing: 5) {
-                Text(patient.fullname) // Fixed property name
+                Text(patient.fullname)
                     .font(.headline)
                 
                 HStack {
@@ -99,18 +99,16 @@ struct PatientCard: View {
                     
                     Spacer()
                     
-                    Text("No: \(patient.contactno)") // 🔹 Fixed property name
+                    Text("No: \(patient.contactno)")
                         .font(.subheadline)
                         .foregroundColor(.gray)
                 }
             }
-//            Spacer()
         }
         .padding()
-        .background(Color.white)
-        .cornerRadius(10)
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-        .padding(.horizontal)
+        .background(AppConfig.backgroundColor)
+        .cornerRadius(12)
+        .shadow(color: AppConfig.shadowColor, radius: 4, x: 0, y: 2)
     }
 }
 
