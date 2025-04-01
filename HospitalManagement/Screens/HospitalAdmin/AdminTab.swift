@@ -23,6 +23,11 @@ struct AdminTabView: View {
                         Label("Home", systemImage: "house.fill")
                     }
                 
+                AnalyticsView()
+                    .tabItem {
+                        Label("Analytics", systemImage: "chart.bar.fill")
+                    }
+                
                 BedView()
                     .tabItem {
                         Label("Bed", systemImage: "bed.double.circle")
