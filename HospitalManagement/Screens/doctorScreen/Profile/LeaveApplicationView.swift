@@ -161,6 +161,7 @@ struct LeaveApplicationView: View {
         }
         
         pendingLeave = Leave(
+            id: UUID(),
             DoctorID: Doctor.id,
             HospitalID: Doctor.hospital_id ?? UUID(),
             type: selectedLeaveType,
@@ -184,20 +185,21 @@ struct LeaveApplicationView: View {
 
 // MARK: - Leave Data Model
 struct Leave {
-    var DoctorID: UUID
-    var HospitalID: UUID
+    let id: UUID
+    let doctorId: UUID
+    let hospitalId: UUID
     var type: LeaveType
-    var reason: String
-    var startDate: Date
-    var endDate: Date
+    let reason: String
+    let startDate: Date
+    let endDate: Date
     var status: LeaveStatus
 }
 
 // MARK: - Leave Status Enum
-enum LeaveStatus {
-    case pending
-    case approved
-    case rejected
+enum LeaveStatus: String {
+    case pending = "Pending"
+    case approved = "Approved"
+    case rejected = "Rejected"
 }
 
 // MARK: - Leave Types Enum
@@ -209,7 +211,7 @@ enum LeaveType: String, CaseIterable, Identifiable {
     case maternityPaternityLeave = "Maternity/Paternity Leave"
     case conferenceLeave = "Conference Leave"
     
-    var id: String { self.rawValue } // ✅ Conforms to Identifiable
+    var id: String { self.rawValue }
     var displayName: String { self.rawValue }
 }
 
