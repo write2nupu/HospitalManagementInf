@@ -21,6 +21,9 @@ struct DoctorDashBoard: View {
     @State private var isViewActive = true
     @State private var loadDataTask: Task<Void, Never>?
     
+//    VARIABLE TO store Doctor Leave
+    @State private var docLeave: Leave? = Leave(id: UUID(), doctorId: UUID(), hospitalId: UUID(), type: .casualLeave, reason: "mera man", startDate: Date(), endDate: Date(), status: .pending)
+    
     // Computed property for upcoming appointments
     private var upcomingAppointments: [Appointment] {
         let now = Date()
@@ -94,6 +97,15 @@ struct DoctorDashBoard: View {
                         statCard(title: "Patients Handling", value: "\(activePatients)")
                     }
                     .padding(.horizontal)
+                    
+                    if let leave = docLeave{
+                        Text("Your leave")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
+                        LeaveStatusCard(leave: leave)
+                            .padding()
+                    }
                     
                     // **Upcoming Appointments Section**
                     VStack(alignment: .leading, spacing: 12) {

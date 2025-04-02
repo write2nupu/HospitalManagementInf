@@ -171,63 +171,88 @@ struct AppointmentView: View {
         }
     }
     
-    // ✅ Appointment Card View
+    // Updated appointment card with better UI
     func upcomingAppointmentCard(appointment: Appointment) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "person.fill")
-                    .foregroundColor(AppConfig.buttonColor)
-                    .font(.title2)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center, spacing: 12) {
+                // Patient Icon with Background
+                Circle()
+                    .fill(AppConfig.buttonColor.opacity(0.1))
+                    .frame(width: 45, height: 45)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .foregroundColor(AppConfig.buttonColor)
+                            .font(.system(size: 20))
+                    )
                 
-                Text(patientNames[appointment.patientId] ?? "Loading...")
-                    .font(.headline)
-                    .foregroundColor(.black)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(patientNames[appointment.patientId] ?? "Loading...")
+                        .font(.headline)
+                    
+                    Text(appointment.type.rawValue)
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
                 
                 Spacer()
                 
-                Text(appointment.status.rawValue.capitalized)
-                    .font(.subheadline)
-                    .foregroundColor(.white)
+                // Status Badge
+                Text(appointment.status.rawValue)
+                    .font(.caption)
+                    .fontWeight(.medium)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .clipShape(RoundedRectangle(cornerRadius: 15))
+                    .background(
+                        RoundedRectangle(cornerRadius: 15)
+                            .fill(statusColor(for: appointment.status).opacity(0.1))
+                    )
+                    .foregroundColor(statusColor(for: appointment.status))
             }
             
-            Text("Type: \(appointment.type.rawValue)")
-                .font(.footnote)
-                .foregroundColor(.black)
-
-            HStack {
-                Image(systemName: "calendar")
-                    .foregroundColor(AppConfig.buttonColor)
-                Text(formatDate(appointment.date))
-                    .font(.footnote)
-                    .fontWeight(.bold)
+            Divider()
+            
+            // Date and Time with Icons
+            HStack(spacing: 16) {
+                // Date
+                HStack(spacing: 8) {
+                    Image(systemName: "calendar")
+                        .foregroundColor(AppConfig.buttonColor)
+                    Text(formatDate(appointment.date, format: "MMM d, yyyy"))
+                        .font(.subheadline)
+                }
                 
                 Spacer()
                 
-                Image(systemName: "clock.fill")
-                    .foregroundColor(AppConfig.buttonColor)
-                Text(formatTime(appointment.date))
-                    .font(.footnote)
-                    .foregroundColor(.black)
+                // Time
+                HStack(spacing: 8) {
+                    Image(systemName: "clock.fill")
+                        .foregroundColor(AppConfig.buttonColor)
+                    Text(formatDate(appointment.date, format: "h:mm a"))
+                        .font(.subheadline)
+                }
             }
+            .foregroundColor(.gray)
         }
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 15)
-                .fill(Color.white)
-                .shadow(color: AppConfig.shadowColor, radius: 4, x: 0, y: 2)
-        )
-        .frame(width: screenWidth * 0.95)
-        .frame(height: 150)
-        .padding(.vertical, 8)
+        .background(Color(.systemBackground))
+        .cornerRadius(15)
+        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
     
-    // Function to format Date
-    func formatDate(_ date: Date) -> String {
+    func statusColor(for status: AppointmentStatus) -> Color {
+        switch status {
+        case .scheduled:
+            return .blue
+        case .completed:
+            return .green
+        case .cancelled:
+            return .red
+        }
+    }
+    
+    func formatDate(_ date: Date, format: String) -> String {
         let formatter = DateFormatter()
-        formatter.dateStyle = .medium
+        formatter.dateFormat = format
         return formatter.string(from: date)
     }
     
