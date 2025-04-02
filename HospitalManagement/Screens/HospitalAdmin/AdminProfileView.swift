@@ -7,7 +7,7 @@ struct AdminProfile: Codable {
     var email: String = ""
     var phone: String = ""
     var password: String = ""
-    let role: String = ""
+    var role: String = ""
 }
 
 struct EditContactSheet: View {

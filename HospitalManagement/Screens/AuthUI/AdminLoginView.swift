@@ -250,7 +250,7 @@ struct AdminLoginViewS: View {
                 TextField(placeholder, text: text)
                     .autocapitalization(.none)
                     .keyboardType(keyboardType)
-                    .onChange(of: text.wrappedValue) { newValue in
+                    .onChange(of: text.wrappedValue) { oldValue, newValue in
                         if placeholder == "Enter Email" {
                             if !newValue.isEmpty && !isValidEmail(newValue) {
                                 emailErrorMessage = "Please enter a valid email"
@@ -283,7 +283,7 @@ struct AdminLoginViewS: View {
                 if isPasswordVisible {
                     TextField(placeholder, text: text)
                         .autocapitalization(.none)
-                        .onChange(of: text.wrappedValue) { newValue in
+                        .onChange(of: text.wrappedValue) { oldValue, newValue in
                             if !newValue.isEmpty && !isValidPassword(newValue) {
                                 passwordErrorMessage = "Password must be at least 8 characters with 1 number, 1 letter, and 1 special character"
                             } else {
@@ -292,7 +292,7 @@ struct AdminLoginViewS: View {
                         }
                 } else {
                     SecureField(placeholder, text: text)
-                        .onChange(of: text.wrappedValue) { newValue in
+                        .onChange(of: text.wrappedValue) { oldValue, newValue in
                             if !newValue.isEmpty && !isValidPassword(newValue) {
                                 passwordErrorMessage = "Password must be at least 8 characters with 1 number, 1 letter, and 1 special character"
                             } else {

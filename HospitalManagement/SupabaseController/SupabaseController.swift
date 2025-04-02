@@ -1409,7 +1409,7 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
                 )
             }
             
-            var query = client
+            let query = client
                 .from("BedBooking")
                 .select("""
                 id,

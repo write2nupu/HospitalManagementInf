@@ -209,7 +209,7 @@ struct PatientLoginSignupView: View {
                 TextField(placeholder, text: text)
                     .autocapitalization(.none)
                     .keyboardType(keyboardType)
-                    .onChange(of: text.wrappedValue) { newValue in
+                    .onChange(of: text.wrappedValue) { oldValue, newValue in
                         if icon == "envelope.fill" {
                             isEmailValid = newValue.isEmpty || isValidEmail(newValue)
                             if !isEmailValid {
@@ -241,7 +241,7 @@ struct PatientLoginSignupView: View {
                 if isPasswordVisible {
                     TextField(placeholder, text: text)
                         .autocapitalization(.none)
-                        .onChange(of: text.wrappedValue) { newValue in
+                        .onChange(of: text.wrappedValue) { oldValue, newValue in
                             isPasswordValid = newValue.isEmpty || isValidPassword(newValue)
                             if !isPasswordValid {
                                 passwordErrorMessage = "Password must be at least 8 characters with 1 number, 1 letter, and 1 special character"
@@ -249,7 +249,7 @@ struct PatientLoginSignupView: View {
                         }
                 } else {
                     SecureField(placeholder, text: text)
-                        .onChange(of: text.wrappedValue) { newValue in
+                        .onChange(of: text.wrappedValue) { oldValue, newValue in
                             isPasswordValid = newValue.isEmpty || isValidPassword(newValue)
                             if !isPasswordValid {
                                 passwordErrorMessage = "Password must be at least 8 characters with 1 number, 1 letter, and 1 special character"
