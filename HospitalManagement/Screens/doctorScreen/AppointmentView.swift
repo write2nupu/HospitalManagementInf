@@ -67,7 +67,17 @@ struct AppointmentView: View {
             }
             .background(Color(UIColor.systemGray6))
             .sheet(item: $selectedAppointment) { appointment in
-                AppointmentDetailView(appointment: appointment)
+                AppointmentDetailView(
+                    appointment: appointment,
+                    onStatusUpdate: { newStatus in
+                        // Update the appointment status in the local array
+                        if let index = appointments.firstIndex(where: { $0.id == appointment.id }) {
+                            appointments[index].status = newStatus
+                        }
+                        // Refresh the view
+                        startLoadingData()
+                    }
+                )
             }
             .onAppear {
                 isViewActive = true
@@ -100,7 +110,7 @@ struct AppointmentView: View {
     
     private func startRefreshTimer() {
         stopRefreshTimer()
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
             if isViewActive {
                 startLoadingData()
             }

@@ -156,6 +156,7 @@ struct AppointmentDetailView: View {
    @StateObject private var supabase = SupabaseController()
    
    let appointment: Appointment
+   var onStatusUpdate: ((AppointmentStatus) -> Void)? // Add callback for status update
    
    @State private var selectedImage: UIImage?
    @State private var diagnosticTests: String = ""
@@ -163,6 +164,7 @@ struct AppointmentDetailView: View {
    @State private var isLoadingPrescription = true
    @State private var prescriptionError: Error?
    @State private var isEditable: Bool = false
+   @State private var currentStatus: AppointmentStatus // Add state for current status
    
    // Add new state variables for prescription
    @State private var diagnosis: String = ""
@@ -237,6 +239,12 @@ struct AppointmentDetailView: View {
        return isDiagnosisValid
    }
 
+   init(appointment: Appointment, onStatusUpdate: ((AppointmentStatus) -> Void)? = nil) {
+       self.appointment = appointment
+       self.onStatusUpdate = onStatusUpdate
+       _currentStatus = State(initialValue: appointment.status)
+   }
+
    var body: some View {
        NavigationView {
            VStack {
@@ -248,7 +256,20 @@ struct AppointmentDetailView: View {
                        Section(header: Text("Appointment Details").font(.headline)) {
                            InfoRowAppointment(label: "Appointment Type", value: appointment.type.rawValue)
                            InfoRowAppointment(label: "Date & Time", value: formatDate(appointment.date))
-                           InfoRowAppointment(label: "Status", value: appointment.status.rawValue)
+                           
+                           // Add status picker if appointment is not cancelled
+                           if appointment.status != .cancelled {
+                               Picker("Status", selection: $currentStatus) {
+                                   Text("Scheduled").tag(AppointmentStatus.scheduled)
+                                   Text("Completed").tag(AppointmentStatus.completed)
+                               }
+                               .pickerStyle(SegmentedPickerStyle())
+                               .onChange(of: currentStatus) { newStatus in
+                                   updateAppointmentStatus(to: newStatus)
+                               }
+                           } else {
+                               InfoRowAppointment(label: "Status", value: appointment.status.rawValue)
+                           }
                        }
                        
                        // Prescription Section
@@ -673,14 +694,17 @@ struct AppointmentDetailView: View {
                
                print("Successfully inserted new prescription")
                
-               // Update the appointment with the prescription ID
+               // Update the appointment with the prescription ID and status
                try await supabase.client
                    .from("Appointment")
-                   .update(["prescriptionId": prescriptionId.uuidString])
+                   .update([
+                       "prescriptionId": prescriptionId.uuidString,
+                       "status": AppointmentStatus.completed.rawValue
+                   ])
                    .eq("id", value: appointment.id.uuidString)
                    .execute()
                
-               print("Successfully updated appointment with prescription ID")
+               print("Successfully updated appointment with prescription ID and status")
                
                // Generate PDF with hospital and doctor details
                if let pdfData = PDFGenerator.generatePrescriptionPDF(data: prescriptionData, doctor: doctor, hospital: hospital) {
@@ -1215,6 +1239,17 @@ struct AppointmentDetailView: View {
                        dismiss()
                    }
                )
+           }
+       }
+   }
+   
+   private func updateAppointmentStatus(to newStatus: AppointmentStatus) {
+       Task {
+           do {
+               try await supabase.updateAppointmentStatus(appointmentId: appointment.id, status: newStatus)
+               onStatusUpdate?(newStatus) // Notify parent view of the status change
+           } catch {
+               print("Error updating appointment status: \(error)")
            }
        }
    }
