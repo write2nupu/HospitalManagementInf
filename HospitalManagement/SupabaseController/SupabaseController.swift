@@ -562,150 +562,150 @@ class SupabaseController: ObservableObject {
             print("Super admin already exists")
         }
     }
-
-// MARK: - Fetch Departments by Hospital
-func fetchHospitalDepartments(hospitalId: UUID) async throws -> [Department] {
-    let departments: [Department] = try await client
-        .from("Department")
-        .select()
-        .eq("hospital_id", value: hospitalId.uuidString)
-        .execute()
-        .value
-    return departments
-}
-
-// MARK: - Fetch Doctors by Department
-func getDoctorsByDepartment(departmentId: UUID) async throws -> [Doctor] {
-    let doctors: [Doctor] = try await client
-        .from("Doctor")
-        .select()
-        .eq("department_id", value: departmentId.uuidString)
-        .execute()
-        .value
-    return doctors
-}
-
-// MARK: - Patient Authentication
-func signUpPatient(email: String, password: String, userData: Patient) async throws -> Patient {
-    print("Attempting to sign up patient with email:", email)
     
-    let lowercaseEmail = email.lowercased()
-    
-    // First create the auth user
-    let authResponse = try await client.auth.signUp(
-        email: lowercaseEmail,
-        password: password
-    )
-    
-    print("Auth Response:", authResponse)
-    
-    let userId = authResponse.user.id
-    let currentDate = ISO8601DateFormatter().string(from: Date())
-    
-    // Create user record in users table
-    let user = users(
-        id: userId,
-        email: lowercaseEmail,
-        full_name: userData.fullname,
-        phone_number: userData.contactno,
-        role: "patient",
-        is_first_login: true,
-        is_active: true,
-        hospital_id: nil,
-        created_at: currentDate,
-        updated_at: currentDate
-    )
-    
-    try await client
-        .from("users")
-        .insert(user)
-        .execute()
-    
-    print("User added to users table successfully")
-    
-    // Create patient record with proper formatting
-    let dateFormatter = ISO8601DateFormatter()
-    let patientData: [String: AnyJSON] = [
-        "id": .string(userId.uuidString),
-        "fullname": .string(userData.fullname),
-        "gender": .string(userData.gender),
-        "dateofbirth": .string(dateFormatter.string(from: userData.dateofbirth)),
-        "contactno": .string(userData.contactno),
-        "email": .string(lowercaseEmail),
-        "detail_id": .null
-    ]
-    
-    print("Attempting to insert patient data:", patientData)
-    
-    let insertedPatients: [Patient] = try await client
-        .from("Patient")
-        .insert(patientData)
-        .select()
-        .execute()
-        .value
-    
-    guard let insertedPatient = insertedPatients.first else {
-        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create patient record"])
+    // MARK: - Fetch Departments by Hospital
+    func fetchHospitalDepartments(hospitalId: UUID) async throws -> [Department] {
+        let departments: [Department] = try await client
+            .from("Department")
+            .select()
+            .eq("hospital_id", value: hospitalId.uuidString)
+            .execute()
+            .value
+        return departments
     }
     
-    print("Patient added to Patient table successfully")
-    return insertedPatient
-}
-
-func signInPatient(email: String, password: String) async throws -> Patient {
-    print("Attempting to sign in patient with email:", email)
+    // MARK: - Fetch Doctors by Department
+    func getDoctorsByDepartment(departmentId: UUID) async throws -> [Doctor] {
+        let doctors: [Doctor] = try await client
+            .from("Doctor")
+            .select()
+            .eq("department_id", value: departmentId.uuidString)
+            .execute()
+            .value
+        return doctors
+    }
     
-    let lowercaseEmail = email.lowercased()
-    
-    // First authenticate the user
-    let authResponse = try await client.auth.signIn(
-        email: lowercaseEmail,
-        password: password
-    )
-    
-    print("Authentication successful")
-    print("User ID from auth:", authResponse.user.id)
-    
-    // Create a decoder that matches our date format
-    let decoder = JSONDecoder()
-    let dateFormatter = ISO8601DateFormatter()
-    decoder.dateDecodingStrategy = .custom { decoder in
-        let container = try decoder.singleValueContainer()
-        let dateString = try container.decode(String.self)
-        if let date = dateFormatter.date(from: dateString) {
-            return date
-        }
-        throw DecodingError.dataCorruptedError(
-            in: container,
-            debugDescription: "Cannot decode date string \(dateString)"
+    // MARK: - Patient Authentication
+    func signUpPatient(email: String, password: String, userData: Patient) async throws -> Patient {
+        print("Attempting to sign up patient with email:", email)
+        
+        let lowercaseEmail = email.lowercased()
+        
+        // First create the auth user
+        let authResponse = try await client.auth.signUp(
+            email: lowercaseEmail,
+            password: password
         )
+        
+        print("Auth Response:", authResponse)
+        
+        let userId = authResponse.user.id
+        let currentDate = ISO8601DateFormatter().string(from: Date())
+        
+        // Create user record in users table
+        let user = users(
+            id: userId,
+            email: lowercaseEmail,
+            full_name: userData.fullname,
+            phone_number: userData.contactno,
+            role: "patient",
+            is_first_login: true,
+            is_active: true,
+            hospital_id: nil,
+            created_at: currentDate,
+            updated_at: currentDate
+        )
+        
+        try await client
+            .from("users")
+            .insert(user)
+            .execute()
+        
+        print("User added to users table successfully")
+        
+        // Create patient record with proper formatting
+        let dateFormatter = ISO8601DateFormatter()
+        let patientData: [String: AnyJSON] = [
+            "id": .string(userId.uuidString),
+            "fullname": .string(userData.fullname),
+            "gender": .string(userData.gender),
+            "dateofbirth": .string(dateFormatter.string(from: userData.dateofbirth)),
+            "contactno": .string(userData.contactno),
+            "email": .string(lowercaseEmail),
+            "detail_id": .null
+        ]
+        
+        print("Attempting to insert patient data:", patientData)
+        
+        let insertedPatients: [Patient] = try await client
+            .from("Patient")
+            .insert(patientData)
+            .select()
+            .execute()
+            .value
+        
+        guard let insertedPatient = insertedPatients.first else {
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create patient record"])
+        }
+        
+        print("Patient added to Patient table successfully")
+        return insertedPatient
     }
     
-    // Fetch patient details using the user ID
-    let patients: [Patient] = try await client
-        .from("Patient")
-        .select()
-        .eq("id", value: authResponse.user.id.uuidString)
-        .execute()
-        .value
-    
-    guard let patient = patients.first else {
-        print("No patient found with ID:", authResponse.user.id.uuidString)
-        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Patient account not found. Please contact support."])
+    func signInPatient(email: String, password: String) async throws -> Patient {
+        print("Attempting to sign in patient with email:", email)
+        
+        let lowercaseEmail = email.lowercased()
+        
+        // First authenticate the user
+        let authResponse = try await client.auth.signIn(
+            email: lowercaseEmail,
+            password: password
+        )
+        
+        print("Authentication successful")
+        print("User ID from auth:", authResponse.user.id)
+        
+        // Create a decoder that matches our date format
+        let decoder = JSONDecoder()
+        let dateFormatter = ISO8601DateFormatter()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateString = try container.decode(String.self)
+            if let date = dateFormatter.date(from: dateString) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Cannot decode date string \(dateString)"
+            )
+        }
+        
+        // Fetch patient details using the user ID
+        let patients: [Patient] = try await client
+            .from("Patient")
+            .select()
+            .eq("id", value: authResponse.user.id.uuidString)
+            .execute()
+            .value
+        
+        guard let patient = patients.first else {
+            print("No patient found with ID:", authResponse.user.id.uuidString)
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Patient account not found. Please contact support."])
+        }
+        
+        // Store the patient ID in UserDefaults
+        UserDefaults.standard.set(patient.id.uuidString, forKey: "currentPatientId")
+        print("Stored patient ID in UserDefaults:", patient.id.uuidString)
+        
+        return patient
     }
     
-    // Store the patient ID in UserDefaults
-    UserDefaults.standard.set(patient.id.uuidString, forKey: "currentPatientId")
-    print("Stored patient ID in UserDefaults:", patient.id.uuidString)
-    
-    return patient
-}
-
-// MARK: - Doctor Profile and Appointments
-func fetchDoctorProfile(doctorId: UUID) async throws -> Doctor {
-    let doctors: [Doctor] = try await client
-        .from("Doctor")
-        .select("""
+    // MARK: - Doctor Profile and Appointments
+    func fetchDoctorProfile(doctorId: UUID) async throws -> Doctor {
+        let doctors: [Doctor] = try await client
+            .from("Doctor")
+            .select("""
             id,
             full_name,
             department_id,
@@ -726,21 +726,21 @@ func fetchDoctorProfile(doctorId: UUID) async throws -> Doctor {
                 name
             )
         """)
-        .eq("id", value: doctorId.uuidString)
-        .execute()
-        .value
-    
-    guard let doctor = doctors.first else {
-        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Doctor not found"])
+            .eq("id", value: doctorId.uuidString)
+            .execute()
+            .value
+        
+        guard let doctor = doctors.first else {
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Doctor not found"])
+        }
+        
+        return doctor
     }
     
-    return doctor
-}
-
-func fetchDoctorAppointments(doctorId: UUID) async throws -> [Appointment] {
-    let appointments: [Appointment] = try await client
-        .from("Appointment")
-        .select("""
+    func fetchDoctorAppointments(doctorId: UUID) async throws -> [Appointment] {
+        let appointments: [Appointment] = try await client
+            .from("Appointment")
+            .select("""
             id,
             patientId,
             doctorId,
@@ -758,59 +758,59 @@ func fetchDoctorAppointments(doctorId: UUID) async throws -> [Appointment] {
                 email
             )
         """)
-        .eq("doctorId", value: doctorId.uuidString)
-        .order("date")
-        .execute()
-        .value
-    
-    return appointments
-}
-
-func fetchDoctorStats(doctorId: UUID) async throws -> (completedAppointments: Int, activePatients: Int) {
-    // Get completed appointments count
-    let completedAppointments: [Appointment] = try await client
-        .from("Appointment")
-        .select()
-        .eq("doctorId", value: doctorId.uuidString)
-        .eq("status", value: AppointmentStatus.completed.rawValue)
-        .execute()
-        .value
-    
-    // Get unique patients count from active appointments
-    let activeAppointments: [Appointment] = try await client
-        .from("Appointment")
-        .select()
-        .eq("doctorId", value: doctorId.uuidString)
-        .eq("status", value: AppointmentStatus.scheduled.rawValue)
-        .execute()
-        .value
-    
-    let uniquePatients = Set(activeAppointments.map { $0.patientId })
-    
-    return (completedAppointments.count, uniquePatients.count)
-}
-
-// MARK: - Department Operations
-func fetchDepartmentDetails(departmentId: UUID) async throws -> Department {
-    let departments: [Department] = try await client
-        .from("Department")
-        .select()
-        .eq("id", value: departmentId.uuidString)
-        .execute()
-        .value
-    
-    guard let department = departments.first else {
-        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Department not found"])
+            .eq("doctorId", value: doctorId.uuidString)
+            .order("date")
+            .execute()
+            .value
+        
+        return appointments
     }
     
-    return department
-}
-
-// MARK: - Prescription Operations
-func fetchPrescription(prescriptionId: UUID) async throws -> PrescriptionData {
-    let prescriptions: [PrescriptionData] = try await client
-        .from("Prescription")
-        .select("""
+    func fetchDoctorStats(doctorId: UUID) async throws -> (completedAppointments: Int, activePatients: Int) {
+        // Get completed appointments count
+        let completedAppointments: [Appointment] = try await client
+            .from("Appointment")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .eq("status", value: AppointmentStatus.completed.rawValue)
+            .execute()
+            .value
+        
+        // Get unique patients count from active appointments
+        let activeAppointments: [Appointment] = try await client
+            .from("Appointment")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .eq("status", value: AppointmentStatus.scheduled.rawValue)
+            .execute()
+            .value
+        
+        let uniquePatients = Set(activeAppointments.map { $0.patientId })
+        
+        return (completedAppointments.count, uniquePatients.count)
+    }
+    
+    // MARK: - Department Operations
+    func fetchDepartmentDetails(departmentId: UUID) async throws -> Department {
+        let departments: [Department] = try await client
+            .from("Department")
+            .select()
+            .eq("id", value: departmentId.uuidString)
+            .execute()
+            .value
+        
+        guard let department = departments.first else {
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Department not found"])
+        }
+        
+        return department
+    }
+    
+    // MARK: - Prescription Operations
+    func fetchPrescription(prescriptionId: UUID) async throws -> PrescriptionData {
+        let prescriptions: [PrescriptionData] = try await client
+            .from("Prescription")
+            .select("""
             id,
             patientId,
             doctorId,
@@ -818,41 +818,41 @@ func fetchPrescription(prescriptionId: UUID) async throws -> PrescriptionData {
             labTests,
             additionalNotes
         """)
-        .eq("id", value: prescriptionId.uuidString)
-        .execute()
-        .value
-    
-    guard let prescription = prescriptions.first else {
-        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Prescription not found"])
+            .eq("id", value: prescriptionId.uuidString)
+            .execute()
+            .value
+        
+        guard let prescription = prescriptions.first else {
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Prescription not found"])
+        }
+        
+        return prescription
     }
     
-    return prescription
-}
-
-func savePrescription(_ prescription: PrescriptionData) async throws {
-    try await client
-        .from("Prescription")
-        .upsert(prescription)
-        .execute()
-}
-
-// MARK: - Patient Operations
-func fetchPatientById(patientId: UUID) async throws -> Patient {
-    let patients: [Patient] = try await client
-        .from("Patient")
-        .select()
-        .eq("id", value: patientId.uuidString)
-        .execute()
-        .value
-    
-    guard let patient = patients.first else {
-        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Patient not found"])
+    func savePrescription(_ prescription: PrescriptionData) async throws {
+        try await client
+            .from("Prescription")
+            .upsert(prescription)
+            .execute()
     }
     
-    return patient
-}
-
-// MARK: - Hospital Operations
+    // MARK: - Patient Operations
+    func fetchPatientById(patientId: UUID) async throws -> Patient {
+        let patients: [Patient] = try await client
+            .from("Patient")
+            .select()
+            .eq("id", value: patientId.uuidString)
+            .execute()
+            .value
+        
+        guard let patient = patients.first else {
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Patient not found"])
+        }
+        
+        return patient
+    }
+    
+    // MARK: - Hospital Operations
     func fetchHospitalById(hospitalId: UUID) async throws -> Hospital {
         let hospitals: [Hospital] = try await client
             .from("Hospital")
@@ -866,7 +866,7 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
         }
         return hospital
     }
-
+    
     
     func fetchHospitalAndAdmin() async throws -> (Hospital, String)? {
         print("Fetching hospital and admin details")
@@ -882,8 +882,8 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
             print("No hospital found")
             return nil
         }
-    
-    // Get admin details using assigned_admin_id from hospital
+        
+        // Get admin details using assigned_admin_id from hospital
         if let assignedAdminId = hospital.assigned_admin_id {
             let admins: [Admin] = try await client
                 .from("Admin")
@@ -1514,20 +1514,18 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
             )
         }
     }
-
-//    func fetchAppointmentsForPatient(patientId: UUID) async throws -> [Appointment] {
-//        let appointments: [Appointment] = try await client
-//            .from("Appointment")
-//            .select()
-//            .eq("patientId", value: patientId.uuidString)
-//            .execute()
-//            .value
-//        
-//        return appointments
-//    }
-}
-
-extension SupabaseController {
+    
+    //    func fetchAppointmentsForPatient(patientId: UUID) async throws -> [Appointment] {
+    //        let appointments: [Appointment] = try await client
+    //            .from("Appointment")
+    //            .select()
+    //            .eq("patientId", value: patientId.uuidString)
+    //            .execute()
+    //            .value
+    //
+    //        return appointments
+    //    }
+    
     func checkTimeSlotAvailability(doctorId: UUID, timeSlot: TimeSlot) async throws -> Bool {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: timeSlot.startTime)
@@ -1551,8 +1549,8 @@ extension SupabaseController {
             let appointmentEnd = calendar.date(byAdding: .minute, value: 20, to: appointmentStart)!
             
             if (timeSlot.startTime >= appointmentStart && timeSlot.startTime < appointmentEnd) ||
-               (timeSlot.endTime > appointmentStart && timeSlot.endTime <= appointmentEnd) ||
-               (timeSlot.startTime <= appointmentStart && timeSlot.endTime >= appointmentEnd) {
+                (timeSlot.endTime > appointmentStart && timeSlot.endTime <= appointmentEnd) ||
+                (timeSlot.startTime <= appointmentStart && timeSlot.endTime >= appointmentEnd) {
                 return false
             }
         }
@@ -1598,8 +1596,8 @@ extension SupabaseController {
             for bookedSlot in bookedTimeSlots {
                 // Check for any kind of overlap
                 if (slot.startTime >= bookedSlot.startTime && slot.startTime < bookedSlot.endTime) ||
-                   (slot.endTime > bookedSlot.startTime && slot.endTime <= bookedSlot.endTime) ||
-                   (slot.startTime <= bookedSlot.startTime && slot.endTime >= bookedSlot.endTime) {
+                    (slot.endTime > bookedSlot.startTime && slot.endTime <= bookedSlot.endTime) ||
+                    (slot.startTime <= bookedSlot.startTime && slot.endTime >= bookedSlot.endTime) {
                     return false
                 }
             }
@@ -1608,9 +1606,7 @@ extension SupabaseController {
         
         return availableSlots
     }
-}
-
-extension SupabaseController {
+    
     func fetchAppointmentsForPatient(patientId: UUID) async throws -> [Appointment] {
         let appointments: [Appointment] = try await client
             .from("Appointment")
@@ -1664,7 +1660,7 @@ extension SupabaseController {
             .eq("id", value: appointmentId.uuidString)
             .execute()
         
-        
+    }
         // MARK: - Doctor Leave Request Functions
         func fetchLeaveRequests(hospitalId: UUID) async throws -> [(leave: Leave, doctor: Doctor, department: Department?)] {
             print("Fetching leaves for hospital: \(hospitalId)")
@@ -1759,5 +1755,5 @@ extension SupabaseController {
             }
             
         }
-    }
+    
 }

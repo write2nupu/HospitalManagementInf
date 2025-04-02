@@ -1086,7 +1086,7 @@ struct DoctorListView: View {
             return doctors
         }
         let searchQuery = searchText.lowercased()
-        return doctors.filter { doctor in
+            return doctors.filter { doctor in
             doctor.full_name.lowercased().contains(searchQuery)
         }
     }
@@ -1105,19 +1105,19 @@ struct DoctorListView: View {
         VStack(spacing: 0) {
             SearchBarView(searchText: $searchText)
             
-            ScrollView {
+        ScrollView {
                 if filteredDoctors.isEmpty {
                     EmptyStateView(
                         searchText: searchText,
                         onClearSearch: { searchText = "" }
                     )
-        } else {
+                        } else {
                     FilteredDoctorListView(
                         doctors: filteredDoctors,
                         departmentDetails: departmentDetails,
                         onDoctorSelect: { doctor in
-                            selectedDoctor = doctor
-                            showAppointmentBookingModal = true
+                        selectedDoctor = doctor
+                                showAppointmentBookingModal = true
                         },
                         searchText: searchText,
                         showTimeSlotWarning: $showTimeSlotWarning,
@@ -1175,16 +1175,16 @@ struct DoctorListView: View {
         guard let timeSlot = selectedTimeSlot,
               let doctor = selectedDoctor,
               let appointmentType = selectedAppointmentType else {
-            bookingError = NSError(domain: "AppointmentBooking",
-                                 code: 1,
+            bookingError = NSError(domain: "AppointmentBooking", 
+                                 code: 1, 
                                  userInfo: [NSLocalizedDescriptionKey: "Please select all required fields"])
             return
         }
         
         Task {
-            isBookingAppointment = true
-            bookingError = nil
-            
+        isBookingAppointment = true
+        bookingError = nil
+        
             do {
                 guard let patientId = UserDefaults.standard.string(forKey: "currentPatientId"),
                       let patientUUID = UUID(uuidString: patientId) else {
@@ -1352,36 +1352,36 @@ struct DepartmentInfoView: View {
     let department: Department
     
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "building.2")
-                .font(.caption)
-                .foregroundColor(.gray)
-            
-            Text(department.name)
-                .font(.caption)
-                .foregroundColor(.gray)
-                .lineLimit(1)
+                        HStack(spacing: 4) {
+                            Image(systemName: "building.2")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            
+                    Text(department.name)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .lineLimit(1)
         }
     }
-}
-
+                        }
+                        
 // MARK: - Fee Info View
 struct FeeInfoView: View {
     let department: Department
     
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "indianrupeesign")
-                .font(.caption)
-                .foregroundColor(.gray)
-            
-            Text("\(Int(department.fees))")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(.mint)
-        }
-    }
-}
+                        HStack(spacing: 4) {
+                            Image(systemName: "indianrupeesign")
+                                .font(.caption)
+                        .foregroundColor(.gray)
+
+                            Text("\(Int(department.fees))")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                        .foregroundColor(.mint)
+                        }
+                    }
+                }
 
 // MARK: - Filtered Doctor List View
 struct FilteredDoctorListView: View {
@@ -1399,7 +1399,7 @@ struct FilteredDoctorListView: View {
                     Text("Found \(doctors.count) doctor(s)")
                         .font(.footnote)
                         .foregroundColor(.secondary)
-                    Spacer()
+            Spacer()
                 }
                 .padding(.horizontal)
                 .padding(.top, 10)
@@ -1418,8 +1418,8 @@ struct FilteredDoctorListView: View {
                         DoctorCardView(doctor: doctor, departmentDetails: departmentDetails)
                     }
                 }
-            }
-            .padding()
+        }
+        .padding()
         }
     }
 }
@@ -1537,7 +1537,7 @@ struct TimeSlotSectionView: View {
                         if let slot = selectedTimeSlot {
                             Text(slot.formattedTimeRange)
                                 .foregroundColor(.mint)
-                        } else {
+                            } else {
                             Text("Select a time")
                                 .foregroundColor(.gray)
                         }
