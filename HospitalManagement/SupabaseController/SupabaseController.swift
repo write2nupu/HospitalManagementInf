@@ -1475,6 +1475,51 @@ extension SupabaseController {
             .eq("id", value: leaveId.uuidString)
             .execute()
     }
+
+    func fetchLatestLeave(doctorId: UUID) async throws -> Leave? {
+        let leaves: [LeaveResponse] = try await client
+            .database
+            .from("Leave")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .order("startDate", ascending: false)
+            .limit(1)
+            .execute()
+            .value
+        
+        guard let leaveResponse = leaves.first else { return nil }
+        
+        print("Raw leave response: \(leaveResponse)")
+        print("Start date string: \(leaveResponse.startDate)")
+        print("End date string: \(leaveResponse.endDate)")
+        
+        // Create a date formatter that matches the format from Supabase
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = TimeZone.current
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        // Parse the dates
+        guard let startDate = dateFormatter.date(from: leaveResponse.startDate),
+              let endDate = dateFormatter.date(from: leaveResponse.endDate) else {
+            print("Failed to parse dates")
+            return nil
+        }
+        
+        print("Parsed start date: \(startDate)")
+        print("Parsed end date: \(endDate)")
+        
+        return Leave(
+            id: leaveResponse.id,
+            doctorId: leaveResponse.doctorId,
+            hospitalId: leaveResponse.hospitalId,
+            type: LeaveType(rawValue: leaveResponse.type) ?? .sickLeave,
+            reason: leaveResponse.reason,
+            startDate: startDate,
+            endDate: endDate,
+            status: LeaveStatus(rawValue: leaveResponse.status) ?? .pending
+        )
+    }
 }
 
 // MARK: - Leave Data Models

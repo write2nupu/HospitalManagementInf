@@ -72,6 +72,9 @@ struct LeaveStatusCard: View {
     private func formatDate(_ date: Date, format: String) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = format
+        formatter.timeZone = TimeZone.current  // Ensure we're using the correct timezone
+        formatter.locale = Locale(identifier: "en_US_POSIX")  // Use standard locale for consistent formatting
+        print("Formatting date: \(date) with format: \(format), result: \(formatter.string(from: date))")
         return formatter.string(from: date)
     }
     

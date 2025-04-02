@@ -22,7 +22,7 @@ struct DoctorDashBoard: View {
     @State private var loadDataTask: Task<Void, Never>?
     
 //    VARIABLE TO store Doctor Leave
-    @State private var docLeave: Leave? = Leave(id: UUID(), doctorId: UUID(), hospitalId: UUID(), type: .casualLeave, reason: "mera man", startDate: Date(), endDate: Date(), status: .pending)
+    @State private var docLeave: Leave? = nil
     
     // Computed property for upcoming appointments
     private var upcomingAppointments: [Appointment] {
@@ -217,10 +217,11 @@ struct DoctorDashBoard: View {
             async let profileTask = supabase.fetchDoctorProfile(doctorId: doctorId)
             async let appointmentsTask = supabase.fetchDoctorAppointments(doctorId: doctorId)
             async let statsTask = supabase.fetchDoctorStats(doctorId: doctorId)
+            async let leaveTask = supabase.fetchLatestLeave(doctorId: doctorId)
             
             // Wait for all tasks to complete
             guard !Task.isCancelled else { return }
-            let (profile, fetchedAppointments, stats) = try await (profileTask, appointmentsTask, statsTask)
+            let (profile, fetchedAppointments, stats, latestLeave) = try await (profileTask, appointmentsTask, statsTask, leaveTask)
             
             guard !Task.isCancelled && isViewActive else { return }
             
@@ -230,6 +231,7 @@ struct DoctorDashBoard: View {
                 appointments = fetchedAppointments
                 completedAppointments = stats.completedAppointments
                 activePatients = stats.activePatients
+                docLeave = latestLeave
             }
             
             // Fetch additional details if needed
