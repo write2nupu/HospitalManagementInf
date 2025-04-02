@@ -22,36 +22,30 @@ struct UserRoleScreen: View {
                 Spacer()
                 
                 ForEach(roles, id: \.self) { role in
-                        if role == "Patient" {
-                            NavigationLink(destination: PatientLoginSignupView()) {
-                                RoleCard(role: role)
-                            }
-                        }
-                    
-                    else if role == "Doctor" {
-                        NavigationLink(destination: DoctorLoginView(message: "Doctor")) {
-                            RoleCard(role: role)
-                        }
+                    NavigationLink(destination: getDestinationForRole(role)) {
+                        RoleCard(role: role)
                     }
-                    else if role == "Admin" {
-
-                        NavigationLink(destination: AdminLoginViewS(message: "Admin")) {
-                            RoleCard(role: role)
-                        }
-                    }
-                    else if role == "Super-Admin" {
-
-                        NavigationLink(destination: SuperAdminLoginView(message: "Super admin")) {
-
-                            RoleCard(role: role)
-                        }
-                    }
-    
                 }
                 
                 Spacer()
             }
             .padding()
+        }
+    }
+    
+    @ViewBuilder
+    private func getDestinationForRole(_ role: String) -> some View {
+        switch role {
+        case "Patient":
+            PatientLoginSignupView()
+        case "Doctor":
+            DoctorLoginView(message: "Doctor")
+        case "Admin":
+            AdminLoginViewS(message: "Admin")
+        case "Super-Admin":
+            SuperAdminLoginView(message: "Super admin")
+        default:
+            EmptyView()
         }
     }
 }

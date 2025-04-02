@@ -4,6 +4,16 @@ class HospitalManagementTestViewModel: ObservableObject {
     @Published var showUserProfile = false
 }
 
+// Custom navigation controller that hides back button
+class NoBackNavigationController: UINavigationController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.navigationBar.topItem?.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
+        self.navigationBar.backIndicatorImage = UIImage()
+        self.navigationBar.backIndicatorTransitionMaskImage = UIImage()
+    }
+}
+
 // MARK: - Hide Back Button Modifier
 struct HideBackButtonModifier: ViewModifier {
     func body(content: Content) -> some View {
@@ -46,23 +56,53 @@ struct PatientDashboard: View {
         let navBarAppearance = UINavigationBarAppearance()
         navBarAppearance.configureWithDefaultBackground()
         
-        // Disable back button appearance globally
+        // Completely remove back button appearance
         navBarAppearance.setBackIndicatorImage(UIImage(), transitionMaskImage: UIImage())
+        navBarAppearance.backButtonAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.clear]
         
         UINavigationBar.appearance().standardAppearance = navBarAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navBarAppearance
         UINavigationBar.appearance().backIndicatorImage = UIImage()
         UINavigationBar.appearance().backIndicatorTransitionMaskImage = UIImage()
+        
+        // Completely hide back button title
+        let emptyBackButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
+        UINavigationBar.appearance().topItem?.backBarButtonItem = emptyBackButtonItem
+        UINavigationBar.appearance().backItem?.backBarButtonItem = emptyBackButtonItem
+    }
+    
+    // Force UIKit changes to be applied
+    struct NavigationConfigurator: UIViewControllerRepresentable {
+        func makeUIViewController(context: Context) -> UIViewController {
+            let controller = UIViewController()
+            controller.view.backgroundColor = .clear
+            return controller
+        }
+        
+        func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+            if let navController = uiViewController.navigationController {
+                navController.navigationBar.backIndicatorImage = UIImage()
+                navController.navigationBar.backIndicatorTransitionMaskImage = UIImage()
+                
+                navController.navigationBar.topItem?.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
+            }
+        }
     }
     
     var body: some View {
         TabView(selection: $selectedTab) {
             // MARK: - Home Tab
             NavigationView {
-                HomeTabView(
-                    selectedHospital: $selectedHospital,
-                    departments: $departments
-                )
+                ZStack {
+                    HomeTabView(
+                        selectedHospital: $selectedHospital,
+                        departments: $departments
+                    )
+                    
+                    // Force hide back button with UIKit configurator
+                    NavigationConfigurator()
+                        .frame(width: 0, height: 0)
+                }
                 .navigationTitle("Hi, \(patient.fullname)")
                 .navigationBarTitleDisplayMode(.large)
                 .navigationBarBackButtonHidden(true)
@@ -95,14 +135,20 @@ struct PatientDashboard: View {
             
             // MARK: - Appointments Tab
             NavigationView {
-                AppointmentsTabView()
-                    .navigationBarBackButtonHidden(true)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            // Empty view to override back button
-                            Color.clear.frame(width: 0, height: 0)
-                        }
+                ZStack {
+                    AppointmentsTabView()
+                    
+                    // Force hide back button with UIKit configurator
+                    NavigationConfigurator()
+                        .frame(width: 0, height: 0)
+                }
+                .navigationBarBackButtonHidden(true)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        // Empty view to override back button
+                        Color.clear.frame(width: 0, height: 0)
                     }
+                }
             }
             .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
@@ -112,14 +158,20 @@ struct PatientDashboard: View {
             
             // MARK: - Records Tab
             NavigationView {
-                RecordsTabView(selectedHospitalId: $selectedHospitalId)
-                    .navigationBarBackButtonHidden(true)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            // Empty view to override back button
-                            Color.clear.frame(width: 0, height: 0)
-                        }
+                ZStack {
+                    RecordsTabView(selectedHospitalId: $selectedHospitalId)
+                    
+                    // Force hide back button with UIKit configurator
+                    NavigationConfigurator()
+                        .frame(width: 0, height: 0)
+                }
+                .navigationBarBackButtonHidden(true)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        // Empty view to override back button
+                        Color.clear.frame(width: 0, height: 0)
                     }
+                }
             }
             .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
@@ -129,14 +181,20 @@ struct PatientDashboard: View {
             
             // MARK: - Invoices Tab
             NavigationView {
-                InvoiceListView(patientId: patient.id)
-                    .navigationBarBackButtonHidden(true)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            // Empty view to override back button
-                            Color.clear.frame(width: 0, height: 0)
-                        }
+                ZStack {
+                    InvoiceListView(patientId: patient.id)
+                    
+                    // Force hide back button with UIKit configurator
+                    NavigationConfigurator()
+                        .frame(width: 0, height: 0)
+                }
+                .navigationBarBackButtonHidden(true)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        // Empty view to override back button
+                        Color.clear.frame(width: 0, height: 0)
                     }
+                }
             }
             .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
