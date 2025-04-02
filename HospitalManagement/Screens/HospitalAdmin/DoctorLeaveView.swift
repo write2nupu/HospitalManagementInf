@@ -9,18 +9,18 @@ import SwiftUI
 
 struct DoctorLeaveView: View {
     @StateObject private var supabaseController = SupabaseController()
-    @State private var leaveRequests: [Leave] = []
+    @State private var leaveDetails: [(leave: Leave, doctor: Doctor, department: Department?)] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selectedFilter: LeaveStatus?
     @State private var showingFilterSheet = false
     @AppStorage("hospitalId") private var hospitalIdString: String?
     
-    var filteredLeaves: [Leave] {
+    var filteredLeaves: [(leave: Leave, doctor: Doctor, department: Department?)] {
         if let filter = selectedFilter {
-            return leaveRequests.filter { $0.status == filter }
+            return leaveDetails.filter { $0.leave.status == filter }
         }
-        return leaveRequests
+        return leaveDetails
     }
     
     var body: some View {
@@ -56,14 +56,14 @@ struct DoctorLeaveView: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             } else {
-                ForEach(filteredLeaves, id: \.id) { leave in
-                    NavigationLink(destination: LeaveRequestDetailView(leave: leave) { updatedLeave in
+                ForEach(filteredLeaves, id: \.leave.id) { leaveDetail in
+                    NavigationLink(destination: LeaveRequestDetailView(leaveDetail: leaveDetail) { updatedLeave in
                         // Update the leave request in the list
-                        if let index = leaveRequests.firstIndex(where: { $0.id == updatedLeave.id }) {
-                            leaveRequests[index] = updatedLeave
+                        if let index = leaveDetails.firstIndex(where: { $0.leave.id == updatedLeave.id }) {
+                            leaveDetails[index].leave = updatedLeave
                         }
                     }) {
-                        LeaveRequestCard(leave: leave)
+                        LeaveRequestCard(leaveDetail: leaveDetail)
                     }
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .listRowBackground(Color.clear)
@@ -127,7 +127,7 @@ struct DoctorLeaveView: View {
         errorMessage = nil
         
         do {
-            leaveRequests = try await supabaseController.fetchLeaveRequests(hospitalId: hospitalId)
+            leaveDetails = try await supabaseController.fetchLeaveRequests(hospitalId: hospitalId)
         } catch {
             errorMessage = "Failed to load leave requests: \(error.localizedDescription)"
         }
@@ -137,7 +137,7 @@ struct DoctorLeaveView: View {
 }
 
 struct LeaveRequestCard: View {
-    let leave: Leave
+    let leaveDetail: (leave: Leave, doctor: Doctor, department: Department?)
     @State private var isPressed = false
     
     var body: some View {
@@ -156,17 +156,17 @@ struct LeaveRequestCard: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Dr. John Doe") // Replace with actual doctor name
+                    Text("Dr. \(leaveDetail.doctor.full_name)")
                         .font(.headline)
                         .foregroundColor(.primary)
-                    Text("Cardiology Department") // Replace with actual department
+                    Text(leaveDetail.department?.name ?? "No Department")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
                 
                 Spacer()
                 
-                StatusBadge3(status: leave.status)
+                StatusBadge3(status: leaveDetail.leave.status)
             }
             
             Divider()
@@ -183,7 +183,7 @@ struct LeaveRequestCard: View {
                         Text("Leave Period")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        Text("\(formatDate(leave.startDate)) - \(formatDate(leave.endDate))")
+                        Text("\(formatDate(leaveDetail.leave.startDate)) - \(formatDate(leaveDetail.leave.endDate))")
                             .font(.body)
                             .fontWeight(.medium)
                     }
@@ -198,7 +198,7 @@ struct LeaveRequestCard: View {
                         Text("Reason")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        Text(leave.reason)
+                        Text(leaveDetail.leave.reason)
                             .font(.body)
                             .fontWeight(.medium)
                     }

@@ -2,6 +2,8 @@ import SwiftUI
 
 struct LeaveRequestDetailView: View {
     let leave: Leave
+    let doctor: Doctor
+    let department: Department?
     let onStatusUpdate: (Leave) -> Void
     @Environment(\.dismiss) private var dismiss
     @StateObject private var supabaseController = SupabaseController()
@@ -15,6 +17,13 @@ struct LeaveRequestDetailView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     
+    init(leaveDetail: (leave: Leave, doctor: Doctor, department: Department?), onStatusUpdate: @escaping (Leave) -> Void) {
+        self.leave = leaveDetail.leave
+        self.doctor = leaveDetail.doctor
+        self.department = leaveDetail.department
+        self.onStatusUpdate = onStatusUpdate
+    }
+    
     var body: some View {
         NavigationView {
             ScrollView {
@@ -22,11 +31,11 @@ struct LeaveRequestDetailView: View {
                     // Doctor Profile Section
                     VStack(spacing: 16) {
                         VStack(spacing: 4) {
-                            Text("Dr. John Doe") // Replace with actual doctor name
+                            Text("Dr. \(doctor.full_name)")
                                 .font(.title2)
                                 .fontWeight(.bold)
                             
-                            Text("Cardiology Department") // Replace with actual department
+                            Text(department?.name ?? "No Department")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -36,6 +45,26 @@ struct LeaveRequestDetailView: View {
                     }
                     .padding()
                     .frame(maxWidth: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.systemBackground))
+                            .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                    )
+                    
+                    // Contact Information Section
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text("Contact Information")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .padding(.bottom, 4)
+                        
+                        VStack(alignment: .leading, spacing: 16) {
+                            DetailRow2(icon: "envelope", title: "Email", value: doctor.email_address)
+                            DetailRow2(icon: "phone", title: "Phone", value: doctor.phone_num)
+                        }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color(.systemBackground))

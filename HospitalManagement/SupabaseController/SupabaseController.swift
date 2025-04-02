@@ -1461,7 +1461,7 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
     }
 
     // MARK: - Doctor Leave Request Functions
-    func fetchLeaveRequests(hospitalId: UUID) async throws -> [Leave] {
+    func fetchLeaveRequests(hospitalId: UUID) async throws -> [(leave: Leave, doctor: Doctor, department: Department?)] {
         print("Fetching leaves for hospital: \(hospitalId)")
         do {
             print("Executing Supabase query...")
@@ -1482,19 +1482,40 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
                 .value
             
             print("Successfully fetched \(leaves.count) leaves")
-            for (index, leave) in leaves.enumerated() {
-                print("Leave \(index + 1):")
-                print("  ID: \(leave.id)")
-                print("  Doctor ID: \(leave.doctorId)")
-                print("  Hospital ID: \(leave.hospitalId)")
-                print("  Type: \(leave.type)")
-                print("  Reason: \(leave.reason)")
-                print("  Start Date: \(leave.startDate)")
-                print("  End Date: \(leave.endDate)")
-                print("  Status: \(leave.status)")
-            }
-            return leaves
             
+            var leaveDetails: [(leave: Leave, doctor: Doctor, department: Department?)] = []
+            
+            for leave in leaves {
+                // Fetch doctor details
+                let doctors: [Doctor] = try await client
+                    .from("Doctor")
+                    .select()
+                    .eq("id", value: leave.doctorId.uuidString)
+                    .execute()
+                    .value
+                
+                guard let doctor = doctors.first else {
+                    print("Doctor not found for leave: \(leave.id)")
+                    continue
+                }
+                
+                // Fetch department details if available
+                var department: Department? = nil
+                if let departmentId = doctor.department_id {
+                    let departments: [Department] = try await client
+                        .from("Department")
+                        .select()
+                        .eq("id", value: departmentId.uuidString)
+                        .execute()
+                        .value
+                    
+                    department = departments.first
+                }
+                
+                leaveDetails.append((leave: leave, doctor: doctor, department: department))
+            }
+            
+            return leaveDetails
         } catch {
             print("Error fetching leaves: \(error.localizedDescription)")
             print("Error details: \(String(describing: error))")
