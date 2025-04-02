@@ -461,6 +461,19 @@ struct Leave: Identifiable, Codable {
         case status
     }
     
+    init(id: UUID, doctorId: UUID, hospitalId: UUID, type: LeaveType, reason: String, startDate: Date, endDate: Date, status: LeaveStatus) {
+        self.id = id
+        self.doctorId = doctorId
+        self.hospitalId = hospitalId
+        self.type = type
+        self.reason = reason
+        self.startDate = startDate
+        self.endDate = endDate
+        self.status = status
+        
+    }
+    
+    
     init(from decoder: Decoder) throws {
         print("Starting to decode Leave object")
         let container = try decoder.container(keyedBy: CodingKeys.self)

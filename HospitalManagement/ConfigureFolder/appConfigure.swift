@@ -16,6 +16,10 @@ struct AppConfig {
     static let cardColor = Color(.white)
     static let shadowColor = Color.black.opacity(0.1) // Shadow Color
     
+    static let pendingColor = Color(hex: "#FFD700")  // Gold
+    static let approvedColor = Color(hex: "#CCFFCC") // Green
+    static let rejectedColor = Color(hex: "#e8a1a4") // Red
+    
     
 }
 

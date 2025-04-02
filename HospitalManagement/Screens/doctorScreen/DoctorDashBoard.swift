@@ -17,6 +17,20 @@ struct DoctorDashBoard: View {
     @State private var error: Error?
     @State private var patientNames: [UUID: String] = [:]
     @AppStorage("currentUserId") private var currentUserId: String = ""
+    @State private var refreshTimer: Timer?
+    @State private var isViewActive = true
+    @State private var loadDataTask: Task<Void, Never>?
+    
+//    VARIABLE TO store Doctor Leave
+    @State private var docLeave: Leave? = nil
+    
+    // Computed property for upcoming appointments
+    private var upcomingAppointments: [Appointment] {
+        let now = Date()
+        return appointments
+            .filter { $0.date > now }
+            .sorted { $0.date < $1.date }
+    }
     
     var body: some View {
         ScrollView {
@@ -32,7 +46,7 @@ struct DoctorDashBoard: View {
                         .foregroundColor(.red)
                     Button("Retry") {
                         Task {
-                            await loadData()
+                            await startLoadingData()
                         }
                     }
                 }
@@ -61,21 +75,21 @@ struct DoctorDashBoard: View {
                     }
                     
                     // **Emergency Alert Section**
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Emergency")
-                            .font(.title)
-                            .fontWeight(.regular)
-                        
-                        Text("Urgent Need of Psychologist")
-                            .font(.subheadline)
-                            .foregroundColor(.black)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: 150, alignment: .leading)
-                    .padding()
-                    .background(AppConfig.cardColor)
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                    .shadow(color: AppConfig.shadowColor, radius: 6, x: 0, y: 8)
+//                    VStack(alignment: .leading, spacing: 5) {
+//                        Text("Emergency")
+//                            .font(.title)
+//                            .fontWeight(.regular)
+//                        
+//                        Text("Urgent Need of Psychologist")
+//                            .font(.subheadline)
+//                            .foregroundColor(.black)
+//                    }
+//                    .frame(maxWidth: .infinity, maxHeight: 150, alignment: .leading)
+//                    .padding()
+//                    .background(AppConfig.cardColor)
+//                    .cornerRadius(12)
+//                    .padding(.horizontal)
+//                    .shadow(color: AppConfig.shadowColor, radius: 6, x: 0, y: 8)
                     
                     // **Appointments & Patients Stats**
                     HStack(spacing: 16) {
@@ -84,24 +98,56 @@ struct DoctorDashBoard: View {
                     }
                     .padding(.horizontal)
                     
-                    // **Upcoming Appointments (Horizontal Scroll)**
-                    Text("Upcoming Appointments")
-                        .font(.headline)
-                        .padding(.horizontal)
+                    if let leave = docLeave{
+                        Text("Your leave")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
+                        LeaveStatusCard(leave: leave)
+                            .padding()
+                    }
                     
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: 16) {
-                            ForEach(appointments) { appointment in
-                                upcomingAppointmentCard(appointment: appointment)
-                                    .frame(width: screenWidth * 0.87)
-                                    .frame(height: 150)
-                                    .padding(.vertical, 8)
-                                    .onTapGesture {
-                                        selectedAppointment = appointment
-                                    }
+                    // **Upcoming Appointments Section**
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Upcoming Appointments")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            
+                            Spacer()
+                            
+                            if !upcomingAppointments.isEmpty {
+                                Text("\(upcomingAppointments.count) upcoming")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
                             }
                         }
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal)
+                        
+                        if upcomingAppointments.isEmpty {
+                            VStack(spacing: 8) {
+                                Image(systemName: "calendar.badge.clock")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.gray)
+                                Text("No upcoming appointments")
+                                    .font(.headline)
+                                    .foregroundColor(.gray)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                        } else {
+                            ScrollView(.vertical, showsIndicators: false) {
+                                VStack(spacing: 12) {
+                                    ForEach(upcomingAppointments) { appointment in
+                                        upcomingAppointmentCard(appointment: appointment)
+                                            .onTapGesture {
+                                                selectedAppointment = appointment
+                                            }
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
                     }
                 }
                 .padding(.top, 10)
@@ -112,63 +158,134 @@ struct DoctorDashBoard: View {
         .sheet(item: $selectedAppointment) { appointment in
             AppointmentDetailView(appointment: appointment)
         }
-        .task {
-            await loadData()
+        .onAppear {
+            isViewActive = true
+            startLoadingData()
+        }
+        .onDisappear {
+            isViewActive = false
+            cancelLoadingTask()
+            stopRefreshTimer()
         }
     }
     
+    private func startLoadingData() {
+        cancelLoadingTask()
+        loadDataTask = Task {
+            await loadData()
+            
+            // Start refresh timer after initial load
+            if isViewActive {
+                startRefreshTimer()
+            }
+        }
+    }
+    
+    private func cancelLoadingTask() {
+        loadDataTask?.cancel()
+        loadDataTask = nil
+    }
+    
+    private func startRefreshTimer() {
+        stopRefreshTimer()
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+            if isViewActive {
+                startLoadingData()
+            }
+        }
+    }
+    
+    private func stopRefreshTimer() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+    
     private func loadData() async {
-        isLoading = true
-        error = nil
+        guard !Task.isCancelled && isViewActive else { return }
+        
+        await MainActor.run {
+            isLoading = true
+            error = nil
+        }
         
         do {
             guard let doctorId = UUID(uuidString: currentUserId) else {
-                self.error = NSError(domain: "", code: -1, 
-                    userInfo: [NSLocalizedDescriptionKey: "Invalid doctor ID"])
-                isLoading = false
-                return
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid doctor ID"])
             }
             
-            // Fetch doctor profile
-            doctorProfile = try await supabase.fetchDoctorProfile(doctorId: doctorId)
+            // Create individual tasks for concurrent fetching
+            async let profileTask = supabase.fetchDoctorProfile(doctorId: doctorId)
+            async let appointmentsTask = supabase.fetchDoctorAppointments(doctorId: doctorId)
+            async let statsTask = supabase.fetchDoctorStats(doctorId: doctorId)
+            async let leaveTask = supabase.fetchLatestLeave(doctorId: doctorId)
             
-            // Fetch department details if available
-            if let departmentId = doctorProfile?.department_id {
-                department = await supabase.fetchDepartmentDetails(departmentId: departmentId)
+            // Wait for all tasks to complete
+            guard !Task.isCancelled else { return }
+            let (profile, fetchedAppointments, stats, latestLeave) = try await (profileTask, appointmentsTask, statsTask, leaveTask)
+            
+            guard !Task.isCancelled && isViewActive else { return }
+            
+            // Update UI on main thread
+            await MainActor.run {
+                doctorProfile = profile
+                appointments = fetchedAppointments
+                completedAppointments = stats.completedAppointments
+                activePatients = stats.activePatients
+                docLeave = latestLeave
             }
             
-            // Fetch hospital details if available
-            if let hospitalId = doctorProfile?.hospital_id {
-                hospital = try await supabase.fetchHospitalById(hospitalId: hospitalId)
-            }
-            
-            // Fetch appointments
-            appointments = try await supabase.fetchDoctorAppointments(doctorId: doctorId)
-            
-            // Fetch patient names for all appointments
-            for appointment in appointments {
-                if patientNames[appointment.patientId] == nil {
-                    do {
-                        let patient = try await supabase.fetchPatientById(patientId: appointment.patientId)
-                        patientNames[appointment.patientId] = patient.fullname
-                    } catch {
-                        print("Error fetching patient name:", error)
-                        patientNames[appointment.patientId] = "Unknown Patient"
+            // Fetch additional details if needed
+            if let departmentId = profile.department_id {
+                guard !Task.isCancelled else { return }
+                if let deptDetails = await supabase.fetchDepartmentDetails(departmentId: departmentId) {
+                    if isViewActive {
+                        await MainActor.run { department = deptDetails }
                     }
                 }
             }
             
-            // Fetch doctor stats
-            let stats = try await supabase.fetchDoctorStats(doctorId: doctorId)
-            completedAppointments = stats.completedAppointments
-            activePatients = stats.activePatients
+            if let hospitalId = profile.hospital_id {
+                guard !Task.isCancelled else { return }
+                let hospitalDetails = try await supabase.fetchHospitalById(hospitalId: hospitalId)
+                if isViewActive {
+                    await MainActor.run { hospital = hospitalDetails }
+                }
+            }
+            
+            // Fetch patient names
+            var updatedNames: [UUID: String] = [:]
+            for appointment in fetchedAppointments {
+                guard !Task.isCancelled else { return }
+                if patientNames[appointment.patientId] == nil {
+                    do {
+                        let patient = try await supabase.fetchPatientById(patientId: appointment.patientId)
+                        updatedNames[appointment.patientId] = patient.fullname
+                    } catch {
+                        print("Error fetching patient name:", error)
+                        updatedNames[appointment.patientId] = "Unknown Patient"
+                    }
+                }
+            }
+            
+            guard !Task.isCancelled && isViewActive else { return }
+            await MainActor.run {
+                for (id, name) in updatedNames {
+                    patientNames[id] = name
+                }
+            }
             
         } catch {
-            self.error = error
-            print("Error loading data:", error)
+            guard !Task.isCancelled && isViewActive else { return }
+            await MainActor.run {
+                self.error = error
+                print("Error loading data:", error)
+            }
         }
         
-        isLoading = false
+        guard !Task.isCancelled && isViewActive else { return }
+        await MainActor.run {
+            isLoading = false
+        }
     }
     
     // **Stat Card Component**
@@ -193,65 +310,91 @@ struct DoctorDashBoard: View {
         .shadow(color: AppConfig.shadowColor, radius: 5, x: 0, y: 4)
     }
     
-    // **Upcoming Appointment Card**
+    // Updated appointment card with better UI
     func upcomingAppointmentCard(appointment: Appointment) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "person.fill")
-                    .foregroundColor(AppConfig.buttonColor)
-                    .font(.title2)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center, spacing: 12) {
+                // Patient Icon with Background
+                Circle()
+                    .fill(AppConfig.buttonColor.opacity(0.1))
+                    .frame(width: 45, height: 45)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .foregroundColor(AppConfig.buttonColor)
+                            .font(.system(size: 20))
+                    )
                 
-                Text(patientNames[appointment.patientId] ?? "Loading...")
-                    .font(.headline)
-                    .foregroundColor(.black)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(patientNames[appointment.patientId] ?? "Loading...")
+                        .font(.headline)
+                    
+                    Text(appointment.type.rawValue)
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
                 
                 Spacer()
                 
+                // Status Badge
                 Text(appointment.status.rawValue)
-                    .font(.subheadline)
-                    .foregroundColor(AppConfig.fontColor)
+                    .font(.caption)
+                    .fontWeight(.medium)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .clipShape(RoundedRectangle(cornerRadius: 15))
+                    .background(
+                        RoundedRectangle(cornerRadius: 15)
+                            .fill(statusColor(for: appointment.status).opacity(0.1))
+                    )
+                    .foregroundColor(statusColor(for: appointment.status))
             }
             
-            // Visit Type & Date
-            HStack {
-                HStack {
+            Divider()
+            
+            // Date and Time with Icons
+            HStack(spacing: 16) {
+                // Date
+                HStack(spacing: 8) {
                     Image(systemName: "calendar")
                         .foregroundColor(AppConfig.buttonColor)
-                    Text(appointment.type.rawValue)
-                        .font(.footnote)
-                        .fontWeight(.bold)
+                    Text(formatDate(appointment.date, format: "MMM d, yyyy"))
+                        .font(.subheadline)
                 }
                 
                 Spacer()
                 
-                HStack {
+                // Time
+                HStack(spacing: 8) {
                     Image(systemName: "clock.fill")
                         .foregroundColor(AppConfig.buttonColor)
-                    Text(formatDate(appointment.date))
-                        .font(.footnote)
-                        .foregroundColor(.black)
+                    Text(formatDate(appointment.date, format: "h:mm a"))
+                        .font(.subheadline)
                 }
             }
+            .foregroundColor(.gray)
         }
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 15)
-                .fill(AppConfig.cardColor)
-                .shadow(color: AppConfig.shadowColor.opacity(0.3), radius: 8, x: 0, y: 6)
-        )
-        .frame(width: screenWidth * 0.87)
-        .frame(height: 150)
-        .padding(.vertical, 8)
+        .background(Color(.systemBackground))
+        .cornerRadius(15)
+        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
-
-    // ✅ Format Date Function
-    func formatDate(_ date: Date) -> String {
+    
+    // Helper function to format date with custom format
+    func formatDate(_ date: Date, format: String) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, yyyy - h:mm a" // Example: "Mar 26, 2025 - 10:30 AM"
+        formatter.dateFormat = format
         return formatter.string(from: date)
+    }
+    
+    // Helper function to determine status color
+    func statusColor(for status: AppointmentStatus) -> Color {
+        switch status {
+        case .scheduled:
+            return .blue
+        case .completed:
+            return .green
+        case .cancelled:
+            return .red
+        }
     }
 }
 

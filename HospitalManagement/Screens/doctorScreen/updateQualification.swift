@@ -75,7 +75,7 @@ struct UpdateQualificationsView: View {
         
         Task {
             do {
-                try await supabaseController.client.database
+                try await supabaseController.client
                     .from("Doctor")
                     .update(["qualifications": selectedQualification])
                     .eq("id", value: doctor.id.uuidString)

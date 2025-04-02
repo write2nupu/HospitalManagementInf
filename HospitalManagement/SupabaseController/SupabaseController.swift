@@ -748,15 +748,7 @@ class SupabaseController: ObservableObject {
             status,
             createdAt,
             type,
-            prescriptionId,
-            Patient!inner (
-                id,
-                fullname,
-                gender,
-                dateofbirth,
-                contactno,
-                email
-            )
+            prescriptionId
         """)
             .eq("doctorId", value: doctorId.uuidString)
             .order("date")
@@ -829,6 +821,131 @@ class SupabaseController: ObservableObject {
         return prescription
     }
     
+
+func savePrescription(_ prescription: PrescriptionData) async throws {
+    try await client
+        .from("Prescription")
+        .upsert(prescription)
+        .execute()
+}
+
+// MARK: - Patient Operations
+func fetchPatientDetailsById(detailId: UUID) async throws -> PatientDetails? {
+    print("Fetching patient details for detailId: \(detailId)")
+    do {
+        // First, let's check what's in the table
+        print("Checking all records in Patientdetails table...")
+        let allRecords = try await client
+            .from("Patientdetails")
+            .select("*")
+            .execute()
+        
+        if let data = allRecords.data as? [[String: Any]] {
+            print("All records in Patientdetails table:")
+            data.forEach { record in
+                if let detailId = record["detail_id"] as? String {
+                    print("Found record with detail_id: \(detailId)")
+                }
+                print(record)
+            }
+        }
+        
+        // Now try to fetch the specific record
+        let lowercaseUUID = detailId.uuidString.lowercased()
+        print("Attempting to fetch specific record with detail_id: \(lowercaseUUID)")
+        let response = try await client
+            .from("Patientdetails")
+            .select("""
+                detail_id,
+                blood_group,
+                allergies,
+                existing_medical_rec,
+                current_medication,
+                past_surgeries,
+                emergency_contact
+            """)
+            .eq("detail_id", value: lowercaseUUID)
+            .execute()
+        
+        // Handle raw Data response
+        if let responseData = response.data as? Data {
+            print("Got raw Data response, attempting to decode...")
+            let jsonObject = try JSONSerialization.jsonObject(with: responseData, options: [])
+            print("Decoded JSON: \(jsonObject)")
+            
+            if let records = jsonObject as? [[String: Any]], !records.isEmpty {
+                print("Found \(records.count) matching records")
+                
+                // Transform the response to match our model
+                let transformedObject = records.map { dict -> [String: Any] in
+                    var newDict = dict
+                    if let detailId = dict["detail_id"] as? String {
+                        newDict["id"] = detailId
+                    }
+                    if let medicalRec = dict["existing_medical_rec"] as? String {
+                        newDict["existing_medical_record"] = medicalRec
+                    }
+                    return newDict
+                }
+                
+                let jsonData = try JSONSerialization.data(withJSONObject: transformedObject, options: [])
+                let details = try JSONDecoder().decode([PatientDetails].self, from: jsonData)
+                print("Successfully decoded \(details.count) patient details")
+                return details.first
+            }
+        } else if let jsonObject = response.data as? [[String: Any]], !jsonObject.isEmpty {
+            print("Found matching patient details: \(jsonObject)")
+            
+            // Transform the response to match our model
+            let transformedObject = jsonObject.map { dict -> [String: Any] in
+                var newDict = dict
+                if let detailId = dict["detail_id"] as? String {
+                    newDict["id"] = detailId
+                }
+                if let medicalRec = dict["existing_medical_rec"] as? String {
+                    newDict["existing_medical_record"] = medicalRec
+                }
+                return newDict
+            }
+            
+            let jsonData = try JSONSerialization.data(withJSONObject: transformedObject, options: [])
+            let details = try JSONDecoder().decode([PatientDetails].self, from: jsonData)
+            print("Successfully decoded \(details.count) patient details")
+            return details.first
+        }
+        
+        print("No patient details found for detail_id: \(lowercaseUUID)")
+        print("Response data type: \(type(of: response.data))")
+        if let data = response.data as? Data {
+            let str = String(data: data, encoding: .utf8) ?? "Could not convert to string"
+            print("Response data as string: \(str)")
+        } else {
+            print("Response data content: \(response.data)")
+        }
+        return nil
+    } catch {
+        print("Error fetching patient details: \(error)")
+        print("Detailed error: \(String(describing: error))")
+        throw error
+    }
+}
+
+// Helper for custom key decoding
+private struct AnyCodingKey: CodingKey {
+    var stringValue: String
+    var intValue: Int?
+    
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+        self.intValue = nil
+    }
+    
+    init?(intValue: Int) {
+        self.stringValue = String(intValue)
+        self.intValue = intValue
+    }
+}
+
     func savePrescription(_ prescription: PrescriptionData) async throws {
         try await client
             .from("Prescription")
@@ -1756,4 +1873,178 @@ class SupabaseController: ObservableObject {
             
         }
     
+}
+
+// MARK: - Leave Management
+extension SupabaseController {
+    func applyForLeave(_ leave: Leave) async throws {
+        let dateFormatter = ISO8601DateFormatter()
+        let leaveData = LeaveRequest(
+            id: leave.id,
+            doctorId: leave.doctorId,
+            hospitalId: leave.hospitalId,
+            type: leave.type.rawValue,
+            reason: leave.reason,
+            startDate: dateFormatter.string(from: leave.startDate),
+            endDate: dateFormatter.string(from: leave.endDate),
+            status: leave.status.rawValue
+        )
+        
+        try await client
+            .database
+            .from("Leave")
+            .insert(leaveData)
+            .execute()
+    }
+    
+    func fetchPendingLeave(doctorId: UUID) async throws -> Leave? {
+        let leaves: [LeaveResponse] = try await client
+            .database
+            .from("Leave")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .eq("status", value: LeaveStatus.pending.rawValue)
+            .order("startDate", ascending: true)
+            .limit(1)
+            .execute()
+            .value
+        
+        guard let leaveResponse = leaves.first else { return nil }
+        
+        let dateFormatter = ISO8601DateFormatter()
+        return Leave(
+            id: leaveResponse.id,
+            doctorId: leaveResponse.doctorId,
+            hospitalId: leaveResponse.hospitalId,
+            type: LeaveType(rawValue: leaveResponse.type) ?? .sickLeave,
+            reason: leaveResponse.reason,
+            startDate: dateFormatter.date(from: leaveResponse.startDate) ?? Date(),
+            endDate: dateFormatter.date(from: leaveResponse.endDate) ?? Date(),
+            status: LeaveStatus(rawValue: leaveResponse.status) ?? .pending
+        )
+    }
+    
+    func fetchAllLeaves(doctorId: UUID) async throws -> [Leave] {
+        let leaves: [LeaveResponse] = try await client
+            .database
+            .from("Leave")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .order("startDate", ascending: false)
+            .execute()
+            .value
+        
+        let dateFormatter = ISO8601DateFormatter()
+        return leaves.map { leaveResponse in
+            Leave(
+                id: leaveResponse.id,
+                doctorId: leaveResponse.doctorId,
+                hospitalId: leaveResponse.hospitalId,
+                type: LeaveType(rawValue: leaveResponse.type) ?? .sickLeave,
+                reason: leaveResponse.reason,
+                startDate: dateFormatter.date(from: leaveResponse.startDate) ?? Date(),
+                endDate: dateFormatter.date(from: leaveResponse.endDate) ?? Date(),
+                status: LeaveStatus(rawValue: leaveResponse.status) ?? .pending
+            )
+        }
+    }
+//    
+//    func updateLeaveStatus(leaveId: UUID, status: LeaveStatus) async throws {
+//        try await client
+//            .database
+//            .from("Leave")
+//            .update(["status": status.rawValue])
+//            .eq("id", value: leaveId.uuidString)
+//            .execute()
+//    }
+
+    func fetchLatestLeave(doctorId: UUID) async throws -> Leave? {
+        let leaves: [LeaveResponse] = try await client
+            .database
+            .from("Leave")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .order("startDate", ascending: false)
+            .limit(1)
+            .execute()
+            .value
+        
+        guard let leaveResponse = leaves.first else { return nil }
+        
+        print("Raw leave response: \(leaveResponse)")
+        print("Start date string: \(leaveResponse.startDate)")
+        print("End date string: \(leaveResponse.endDate)")
+        
+        // Create a date formatter that matches the format from Supabase
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = TimeZone.current
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        // Parse the dates
+        guard let startDate = dateFormatter.date(from: leaveResponse.startDate),
+              let endDate = dateFormatter.date(from: leaveResponse.endDate) else {
+            print("Failed to parse dates")
+            return nil
+        }
+        
+        print("Parsed start date: \(startDate)")
+        print("Parsed end date: \(endDate)")
+        
+        return Leave(
+            id: leaveResponse.id,
+            doctorId: leaveResponse.doctorId,
+            hospitalId: leaveResponse.hospitalId,
+            type: LeaveType(rawValue: leaveResponse.type) ?? .sickLeave,
+            reason: leaveResponse.reason,
+            startDate: startDate,
+            endDate: endDate,
+            status: LeaveStatus(rawValue: leaveResponse.status) ?? .pending
+        )
+    }
+}
+
+// MARK: - Leave Data Models
+private struct LeaveRequest: Codable {
+    let id: UUID
+    let doctorId: UUID
+    let hospitalId: UUID
+    let type: String
+    let reason: String
+    let startDate: String
+    let endDate: String
+    let status: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case doctorId = "doctorId"
+        case hospitalId = "hospitalId"
+        case type
+        case reason
+        case startDate = "startDate"
+        case endDate = "endDate"
+        case status
+    }
+}
+
+private struct LeaveResponse: Codable {
+    let id: UUID
+    let doctorId: UUID
+    let hospitalId: UUID
+    let type: String
+    let reason: String
+    let startDate: String
+    let endDate: String
+    let status: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case doctorId = "doctorId"
+        case hospitalId = "hospitalId"
+        case type
+        case reason
+        case startDate = "startDate"
+        case endDate = "endDate"
+        case status
+    }
 }
