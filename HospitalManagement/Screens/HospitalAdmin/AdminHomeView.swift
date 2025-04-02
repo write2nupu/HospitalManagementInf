@@ -22,6 +22,7 @@ struct AdminHomeView: View {
     
     // Emergency and bed request counts (to be implemented with real data later)
     @State private var emergencyRequestsCount = 0
+    @State private var leaveRequestsCount = 0
     
     var filteredDepartments: [Department] {
         if searchText.isEmpty {
@@ -86,6 +87,20 @@ struct AdminHomeView: View {
                                     iconName: "cross.case.fill",
                                     iconColor: .red,
                                     count: emergencyRequestsCount
+                                )
+                                .frame(maxWidth: .infinity)
+                            }
+                            .padding(.horizontal)
+                            
+                            // Leave Requests Card
+                            NavigationLink {
+                                DoctorLeaveView()
+                            } label: {
+                                RequestCard(
+                                    title: "Leave Requests",
+                                    iconName: "calendar.badge.clock",
+                                    iconColor: .orange,
+                                    count: leaveRequestsCount
                                 )
                                 .frame(maxWidth: .infinity)
                             }
