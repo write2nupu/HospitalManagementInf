@@ -31,22 +31,22 @@ struct updateFields: View {
             VStack(spacing: 20) {
                 // **Email Section**
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Email")
-                        .font(.headline)
+//                    Text("Email")
+//                        .font(.headline)
                     
-                    TextField("Enter new email", text: isEditing ? $updatedEmail : $email)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding(.horizontal, 10)
-                        .disabled(!isEditing)
-                        .keyboardType(.emailAddress)
-                        .onChange(of: updatedEmail) { oldValue, _ in validateEmail() }
-                    
-                    if let error = errorMessageEmail {
-                        Text(error)
-                            .foregroundColor(.red)
-                            .font(.caption)
-                            .padding(.horizontal, 10)
-                    }
+//                    TextField("Enter new email", text: isEditing ? $updatedEmail : $email)
+//                        .textFieldStyle(RoundedBorderTextFieldStyle())
+//                        .padding(.horizontal, 10)
+//                        .disabled(!isEditing)
+//                        .keyboardType(.emailAddress)
+//                        .onChange(of: updatedEmail) { _ in validateEmail() }
+//                    
+//                    if let error = errorMessageEmail {
+//                        Text(error)
+//                            .foregroundColor(.red)
+//                            .font(.caption)
+//                            .padding(.horizontal, 10)
+//                    }
                 }
 
                 // **Phone Number Section**
@@ -59,7 +59,7 @@ struct updateFields: View {
                         .padding(.horizontal, 10)
                         .disabled(!isEditing)
                         .keyboardType(.numberPad)
-                        .onChange(of: updatePhone) { oldValue, _ in validatePhone() }
+                        .onChange(of: updatePhone) { print(validatePhone()) }
                     
                     if let error = errorMessagePhone {
                         Text(error)
@@ -199,8 +199,9 @@ struct updateFields: View {
             print("Error updating profile:", error)
             if let authError = error as? AuthError {
                 errorMessageEmail = "Auth Error: Invalid password or authentication failed"
+                print(authError)
             } else if let postgrestError = error as? PostgrestError {
-                errorMessageEmail = "Database Error: \(postgrestError.message ?? "Unknown error")"
+                errorMessageEmail = "Database Error: \(postgrestError.message)"
             } else {
                 errorMessageEmail = "Failed to update: \(error.localizedDescription)"
             }
@@ -243,7 +244,7 @@ struct updateFields: View {
         } catch {
             print("Error updating profile:", error)
             if let postgrestError = error as? PostgrestError {
-                errorMessagePhone = "Database Error: \(postgrestError.message ?? "Unknown error")"
+                errorMessagePhone = "Database Error: \(postgrestError.message)"
             } else {
                 errorMessagePhone = "Failed to update: \(error.localizedDescription)"
             }

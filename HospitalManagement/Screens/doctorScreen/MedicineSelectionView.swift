@@ -26,7 +26,7 @@ struct MedicineSelectionView: View {
                 // Search Bar - Fixed at top
                 MedicineSearchBar(text: $searchText, isSearching: $isSearching)
                     .background(Color.white)
-                    .onChange(of: searchText) { oldValue, newValue in
+                    .onChange(of: searchText) {_, newValue in
                         if !newValue.isEmpty && newValue.count >= 2 {
                             searchMedicines(query: newValue)
                         } else {
