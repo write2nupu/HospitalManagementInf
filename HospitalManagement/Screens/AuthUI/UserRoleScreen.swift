@@ -12,54 +12,56 @@ struct UserRoleScreen: View {
     
     var body: some View {
         NavigationStack {
-            VStack {
-                // Main title with image
-                VStack(spacing: 20) {
-                    Image("role")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 120, height: 120)
+            ScrollView{
+                VStack {
+                    // Main title with image
+                    VStack(spacing: 20) {
+                        Image("role")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 120, height: 120)
+                        
+                        Text("Select Your Role")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.black)
+                    }
+                    .padding(.top, 40)
                     
-                    Text("Select Your Role")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.black)
-                }
-                .padding(.top, 40)
-                
-                Spacer()
-                
-                ForEach(roles, id: \.self) { role in
+                    Spacer()
+                    
+                    ForEach(roles, id: \.self) { role in
                         if role == "Patient" {
                             NavigationLink(destination: PatientLoginSignupView()) {
                                 RoleCard(role: role, imageName: "patient")
                             }
                         }
+                        
+                        else if role == "Doctor" {
+                            NavigationLink(destination: DoctorLoginView(message: "Doctor")) {
+                                RoleCard(role: role, imageName: "doctor")
+                            }
+                        }
+                        else if role == "Admin" {
+                            
+                            NavigationLink(destination: AdminLoginViewS(message: "Admin")) {
+                                RoleCard(role: role, imageName: "admin")
+                            }
+                        }
+                        else if role == "Super-Admin" {
+                            
+                            NavigationLink(destination: SuperAdminLoginView(message: "Super admin")) {
+                                
+                                RoleCard(role: role, imageName: "superadmin")
+                            }
+                        }
+                        
+                    }
                     
-                    else if role == "Doctor" {
-                        NavigationLink(destination: DoctorLoginView(message: "Doctor")) {
-                            RoleCard(role: role, imageName: "doctor")
-                        }
-                    }
-                    else if role == "Admin" {
-
-                        NavigationLink(destination: AdminLoginViewS(message: "Admin")) {
-                            RoleCard(role: role, imageName: "admin")
-                        }
-                    }
-                    else if role == "Super-Admin" {
-
-                        NavigationLink(destination: SuperAdminLoginView(message: "Super admin")) {
-
-                            RoleCard(role: role, imageName: "superadmin")
-                        }
-                    }
-    
+                    Spacer()
                 }
-                
-                Spacer()
+                .padding()
             }
-            .padding()
         }
     }
 }
