@@ -16,7 +16,7 @@ struct SuperAdminLoginView: View {
     @AppStorage("currentUserId") private var currentUserId: String = ""
     @AppStorage("isLoggedIn") private var isUserLoggedIn = false
     @State private var superAdminUser: users? = nil
-    @State private var shouldShowDashboard = false
+ 
     @State private var passwordErrorMessage = ""
     @State private var emailErrorMessage = ""
   
