@@ -2,31 +2,24 @@ import SwiftUI
 
 struct PatientView: View {
     @State private var searchText: String = ""
+    @StateObject private var supabase = SupabaseController()
+    @State private var appointments: [Appointment] = []
+    @State private var patients: [UUID: Patient] = [:]
+    @State private var isLoading = true
+    @State private var error: Error?
+    @AppStorage("currentUserId") private var currentUserId: String = ""
     
     var screenHeight: CGFloat {
         UIScreen.main.bounds.height
     }
     
-    var patientDetails: PatientDetails = PatientDetails(
-        id: UUID(),
-        blood_group: "O+",
-        allergies: "None",
-        existing_medical_record: "None",
-        current_medication: "None",
-        past_surgeries: "None",
-        emergency_contact: "1234567899"
-    )
-    
-    @State private var patients: [Patient] = [
-        Patient(id: UUID(), fullName: "John Doe", gender: "Male", dateOfBirth: Date(), contactNo: "9876543210", email: "john@example.com"),
-        Patient(id: UUID(), fullName: "Jane Smith", gender: "Female", dateOfBirth: Date(), contactNo: "9876543211", email: "jane@example.com"),
-        Patient(id: UUID(), fullName: "Alice Johnson", gender: "Female", dateOfBirth: Date(), contactNo: "9876543212", email: "alice@example.com")
-    ]
-    
     private var filteredPatients: [Patient] {
-        searchText.isEmpty
-            ? patients
-        : patients.filter { $0.fullname.localizedCaseInsensitiveContains(searchText) }
+        if searchText.isEmpty {
+            return Array(patients.values)
+        }
+        return Array(patients.values).filter { 
+            $0.fullname.localizedCaseInsensitiveContains(searchText) 
+        }
     }
     
     var body: some View {
@@ -39,27 +32,79 @@ struct PatientView: View {
             }
             .background(Color.white)
             .shadow(color: AppConfig.shadowColor, radius: 2, x: 0, y: 2)
-            .zIndex(1) // Keeps the search bar on top
+            .zIndex(1)
             
-            // Scrollable Content
-            ScrollView {
-                LazyVStack(spacing: 15) {
-                    ForEach(filteredPatients, id: \.id) { patient in
-                        patientNavigationLink(patient)
+            if isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = error {
+                VStack {
+                    Text("Error loading patients")
+                        .font(.headline)
+                    Text(error.localizedDescription)
+                        .font(.subheadline)
+                        .foregroundColor(.red)
+                    Button("Retry") {
+                        Task {
+                            await loadPatients()
+                        }
                     }
                 }
-                .padding(.top, 8)
-                .padding(.horizontal)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                // Scrollable Content
+                ScrollView {
+                    LazyVStack(spacing: 15) {
+                        ForEach(filteredPatients) { patient in
+                            NavigationLink(destination: PatientDetailView(patient: patient)) {
+                                PatientCard(patient: patient)
+                            }
+                        }
+                    }
+                    .padding(.top, 8)
+                    .padding(.horizontal)
+                }
             }
         }
         .background(Color(.systemGray6).opacity(0.2))
         .ignoresSafeArea(.all, edges: .bottom)
+        .task {
+            await loadPatients()
+        }
     }
     
-    private func patientNavigationLink(_ patient: Patient) -> some View {
-        NavigationLink(destination: PatientDetailView(patient: patient, patientDetails: patientDetails)) {
-            PatientCard(patient: patient)
+    private func loadPatients() async {
+        isLoading = true
+        error = nil
+        
+        do {
+            guard let doctorId = UUID(uuidString: currentUserId) else {
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid doctor ID"])
+            }
+            
+            // Fetch appointments for the doctor
+            appointments = try await supabase.fetchDoctorAppointments(doctorId: doctorId)
+            
+            // Extract unique patient IDs from appointments
+            let uniquePatientIds = Set(appointments.map { $0.patientId })
+            
+            // Fetch patient details for each unique patient ID
+            var fetchedPatients: [UUID: Patient] = [:]
+            for patientId in uniquePatientIds {
+                do {
+                    let patient = try await supabase.fetchPatientById(patientId: patientId)
+                    fetchedPatients[patientId] = patient
+                } catch {
+                    print("Error fetching patient \(patientId): \(error)")
+                }
+            }
+            
+            patients = fetchedPatients
+        } catch {
+            self.error = error
         }
+        
+        isLoading = false
     }
 }
 

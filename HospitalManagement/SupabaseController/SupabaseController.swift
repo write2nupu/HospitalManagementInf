@@ -740,15 +740,7 @@ func fetchDoctorAppointments(doctorId: UUID) async throws -> [Appointment] {
             status,
             createdAt,
             type,
-            prescriptionId,
-            Patient!inner (
-                id,
-                fullname,
-                gender,
-                dateofbirth,
-                contactno,
-                email
-            )
+            prescriptionId
         """)
         .eq("doctorId", value: doctorId.uuidString)
         .order("date")
@@ -829,6 +821,122 @@ func savePrescription(_ prescription: PrescriptionData) async throws {
 }
 
 // MARK: - Patient Operations
+func fetchPatientDetailsById(detailId: UUID) async throws -> PatientDetails? {
+    print("Fetching patient details for detailId: \(detailId)")
+    do {
+        // First, let's check what's in the table
+        print("Checking all records in Patientdetails table...")
+        let allRecords = try await client
+            .from("Patientdetails")
+            .select("*")
+            .execute()
+        
+        if let data = allRecords.data as? [[String: Any]] {
+            print("All records in Patientdetails table:")
+            data.forEach { record in
+                if let detailId = record["detail_id"] as? String {
+                    print("Found record with detail_id: \(detailId)")
+                }
+                print(record)
+            }
+        }
+        
+        // Now try to fetch the specific record
+        let lowercaseUUID = detailId.uuidString.lowercased()
+        print("Attempting to fetch specific record with detail_id: \(lowercaseUUID)")
+        let response = try await client
+            .from("Patientdetails")
+            .select("""
+                detail_id,
+                blood_group,
+                allergies,
+                existing_medical_rec,
+                current_medication,
+                past_surgeries,
+                emergency_contact
+            """)
+            .eq("detail_id", value: lowercaseUUID)
+            .execute()
+        
+        // Handle raw Data response
+        if let responseData = response.data as? Data {
+            print("Got raw Data response, attempting to decode...")
+            let jsonObject = try JSONSerialization.jsonObject(with: responseData, options: [])
+            print("Decoded JSON: \(jsonObject)")
+            
+            if let records = jsonObject as? [[String: Any]], !records.isEmpty {
+                print("Found \(records.count) matching records")
+                
+                // Transform the response to match our model
+                let transformedObject = records.map { dict -> [String: Any] in
+                    var newDict = dict
+                    if let detailId = dict["detail_id"] as? String {
+                        newDict["id"] = detailId
+                    }
+                    if let medicalRec = dict["existing_medical_rec"] as? String {
+                        newDict["existing_medical_record"] = medicalRec
+                    }
+                    return newDict
+                }
+                
+                let jsonData = try JSONSerialization.data(withJSONObject: transformedObject, options: [])
+                let details = try JSONDecoder().decode([PatientDetails].self, from: jsonData)
+                print("Successfully decoded \(details.count) patient details")
+                return details.first
+            }
+        } else if let jsonObject = response.data as? [[String: Any]], !jsonObject.isEmpty {
+            print("Found matching patient details: \(jsonObject)")
+            
+            // Transform the response to match our model
+            let transformedObject = jsonObject.map { dict -> [String: Any] in
+                var newDict = dict
+                if let detailId = dict["detail_id"] as? String {
+                    newDict["id"] = detailId
+                }
+                if let medicalRec = dict["existing_medical_rec"] as? String {
+                    newDict["existing_medical_record"] = medicalRec
+                }
+                return newDict
+            }
+            
+            let jsonData = try JSONSerialization.data(withJSONObject: transformedObject, options: [])
+            let details = try JSONDecoder().decode([PatientDetails].self, from: jsonData)
+            print("Successfully decoded \(details.count) patient details")
+            return details.first
+        }
+        
+        print("No patient details found for detail_id: \(lowercaseUUID)")
+        print("Response data type: \(type(of: response.data))")
+        if let data = response.data as? Data {
+            let str = String(data: data, encoding: .utf8) ?? "Could not convert to string"
+            print("Response data as string: \(str)")
+        } else {
+            print("Response data content: \(response.data)")
+        }
+        return nil
+    } catch {
+        print("Error fetching patient details: \(error)")
+        print("Detailed error: \(String(describing: error))")
+        throw error
+    }
+}
+
+// Helper for custom key decoding
+private struct AnyCodingKey: CodingKey {
+    var stringValue: String
+    var intValue: Int?
+    
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+        self.intValue = nil
+    }
+    
+    init?(intValue: Int) {
+        self.stringValue = String(intValue)
+        self.intValue = intValue
+    }
+}
+
 func fetchPatientById(patientId: UUID) async throws -> Patient {
     let patients: [Patient] = try await client
         .from("Patient")

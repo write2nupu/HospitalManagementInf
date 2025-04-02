@@ -143,6 +143,8 @@ struct ProfileView: View {
     private func saveUpdatedDetails() async {
         guard let detailID = patient.detail_id else { return }
 
+        
+        
         let updatedDetails = PatientDetails(
             id: detailID,
             blood_group: bloodGroup,
