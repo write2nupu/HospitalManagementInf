@@ -175,6 +175,7 @@ struct AppointmentDetailView: View {
    @State private var prescriptionPDF: Data?
    @State private var showingShareSheet = false
    @State private var showingPrescriptionPreview = false
+   @State private var showingDateError = false
    
    // Medicine-related state
    @State private var medicineName: String = ""
@@ -280,65 +281,84 @@ struct AppointmentDetailView: View {
                                    Text("Additional Notes: \(notes)")
                                }
                            } else {
-                               // Show prescription input fields only if no existing prescription
-                               VStack(alignment: .leading, spacing: 8) {
-                                   Text("Diagnosis")
-                                       .font(.subheadline)
-                                       .foregroundColor(.gray)
-                                   TextEditor(text: $diagnosis)
-                                       .frame(height: 100)
-                                       .padding(8)
-                                       .background(Color(.systemGray6))
-                                       .cornerRadius(8)
-                                       .onChange(of: diagnosis) { _ in
-                                           // This will trigger validation and update error message
-                                           _ = isFormValid
-                                       }
-                                   
-                                   if let error = diagnosisError {
-                                       Text(error)
-                                           .font(.caption)
-                                           .foregroundColor(.red)
-                                   }
-                               }
-                               .disabled(!isEditable)
+                               // Check if current date is on or after appointment date
+                               let canAddPrescription = Calendar.current.isDateInToday(appointment.date) || Date() > appointment.date
                                
-                               LabTestsSection(selectedLabTests: $selectedLabTests, showingLabTestPicker: $showingLabTestPicker)
-                                   .disabled(!isEditable)
-                               NotesSection(notes: $additionalNotes)
-                                   .disabled(!isEditable)
-                               
-                               // Medicine Section
-                               Section(header: Text("MEDICINES").font(.headline)) {
-                                   HStack {
-                                       Text("Selected Medicines")
+                               if !canAddPrescription {
+                                   VStack(alignment: .center, spacing: 8) {
+                                       Image(systemName: "calendar.badge.exclamationmark")
+                                           .font(.system(size: 40))
+                                           .foregroundColor(.orange)
+                                       Text("Cannot add prescription yet")
+                                           .font(.headline)
+                                       Text("Prescriptions can only be added on or after the appointment date")
                                            .font(.subheadline)
                                            .foregroundColor(.gray)
-                                       Spacer()
-                                       if isEditable {
-                                           Button(action: {
-                                               showingMedicineSelection = true
-                                           }) {
-                                               Label("Add Medicine", systemImage: "plus.circle.fill")
-                                                   .foregroundColor(.blue)
+                                           .multilineTextAlignment(.center)
+                                   }
+                                   .frame(maxWidth: .infinity)
+                                   .padding()
+                               } else {
+                                   // Show prescription input fields only if no existing prescription
+                                   VStack(alignment: .leading, spacing: 8) {
+                                       Text("Diagnosis")
+                                           .font(.subheadline)
+                                           .foregroundColor(.gray)
+                                       TextEditor(text: $diagnosis)
+                                           .frame(height: 100)
+                                           .padding(8)
+                                           .background(Color(.systemGray6))
+                                           .cornerRadius(8)
+                                           .onChange(of: diagnosis) { _ in
+                                               // This will trigger validation and update error message
+                                               _ = isFormValid
                                            }
+                                       
+                                       if let error = diagnosisError {
+                                           Text(error)
+                                               .font(.caption)
+                                               .foregroundColor(.red)
                                        }
                                    }
+                                   .disabled(!isEditable)
                                    
-                                   if prescribedMedicines.isEmpty {
-                                       Text("No medicines selected")
-                                           .foregroundColor(.gray)
-                                           .italic()
-                                   } else {
-                                       ForEach(prescribedMedicines) { medicine in
-                                           VStack(alignment: .leading) {
-                                               Text(medicine.medicine.name)
-                                                   .font(.headline)
-                                               Text("\(medicine.dosage) for \(medicine.duration)")
-                                                   .font(.subheadline)
-                                                   .foregroundColor(.gray)
+                                   LabTestsSection(selectedLabTests: $selectedLabTests, showingLabTestPicker: $showingLabTestPicker)
+                                       .disabled(!isEditable)
+                                   NotesSection(notes: $additionalNotes)
+                                       .disabled(!isEditable)
+                                   
+                                   // Medicine Section
+                                   Section(header: Text("MEDICINES").font(.headline)) {
+                                       HStack {
+                                           Text("Selected Medicines")
+                                               .font(.subheadline)
+                                               .foregroundColor(.gray)
+                                           Spacer()
+                                           if isEditable {
+                                               Button(action: {
+                                                   showingMedicineSelection = true
+                                               }) {
+                                                   Label("Add Medicine", systemImage: "plus.circle.fill")
+                                                       .foregroundColor(.blue)
+                                               }
                                            }
-                                           .padding(.vertical, 4)
+                                       }
+                                       
+                                       if prescribedMedicines.isEmpty {
+                                           Text("No medicines selected")
+                                               .foregroundColor(.gray)
+                                               .italic()
+                                       } else {
+                                           ForEach(prescribedMedicines) { medicine in
+                                               VStack(alignment: .leading) {
+                                                   Text(medicine.medicine.name)
+                                                       .font(.headline)
+                                                   Text("\(medicine.dosage) for \(medicine.duration)")
+                                                       .font(.subheadline)
+                                                       .foregroundColor(.gray)
+                                               }
+                                               .padding(.vertical, 4)
+                                           }
                                        }
                                    }
                                }
@@ -368,12 +388,24 @@ struct AppointmentDetailView: View {
            .navigationBarItems(trailing: Group {
                if isEditable && existingPrescription == nil {
                    Button("Save") {
-                       savePrescription()
-                       presentationMode.wrappedValue.dismiss()
+                       // Check if current date is on or after appointment date
+                       let canAddPrescription = Calendar.current.isDateInToday(appointment.date) || Date() > appointment.date
+                       
+                       if canAddPrescription {
+                           savePrescription()
+                           presentationMode.wrappedValue.dismiss()
+                       } else {
+                           showingDateError = true
+                       }
                    }
                    .disabled(!isFormValid) // Disable save button if form is not valid
                }
            })
+           .alert("Cannot Add Prescription", isPresented: $showingDateError) {
+               Button("OK", role: .cancel) { }
+           } message: {
+               Text("Prescriptions can only be added on or after the appointment date.")
+           }
            .task {
                await loadPrescription()
            }
