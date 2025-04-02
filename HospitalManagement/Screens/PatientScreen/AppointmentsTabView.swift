@@ -5,12 +5,11 @@ struct AppointmentsTabView: View {
     @State private var shouldRefresh = false
     
     var body: some View {
-        NavigationView {
-            VStack {
-                AppointmentListView()
-            }
-            .navigationTitle("Appointments")
+        VStack {
+            AppointmentListView()
         }
+        .navigationTitle("Appointments")
+        .navigationBarBackButtonHidden(true)
     }
 }
 
