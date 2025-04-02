@@ -597,3 +597,21 @@ enum LeaveStatus: String, Codable {
     case approved = "Approved"
     case rejected = "Rejected"
 }
+
+struct labTest{
+    let id: UUID
+    let patientId: UUID
+    let doctorId: UUID
+    let appointmentId: UUID
+    let prescriptionId: UUID
+    let testName: String
+    let components : [String]?
+    let testValue: Float
+    let status: TestStatus
+    let testDate: Date
+    
+    enum TestStatus: String, Codable {
+            case pending = "Pending"
+            case completed = "Completed"
+        }
+}
