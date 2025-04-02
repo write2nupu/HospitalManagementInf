@@ -13,6 +13,11 @@ struct UserRoleScreen: View {
     var body: some View {
         NavigationStack {
             VStack {
+                Image("role")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 120, height: 120)
+                
                 Text("Select Your Role")
                     .font(.largeTitle)
                     .fontWeight(.bold)
