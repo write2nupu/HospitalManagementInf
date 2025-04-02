@@ -1736,15 +1736,15 @@ extension SupabaseController {
             )
         }
     }
-    
-    func updateLeaveStatus(leaveId: UUID, status: LeaveStatus) async throws {
-        try await client
-            .database
-            .from("Leave")
-            .update(["status": status.rawValue])
-            .eq("id", value: leaveId.uuidString)
-            .execute()
-    }
+//    
+//    func updateLeaveStatus(leaveId: UUID, status: LeaveStatus) async throws {
+//        try await client
+//            .database
+//            .from("Leave")
+//            .update(["status": status.rawValue])
+//            .eq("id", value: leaveId.uuidString)
+//            .execute()
+//    }
 
     func fetchLatestLeave(doctorId: UUID) async throws -> Leave? {
         let leaves: [LeaveResponse] = try await client

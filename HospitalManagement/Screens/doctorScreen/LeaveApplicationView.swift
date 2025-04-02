@@ -184,7 +184,24 @@ struct LeaveApplicationView: View {
         }
         
         isLoading = true
+        //    let id: UUID
+        //    let doctorId: UUID
+        //    let hospitalId: UUID
+        //    var type: LeaveType
+        //    let reason: String
+        //    let startDate: Date
+        //    let endDate: Date
+        //    var status: LeaveStatus
         
+//        let id: UUID
+//        let doctorId: UUID
+//        let hospitalId: UUID
+//        let type: LeaveType
+//        let reason: String
+//        let startDate: Date
+//        let endDate: Date
+//        var status: LeaveStatus
+//        
         do {
             let newLeave = Leave(
                 id: UUID(),
@@ -225,34 +242,34 @@ struct LeaveApplicationView: View {
 }
 
 // MARK: - Leave Data Model
-struct Leave {
-    let id: UUID
-    let doctorId: UUID
-    let hospitalId: UUID
-    var type: LeaveType
-    let reason: String
-    let startDate: Date
-    let endDate: Date
-    var status: LeaveStatus
-}
-
-// MARK: - Leave Status Enum
-enum LeaveStatus: String {
-    case pending = "Pending"
-    case approved = "Approved"
-    case rejected = "Rejected"
-}
-
-// MARK: - Leave Types Enum
-enum LeaveType: String, CaseIterable, Identifiable {
-    case sickLeave = "Sick Leave"
-    case casualLeave = "Casual Leave"
-    case annualLeave = "Annual Leave"
-    case emergencyLeave = "Emergency Leave"
-    case maternityPaternityLeave = "Maternity/Paternity Leave"
-    case conferenceLeave = "Conference Leave"
-    
-    var id: String { self.rawValue }
-    var displayName: String { self.rawValue }
-}
+//struct Leave {
+//    let id: UUID
+//    let doctorId: UUID
+//    let hospitalId: UUID
+//    var type: LeaveType
+//    let reason: String
+//    let startDate: Date
+//    let endDate: Date
+//    var status: LeaveStatus
+//}
+//
+//// MARK: - Leave Status Enum
+//enum LeaveStatus: String {
+//    case pending = "Pending"
+//    case approved = "Approved"
+//    case rejected = "Rejected"
+//}
+//
+//// MARK: - Leave Types Enum
+//enum LeaveType: String, CaseIterable, Identifiable {
+//    case sickLeave = "Sick Leave"
+//    case casualLeave = "Casual Leave"
+//    case annualLeave = "Annual Leave"
+//    case emergencyLeave = "Emergency Leave"
+//    case maternityPaternityLeave = "Maternity/Paternity Leave"
+//    case conferenceLeave = "Conference Leave"
+//    
+//    var id: String { self.rawValue }
+//    var displayName: String { self.rawValue }
+//}
 
