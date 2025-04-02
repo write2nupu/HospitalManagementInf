@@ -10,63 +10,61 @@ struct HospitalListView: View {
     @AppStorage("selectedHospitalId") private var selectedHospitalId: String = ""
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                if isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    VStack(spacing: 15) {
-                        ForEach(hospitals) { hospital in
-                            Button {
-                                // Set selected hospital and go back to home screen
-                                print("🏥 Selected hospital: \(hospital.name)")
-                                print("🆔 Setting hospital ID: \(hospital.id.uuidString)")
-                                selectedHospitalId = hospital.id.uuidString
-                                print("📦 Verifying stored hospital ID: \(selectedHospitalId)")
-                                dismiss()
-                            } label: {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack {
-                                        Image(systemName: "building.fill")
-                                            .foregroundColor(.mint)
-                                            .font(.system(size: 24))
-                                        
-                                        Text(hospital.name)
-                                            .font(.title3)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(.primary)
-                                        
-                                        Spacer()
-                                    }
+        ScrollView {
+            if isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                VStack(spacing: 15) {
+                    ForEach(hospitals) { hospital in
+                        Button {
+                            // Set selected hospital and go back to home screen
+                            print("🏥 Selected hospital: \(hospital.name)")
+                            print("🆔 Setting hospital ID: \(hospital.id.uuidString)")
+                            selectedHospitalId = hospital.id.uuidString
+                            print("📦 Verifying stored hospital ID: \(selectedHospitalId)")
+                            dismiss()
+                        } label: {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Image(systemName: "building.fill")
+                                        .foregroundColor(.mint)
+                                        .font(.system(size: 24))
                                     
-                                    Text("\(hospital.city), \(hospital.state)")
-                                        .font(.body)
-                                        .foregroundColor(.secondary)
+                                    Text(hospital.name)
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.primary)
                                     
-                                    Text(hospital.address)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                                    Spacer()
                                 }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color(.systemBackground))
-                                        .shadow(color: .mint.opacity(0.2), radius: 4, x: 0, y: 2)
-                                )
+                                
+                                Text("\(hospital.city), \(hospital.state)")
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                                
+                                Text(hospital.address)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color(.systemBackground))
+                                    .shadow(color: .mint.opacity(0.2), radius: 4, x: 0, y: 2)
+                            )
                         }
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .padding()
                 }
+                .padding()
             }
-            .navigationTitle("Select Hospital")
-            .background(Color.mint.opacity(0.05)) // Soft mint background
-            .task {
-                await loadHospitals()
-            }
+        }
+        .navigationTitle("Select Hospital")
+        .background(Color.mint.opacity(0.05)) // Soft mint background
+        .task {
+            await loadHospitals()
         }
     }
     

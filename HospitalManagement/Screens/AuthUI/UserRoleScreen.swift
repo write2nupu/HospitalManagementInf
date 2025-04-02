@@ -13,48 +13,18 @@ struct UserRoleScreen: View {
     var body: some View {
         NavigationStack {
             VStack {
-                // Main title with image
-                VStack(spacing: 20) {
-                    Image("role")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 120, height: 120)
-                    
-                    Text("Select Your Role")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.black)
-                }
-                .padding(.top, 40)
+                Text("Select Your Role")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.black)
+                    .padding(.top, 40)
                 
                 Spacer()
                 
                 ForEach(roles, id: \.self) { role in
-                        if role == "Patient" {
-                            NavigationLink(destination: PatientLoginSignupView()) {
-                                RoleCard(role: role, imageName: "patient")
-                            }
-                        }
-                    
-                    else if role == "Doctor" {
-                        NavigationLink(destination: DoctorLoginView(message: "Doctor")) {
-                            RoleCard(role: role, imageName: "doctor")
-                        }
+                    NavigationLink(destination: getDestinationForRole(role)) {
+                        RoleCard(role: role)
                     }
-                    else if role == "Admin" {
-
-                        NavigationLink(destination: AdminLoginViewS(message: "Admin")) {
-                            RoleCard(role: role, imageName: "admin")
-                        }
-                    }
-                    else if role == "Super-Admin" {
-
-                        NavigationLink(destination: SuperAdminLoginView(message: "Super admin")) {
-
-                            RoleCard(role: role, imageName: "superadmin")
-                        }
-                    }
-    
                 }
                 
                 Spacer()
@@ -62,22 +32,30 @@ struct UserRoleScreen: View {
             .padding()
         }
     }
+    
+    @ViewBuilder
+    private func getDestinationForRole(_ role: String) -> some View {
+        switch role {
+        case "Patient":
+            PatientLoginSignupView()
+        case "Doctor":
+            DoctorLoginView(message: "Doctor")
+        case "Admin":
+            AdminLoginViewS(message: "Admin")
+        case "Super-Admin":
+            SuperAdminLoginView(message: "Super admin")
+        default:
+            EmptyView()
+        }
+    }
 }
 
 // MARK: - Role Card
 struct RoleCard: View {
     var role: String
-    var imageName: String
     
     var body: some View {
         HStack {
-            // Role image
-            Image(imageName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 50, height: 50)
-                .padding(.trailing, 10)
-            
             Text(role)
                 .font(.title2)
                 .fontWeight(.semibold)

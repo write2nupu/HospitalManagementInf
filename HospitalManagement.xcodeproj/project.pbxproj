@@ -304,6 +304,7 @@
 				DEVELOPMENT_TEAM = 6C5J9S87D2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+
 				INFOPLIST_FILE = HospitalManagement/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "App needs microphone access.";
@@ -337,6 +338,7 @@
 				DEVELOPMENT_TEAM = 6C5J9S87D2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+
 				INFOPLIST_FILE = HospitalManagement/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "App needs microphone access.";

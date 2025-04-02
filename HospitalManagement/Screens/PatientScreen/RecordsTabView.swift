@@ -4,51 +4,27 @@ struct RecordsTabView: View {
     @Binding var selectedHospitalId: String
     
     var body: some View {
-        ZStack(alignment: .top) {
-            Group {
-                if selectedHospitalId.isEmpty {
-                    NoHospitalSelectedView()
-                        .padding(.top, 50) // Add space at the top for the sticky header
-                } else {
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            // Medical Records Section
-                            VStack(alignment: .leading, spacing: 15) {
-                                Text("")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(AppConfig.fontColor)
-                                    .padding(.horizontal)
-                                
-                                // Placeholder for medical records
-
-                                RecordCategoryCard(title: "Lab Reports", iconName: "cross.case.fill", count: 0)
-                                RecordCategoryCard(title: "Prescriptions", iconName: "pill.fill", count: 0)
-                            }
-                            .padding(.horizontal)
+        Group {
+            if selectedHospitalId.isEmpty {
+                NoHospitalSelectedView()
+            } else {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Medical Records Section
+                        VStack(alignment: .leading, spacing: 15) {
+                            // Placeholder for medical records
+                            RecordCategoryCard(title: "Lab Reports", iconName: "cross.case.fill", count: 0)
+                            RecordCategoryCard(title: "Prescriptions", iconName: "pill.fill", count: 0)
                         }
-                        .padding(.vertical)
-                        .padding(.top, 50) // Add space at the top for the sticky header
+                        .padding(.horizontal)
                     }
-                    .background(AppConfig.backgroundColor)
+                    .padding(.vertical)
                 }
+                .background(AppConfig.backgroundColor)
             }
-            
-            // Sticky header for Records tab
-            VStack(spacing: 0) {
-                Text("Medical Records")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal)
-                    .padding(.top, 10)
-                    .background(Color(.systemBackground))
-                
-                Divider()
-            }
-            .background(Color(.systemBackground))
-            .zIndex(1) // Ensure header appears on top
         }
+        .navigationTitle("Medical Records")
+        .navigationBarBackButtonHidden(true)
     }
 }
 
