@@ -35,16 +35,45 @@ struct PersonalInfoView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var isLoading = false
+    @State private var passwordErrorMessage = ""
+    @State private var confirmPasswordErrorMessage = ""
 
     let genders = ["Select Gender", "Male", "Female", "Other"]
     
     private var isPhoneNumberValid: Bool {
         contactNumber.count == 10 && contactNumber.allSatisfy { $0.isNumber }
     }
+    
     private var isEmailValid: Bool {
-        let emailRegex = #"^[A-Za-z0-9!#$%&'*+/=?^_`{|}~.-]+@(gmail|yahoo|outlook)\.com$"#
+        let emailRegex = #"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
         let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
         return emailPredicate.evaluate(with: email)
+    }
+
+    private var isPasswordValid: Bool {
+        // At least 8 characters
+        guard password.count >= 8 else { return false }
+        
+        // At least one numeric character
+        let numberRegex = ".*[0-9]+.*"
+        let numberPredicate = NSPredicate(format:"SELF MATCHES %@", numberRegex)
+        guard numberPredicate.evaluate(with: password) else { return false }
+        
+        // At least one alphabetic character
+        let letterRegex = ".*[a-zA-Z]+.*"
+        let letterPredicate = NSPredicate(format:"SELF MATCHES %@", letterRegex)
+        guard letterPredicate.evaluate(with: password) else { return false }
+        
+        // At least one special character
+        let specialCharRegex = ".*[^A-Za-z0-9].*"
+        let specialCharPredicate = NSPredicate(format:"SELF MATCHES %@", specialCharRegex)
+        guard specialCharPredicate.evaluate(with: password) else { return false }
+        
+        return true
+    }
+    
+    private var isConfirmPasswordValid: Bool {
+        confirmPassword == password
     }
     
     var body: some View {
@@ -108,35 +137,55 @@ struct PersonalInfoView: View {
             }
 
             // Password fields with independent eye buttons
-            HStack {
-                if isPasswordVisible {
-                    TextField("Password", text: $password)
-                } else {
-                    SecureField("Password", text: $password)
+            VStack(alignment: .leading) {
+                HStack {
+                    if isPasswordVisible {
+                        TextField("Password", text: $password)
+                            .autocapitalization(.none)
+                    } else {
+                        SecureField("Password", text: $password)
+                    }
+                    Button(action: { isPasswordVisible.toggle() }) {
+                        Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                            .foregroundColor(.gray)
+                    }
                 }
-                Button(action: { isPasswordVisible.toggle() }) {
-                    Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
-                        .foregroundColor(.gray)
+                .padding()
+                .background(Color.mint.opacity(0.2))
+                .cornerRadius(8)
+                
+                if !password.isEmpty && !isPasswordValid {
+                    Text("Password must be at least 8 characters with 1 number, 1 letter, and 1 special character")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding(.top, 2)
                 }
             }
-            .padding()
-            .background(Color.mint.opacity(0.2))
-            .cornerRadius(8)
 
-            HStack {
-                if isConfirmPasswordVisible {
-                    TextField("Confirm Password", text: $confirmPassword)
-                } else {
-                    SecureField("Confirm Password", text: $confirmPassword)
+            VStack(alignment: .leading) {
+                HStack {
+                    if isConfirmPasswordVisible {
+                        TextField("Confirm Password", text: $confirmPassword)
+                            .autocapitalization(.none)
+                    } else {
+                        SecureField("Confirm Password", text: $confirmPassword)
+                    }
+                    Button(action: { isConfirmPasswordVisible.toggle() }) {
+                        Image(systemName: isConfirmPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                            .foregroundColor(.gray)
+                    }
                 }
-                Button(action: { isConfirmPasswordVisible.toggle() }) {
-                    Image(systemName: isConfirmPasswordVisible ? "eye.slash.fill" : "eye.fill")
-                        .foregroundColor(.gray)
+                .padding()
+                .background(Color.mint.opacity(0.2))
+                .cornerRadius(8)
+                
+                if !confirmPassword.isEmpty && !isConfirmPasswordValid {
+                    Text("Passwords do not match")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding(.top, 2)
                 }
             }
-            .padding()
-            .background(Color.mint.opacity(0.2))
-            .cornerRadius(8)
 
             Spacer()
 
@@ -168,6 +217,24 @@ struct PersonalInfoView: View {
     private func validateAndProceed() async {
         if fullName.isEmpty || gender == "Select Gender" || contactNumber.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty {
             alertMessage = "Please fill in all required fields."
+            showAlert = true
+            return
+        }
+
+        if !isEmailValid {
+            alertMessage = "Please enter a valid email address."
+            showAlert = true
+            return
+        }
+
+        if !isPhoneNumberValid {
+            alertMessage = "Please enter a valid 10-digit phone number."
+            showAlert = true
+            return
+        }
+
+        if !isPasswordValid {
+            alertMessage = "Password must be at least 8 characters with 1 number, 1 letter, and 1 special character."
             showAlert = true
             return
         }
