@@ -134,7 +134,7 @@ struct DoctorDashBoard: View {
             
             // Fetch department details if available
             if let departmentId = doctorProfile?.department_id {
-                department = try await supabase.fetchDepartmentDetails(departmentId: departmentId)
+                department = await supabase.fetchDepartmentDetails(departmentId: departmentId)
             }
             
             // Fetch hospital details if available

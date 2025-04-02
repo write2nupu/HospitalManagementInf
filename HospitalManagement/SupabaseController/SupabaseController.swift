@@ -1663,5 +1663,101 @@ extension SupabaseController {
             .update(["date": dateString])
             .eq("id", value: appointmentId.uuidString)
             .execute()
+        
+        
+        // MARK: - Doctor Leave Request Functions
+        func fetchLeaveRequests(hospitalId: UUID) async throws -> [(leave: Leave, doctor: Doctor, department: Department?)] {
+            print("Fetching leaves for hospital: \(hospitalId)")
+            do {
+                print("Executing Supabase query...")
+                let leaves: [Leave] = try await client
+                    .from("Leave")
+                    .select("""
+                    id,
+                    doctorId,
+                    hospitalId,
+                    type,
+                    reason,
+                    startDate,
+                    endDate,
+                    status
+                """)
+                    .eq("hospitalId", value: hospitalId.uuidString)
+                    .execute()
+                    .value
+                
+                print("Successfully fetched \(leaves.count) leaves")
+                
+                var leaveDetails: [(leave: Leave, doctor: Doctor, department: Department?)] = []
+                
+                for leave in leaves {
+                    // Fetch doctor details
+                    let doctors: [Doctor] = try await client
+                        .from("Doctor")
+                        .select()
+                        .eq("id", value: leave.doctorId.uuidString)
+                        .execute()
+                        .value
+                    
+                    guard let doctor = doctors.first else {
+                        print("Doctor not found for leave: \(leave.id)")
+                        continue
+                    }
+                    
+                    // Fetch department details if available
+                    var department: Department? = nil
+                    if let departmentId = doctor.department_id {
+                        let departments: [Department] = try await client
+                            .from("Department")
+                            .select()
+                            .eq("id", value: departmentId.uuidString)
+                            .execute()
+                            .value
+                        
+                        department = departments.first
+                    }
+                    
+                    leaveDetails.append((leave: leave, doctor: doctor, department: department))
+                }
+                
+                return leaveDetails
+            } catch {
+                print("Error fetching leaves: \(error.localizedDescription)")
+                print("Error details: \(String(describing: error))")
+                throw error
+            }
+        }
+        
+        func updateLeaveStatus(leaveId: UUID, status: LeaveStatus) async throws {
+            do{
+                try await client
+                    .from("Leave")
+                    .update(["status": status.rawValue])
+                    .eq("id", value: leaveId.uuidString)
+                    .execute()
+            }catch{
+                print(error.localizedDescription)
+            }
+        }
+        
+        func getAffectedAppointments(doctorId: UUID, startDate: Date, endDate: Date) async throws -> Int {
+            do{
+                let appointments: [Appointment] = try await client
+                    .from("Appointment")
+                    .select()
+                    .eq("doctorId", value: doctorId.uuidString)
+                    .eq("status", value: AppointmentStatus.scheduled.rawValue)
+                    .gte("date", value: startDate)
+                    .lte("date", value: endDate)
+                    .execute()
+                    .value
+                
+                return appointments.count
+            }catch{
+                print(error.localizedDescription)
+                throw error
+            }
+            
+        }
     }
 }
