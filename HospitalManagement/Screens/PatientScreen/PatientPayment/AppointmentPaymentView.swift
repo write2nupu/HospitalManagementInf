@@ -15,6 +15,7 @@ struct PaymentView: View {
     @State private var showPaymentConfirmation = false
     @State private var invoice: Invoice?
     @StateObject private var coordinator = NavigationCoordinator.shared
+    @StateObject private var supabaseController = SupabaseController()
     
     // Format the fee to show correct value with two decimal places
     private var formattedFee: String {
@@ -105,7 +106,7 @@ struct PaymentView: View {
     }
 
     private func processPayment() {
-        // Create a paid invoice with correctly formatted fee
+        // Create a paid invoice
         let paidInvoice = Invoice(
             id: UUID(),
             createdAt: Date(),
@@ -116,9 +117,27 @@ struct PaymentView: View {
             hospitalId: hospital.id
         )
         
-        // Store the invoice and show confirmation
-        invoice = paidInvoice
-        showPaymentConfirmation = true
+        // Store the invoice in Supabase and show confirmation
+        Task {
+            do {
+                // Save invoice to Supabase
+                try await supabaseController.createInvoice(invoice: paidInvoice)
+                print("Invoice created successfully in Supabase")
+                
+                await MainActor.run {
+                    // Store the invoice locally for the confirmation view
+                    self.invoice = paidInvoice
+                    self.showPaymentConfirmation = true
+                }
+            } catch {
+                print("Error creating invoice: \(error)")
+                // Handle error - you might want to show an alert to the user
+                await MainActor.run {
+                    // Show error alert
+                    // You can add @State var showError = false and error message handling here
+                }
+            }
+        }
     }
 
     // MARK: - Booking Details Section

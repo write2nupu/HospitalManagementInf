@@ -2,17 +2,20 @@ import SwiftUI
 
 struct RecordsTabView: View {
     @Binding var selectedHospitalId: String
+    @StateObject private var supabase = SupabaseController()
+    @State private var prescriptions: [PrescriptionData] = []
+    @State private var isLoading = false
+    @State private var doctorNames: [UUID: String] = [:] // To store doctor names
     
     var body: some View {
         ZStack(alignment: .top) {
             Group {
                 if selectedHospitalId.isEmpty {
                     NoHospitalSelectedView()
-                        .padding(.top, 50) // Add space at the top for the sticky header
+                        .padding(.top, 50)
                 } else {
                     ScrollView {
                         VStack(spacing: 20) {
-                            // Medical Records Section
                             VStack(alignment: .leading, spacing: 15) {
                                 Text("")
                                     .font(.title2)
@@ -20,21 +23,32 @@ struct RecordsTabView: View {
                                     .foregroundColor(AppConfig.fontColor)
                                     .padding(.horizontal)
                                 
-                                // Placeholder for medical records
-
-                                RecordCategoryCard(title: "Lab Reports", iconName: "cross.case.fill", count: 0)
-                                RecordCategoryCard(title: "Prescriptions", iconName: "pill.fill", count: 0)
+                                // Lab Reports Card
+                                RecordCategoryCard<EmptyView>(
+                                    title: "Lab Reports",
+                                    iconName: "cross.case.fill",
+                                    count: 0,
+                                    destination: EmptyView()
+                                )
+                                
+                                // Prescriptions Card
+                                RecordCategoryCard<PrescriptionListView>(
+                                    title: "Prescriptions",
+                                    iconName: "pill.fill",
+                                    count: prescriptions.count,
+                                    destination: PrescriptionListView(prescriptions: prescriptions, doctorNames: doctorNames)
+                                )
                             }
                             .padding(.horizontal)
                         }
                         .padding(.vertical)
-                        .padding(.top, 50) // Add space at the top for the sticky header
+                        .padding(.top, 50)
                     }
                     .background(AppConfig.backgroundColor)
                 }
             }
             
-            // Sticky header for Records tab
+            // Sticky header
             VStack(spacing: 0) {
                 Text("Medical Records")
                     .font(.largeTitle)
@@ -47,25 +61,70 @@ struct RecordsTabView: View {
                 Divider()
             }
             .background(Color(.systemBackground))
-            .zIndex(1) // Ensure header appears on top
+            .zIndex(1)
+        }
+        .onAppear {
+            fetchPrescriptions()
+        }
+    }
+    
+    private func fetchPrescriptions() {
+        isLoading = true
+        Task {
+            if let patientIdString = UserDefaults.standard.string(forKey: "currentPatientId"),
+               let patientId = UUID(uuidString: patientIdString) {
+                do {
+                    // Fetch prescriptions directly
+                    let fetchedPrescriptions: [PrescriptionData] = try await supabase.client
+                        .from("PrescriptionData")
+                        .select()
+                        .eq("patientId", value: patientId.uuidString)
+                        .execute()
+                        .value
+                    
+                    // Create custom decoder for handling lab tests
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    
+                    // Fetch doctor names
+                    var doctorNamesDict: [UUID: String] = [:]
+                    for prescription in fetchedPrescriptions {
+                        if let doctor = try? await supabase.fetchDoctorById(doctorId: prescription.doctorId) {
+                            doctorNamesDict[prescription.doctorId] = doctor.full_name
+                        }
+                    }
+                    
+                    await MainActor.run {
+                        self.prescriptions = fetchedPrescriptions
+                        self.doctorNames = doctorNamesDict
+                        self.isLoading = false
+                    }
+                } catch {
+                    print("Error fetching prescriptions:", error)
+                    print("Detailed error:", String(describing: error))
+                    await MainActor.run {
+                        self.isLoading = false
+                    }
+                }
+            }
         }
     }
 }
 
-// MARK: - Record Category Card
-struct RecordCategoryCard: View {
+struct RecordCategoryCard<D: View>: View {
     let title: String
     let iconName: String
     let count: Int
+    let destination: D
     
     var body: some View {
-        NavigationLink(destination: RecordDetailView(title: title)) {
+        NavigationLink(destination: destination) {
             HStack {
                 Image(systemName: iconName)
                     .font(.system(size: 24))
-                    .foregroundColor(AppConfig.buttonColor)
+                    .foregroundColor(.blue)
                     .frame(width: 50, height: 50)
-                    .background(AppConfig.buttonColor.opacity(0.1))
+                    .background(Color.blue.opacity(0.1))
                     .cornerRadius(10)
                 
                 VStack(alignment: .leading, spacing: 5) {
@@ -125,15 +184,14 @@ struct NoHospitalSelectedView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "building.2.fill")
+            Image(systemName: "building.2.crop.circle")
                 .font(.system(size: 60))
-                .foregroundColor(AppConfig.buttonColor.opacity(0.5))
+                .foregroundColor(.blue.opacity(0.5))
             
             Text("No Hospital Selected")
                 .font(.title3)
-                .foregroundColor(AppConfig.fontColor)
             
-            Text("Please select a hospital to view your information")
+            Text("Please select a hospital to view records")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -160,5 +218,24 @@ struct NoHospitalSelectedView: View {
 #Preview {
     NavigationView {
         RecordsTabView(selectedHospitalId: .constant(""))
+    }
+}
+
+extension PrescriptionData {
+    var formattedLabTests: [String] {
+        guard let tests = labTests else { return [] }
+        
+        // If tests is already an array, return it
+        if tests is [String] {
+            return tests
+        }
+        
+        // If tests is a string, split it
+        if let testString = tests as? String {
+            return testString.split(separator: ",")
+                .map { String($0.trimmingCharacters(in: .whitespaces)) }
+        }
+        
+        return []
     }
 } 
