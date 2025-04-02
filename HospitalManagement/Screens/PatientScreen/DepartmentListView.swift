@@ -21,9 +21,8 @@ struct DepartmentListView: View {
         }
     }
 
-    // Adaptive Grid Layout with 2 Columns
+    // Update the grid layout to use single column
     let columns = [
-        GridItem(.flexible(), spacing: 15),
         GridItem(.flexible(), spacing: 15)
     ]
     
@@ -202,6 +201,8 @@ struct DepartmentListView: View {
                         .font(.headline)
                         .foregroundColor(.mint)
                 }
+                
+                Spacer()
             }
             
             if let description = department.description, !description.isEmpty {
@@ -211,7 +212,7 @@ struct DepartmentListView: View {
                     .lineLimit(2)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 140)
+        .frame(maxWidth: .infinity, minHeight: 120)
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 15)
