@@ -3,6 +3,7 @@ import SwiftUI
 struct LeaveApplicationView: View {
     
     var Doctor: Doctor
+    @StateObject private var supabase = SupabaseController()
     
     let leaveTypes: [LeaveType] = [
         .sickLeave, .casualLeave, .annualLeave,
@@ -18,39 +19,44 @@ struct LeaveApplicationView: View {
     @State private var isLeaveApproved = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var isLoading = false
+    @State private var showSuccess = false
 
     var body: some View {
         NavigationStack {
-            Form {
-                if let leave = pendingLeave {
-                    leaveStatusSection(leave)
+            Group {
+                if isLoading {
+                    ProgressView("Loading...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    Section(header: Text("Leave Type")) {
-                        Picker("Select Leave Type", selection: $selectedLeaveType) {
-                            Text("Select Leave Type").tag(Optional<LeaveType>(nil))
-                            ForEach(leaveTypes, id: \.self) { leave in
-                                Text(leave.displayName).tag(Optional(leave))
+                    Form {
+                        if let leave = pendingLeave {
+                            leaveStatusSection(leave)
+                        } else {
+                            Section(header: Text("Leave Type")) {
+                                Picker("Select Leave Type", selection: $selectedLeaveType) {
+                                    Text("Select Leave Type").tag(Optional<LeaveType>(nil))
+                                    ForEach(leaveTypes, id: \.self) { leave in
+                                        Text(leave.displayName).tag(Optional(leave))
+                                    }
+                                }
+                                .pickerStyle(MenuPickerStyle())
+                            }
+                            
+                            Section(header: Text("Reason for Leave")) {
+                                TextField("Enter reason...", text: $reason)
+                            }
+                            
+                            Section(header: Text("Leave Duration")) {
+                                Text("Number days: \(leaveDays)")
+                                
+                                DatePicker("Start Date", selection: $startDate, in: Date()..., displayedComponents: .date)
+                                    .onChange(of: startDate) { updateLeaveDays() }
+                                
+                                DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                                    .onChange(of: endDate) { updateLeaveDays() }
                             }
                         }
-                        .pickerStyle(MenuPickerStyle())
-                    }
-                    
-                    Section(header: Text("Reason for Leave")) {
-                        TextField("Enter reason...", text: $reason)
-                    }
-                    
-                    Section(header: Text("Leave Duration")) {
-//                        Stepper(value: $leaveDays, in: 1...30) {
-//                            Text("Days: \(leaveDays)")
-//                        }
-                        
-                        Text("Number days: \(leaveDays)")
-                        
-                        DatePicker("Start Date", selection: $startDate, in: Date()..., displayedComponents: .date)
-                            .onChange(of: startDate) { updateLeaveDays() }
-                        
-                        DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
-                            .onChange(of: endDate) { updateLeaveDays() }
                     }
                 }
             }
@@ -59,16 +65,25 @@ struct LeaveApplicationView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Apply") {
-                        applyForLeave()
+                        Task {
+                            await applyForLeave()
+                        }
                     }
-                    .disabled(pendingLeave != nil)
+                    .disabled(pendingLeave != nil || isLoading)
                 }
             }
-            .alert(isPresented: $showError) {
-                Alert(title: Text("Error"), message: Text(errorMessage), dismissButton: .default(Text("OK")))
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
             }
-            .onAppear {
-                loadPendingLeave()
+            .alert("Success", isPresented: $showSuccess) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Leave application submitted successfully")
+            }
+            .task {
+                await loadPendingLeave()
             }
         }
     }
@@ -78,10 +93,12 @@ struct LeaveApplicationView: View {
     private func leaveStatusSection(_ leave: Leave) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: isLeaveApproved ? "checkmark.circle.fill" : "clock.fill")
-                    .foregroundColor(isLeaveApproved ? .green : .yellow)
+                Image(systemName: leave.status == .approved ? "checkmark.circle.fill" : 
+                      leave.status == .rejected ? "xmark.circle.fill" : "clock.fill")
+                    .foregroundColor(leave.status == .approved ? .green : 
+                                   leave.status == .rejected ? .red : .yellow)
                 
-                Text(isLeaveApproved ? "Approved Leave" : "Pending Leave")
+                Text(leave.status.rawValue + " Leave")
                     .font(.title2)
                     .bold()
                     .foregroundColor(.primary)
@@ -116,12 +133,18 @@ struct LeaveApplicationView: View {
                     .fontWeight(.semibold)
             }
             
-            if isLeaveApproved {
+            switch leave.status {
+            case .approved:
                 Text("Your leave has been approved.")
                     .font(.footnote)
                     .foregroundColor(.green)
                     .padding(.top, 5)
-            } else {
+            case .rejected:
+                Text("Your leave application was rejected.")
+                    .font(.footnote)
+                    .foregroundColor(.red)
+                    .padding(.top, 5)
+            case .pending:
                 Text("Leave is pending approval from Admin.")
                     .font(.footnote)
                     .foregroundColor(.orange)
@@ -138,11 +161,11 @@ struct LeaveApplicationView: View {
     // MARK: - Helper Functions
     private func updateLeaveDays() {
         if let days = Calendar.current.dateComponents([.day], from: startDate, to: endDate).day {
-            leaveDays = max(1, days + 1) // ✅ Include both start and end days
+            leaveDays = max(1, days + 1) // Include both start and end days
         }
     }
     
-    private func applyForLeave() {
+    private func applyForLeave() async {
         guard let selectedLeaveType = selectedLeaveType else {
             showError("Please select a leave type.")
             return
@@ -160,17 +183,29 @@ struct LeaveApplicationView: View {
             return
         }
         
-        pendingLeave = Leave(
-            id: UUID(),
-            doctorId: Doctor.id,
-            hospitalId: Doctor.hospital_id ?? UUID(),
-            type: selectedLeaveType,
-            reason: reason,
-            startDate: startDate,
-            endDate: endDate,
-            status: .pending
-        )
-        isLeaveApproved = false
+        isLoading = true
+        
+        do {
+            let newLeave = Leave(
+                id: UUID(),
+                doctorId: Doctor.id,
+                hospitalId: Doctor.hospital_id ?? UUID(),
+                type: selectedLeaveType,
+                reason: reason,
+                startDate: startDate,
+                endDate: endDate,
+                status: .pending
+            )
+            
+            try await supabase.applyForLeave(newLeave)
+            pendingLeave = newLeave
+            showSuccess = true
+            
+        } catch {
+            showError(error.localizedDescription)
+        }
+        
+        isLoading = false
     }
     
     private func showError(_ message: String) {
@@ -178,8 +213,14 @@ struct LeaveApplicationView: View {
         showError = true
     }
     
-    private func loadPendingLeave() {
-        pendingLeave = nil
+    private func loadPendingLeave() async {
+        isLoading = true
+        do {
+            pendingLeave = try await supabase.fetchPendingLeave(doctorId: Doctor.id)
+        } catch {
+            showError(error.localizedDescription)
+        }
+        isLoading = false
     }
 }
 

@@ -1284,3 +1284,132 @@ func getBedStatistics(hospitalId: UUID? = nil) async throws -> (total: Int, avai
         return []
     }
 }
+
+// MARK: - Leave Management
+extension SupabaseController {
+    func applyForLeave(_ leave: Leave) async throws {
+        let dateFormatter = ISO8601DateFormatter()
+        let leaveData = LeaveRequest(
+            id: leave.id,
+            doctorId: leave.doctorId,
+            hospitalId: leave.hospitalId,
+            type: leave.type.rawValue,
+            reason: leave.reason,
+            startDate: dateFormatter.string(from: leave.startDate),
+            endDate: dateFormatter.string(from: leave.endDate),
+            status: leave.status.rawValue
+        )
+        
+        try await client
+            .database
+            .from("Leave")
+            .insert(leaveData)
+            .execute()
+    }
+    
+    func fetchPendingLeave(doctorId: UUID) async throws -> Leave? {
+        let leaves: [LeaveResponse] = try await client
+            .database
+            .from("Leave")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .eq("status", value: LeaveStatus.pending.rawValue)
+            .order("startDate", ascending: true)
+            .limit(1)
+            .execute()
+            .value
+        
+        guard let leaveResponse = leaves.first else { return nil }
+        
+        let dateFormatter = ISO8601DateFormatter()
+        return Leave(
+            id: leaveResponse.id,
+            doctorId: leaveResponse.doctorId,
+            hospitalId: leaveResponse.hospitalId,
+            type: LeaveType(rawValue: leaveResponse.type) ?? .sickLeave,
+            reason: leaveResponse.reason,
+            startDate: dateFormatter.date(from: leaveResponse.startDate) ?? Date(),
+            endDate: dateFormatter.date(from: leaveResponse.endDate) ?? Date(),
+            status: LeaveStatus(rawValue: leaveResponse.status) ?? .pending
+        )
+    }
+    
+    func fetchAllLeaves(doctorId: UUID) async throws -> [Leave] {
+        let leaves: [LeaveResponse] = try await client
+            .database
+            .from("Leave")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .order("startDate", ascending: false)
+            .execute()
+            .value
+        
+        let dateFormatter = ISO8601DateFormatter()
+        return leaves.map { leaveResponse in
+            Leave(
+                id: leaveResponse.id,
+                doctorId: leaveResponse.doctorId,
+                hospitalId: leaveResponse.hospitalId,
+                type: LeaveType(rawValue: leaveResponse.type) ?? .sickLeave,
+                reason: leaveResponse.reason,
+                startDate: dateFormatter.date(from: leaveResponse.startDate) ?? Date(),
+                endDate: dateFormatter.date(from: leaveResponse.endDate) ?? Date(),
+                status: LeaveStatus(rawValue: leaveResponse.status) ?? .pending
+            )
+        }
+    }
+    
+    func updateLeaveStatus(leaveId: UUID, status: LeaveStatus) async throws {
+        try await client
+            .database
+            .from("Leave")
+            .update(["status": status.rawValue])
+            .eq("id", value: leaveId.uuidString)
+            .execute()
+    }
+}
+
+// MARK: - Leave Data Models
+private struct LeaveRequest: Codable {
+    let id: UUID
+    let doctorId: UUID
+    let hospitalId: UUID
+    let type: String
+    let reason: String
+    let startDate: String
+    let endDate: String
+    let status: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case doctorId = "doctorId"
+        case hospitalId = "hospitalId"
+        case type
+        case reason
+        case startDate = "startDate"
+        case endDate = "endDate"
+        case status
+    }
+}
+
+private struct LeaveResponse: Codable {
+    let id: UUID
+    let doctorId: UUID
+    let hospitalId: UUID
+    let type: String
+    let reason: String
+    let startDate: String
+    let endDate: String
+    let status: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case doctorId = "doctorId"
+        case hospitalId = "hospitalId"
+        case type
+        case reason
+        case startDate = "startDate"
+        case endDate = "endDate"
+        case status
+    }
+}
