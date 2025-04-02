@@ -12,14 +12,41 @@ struct HospitalManagementApp: App {
     @StateObject private var viewModel = HospitalManagementViewModel()
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @AppStorage("userRole") private var userRole: String?
-    @State private var shouldShowUserRoleScreen = false
+    @AppStorage("currentUserId") private var currentUserId: String = ""
+    @State private var patient: Patient?
     @StateObject private var supabaseController = SupabaseController()
     
     var body: some Scene {
         WindowGroup {
             Group {
-                if shouldShowUserRoleScreen {
-                    UserRoleScreen()
+                if isLoggedIn {
+                    if let userRole = userRole {
+                        switch userRole {
+                        case "Patient":
+                            if let patient = patient {
+                                PatientDashboard(patient: patient)
+                            } else {
+                                // Loading state while fetching patient data
+                                LoadingView()
+                                    .onAppear {
+                                        fetchLoggedInPatient()
+                                    }
+                            }
+                        case "Doctor":
+                            Text("Doctor Dashboard")
+                            // Replace with actual doctor dashboard
+                        case "Admin":
+                            Text("Admin Dashboard")
+                            // Replace with actual admin dashboard
+                        case "Super-Admin":
+                            Text("Super Admin Dashboard")
+                            // Replace with actual super admin dashboard
+                        default:
+                            UserRoleScreen()
+                        }
+                    } else {
+                        UserRoleScreen()
+                    }
                 } else {
                     UserRoleScreen()
                 }
@@ -30,7 +57,6 @@ struct HospitalManagementApp: App {
                 Task {
                     do {
                         try await supabaseController.createDefaultSuperAdmin()
-                        
                     } catch {
                         print("Error creating default super admin: \(error)")
                     }
@@ -42,9 +68,41 @@ struct HospitalManagementApp: App {
                     object: nil,
                     queue: .main
                 ) { _ in
-                    shouldShowUserRoleScreen = true
+                    isLoggedIn = false
+                    userRole = nil
+                    currentUserId = ""
+                    patient = nil
                 }
             }
+        }
+    }
+    
+    private func fetchLoggedInPatient() {
+        Task {
+            do {
+                if let userId = UUID(uuidString: currentUserId) {
+                    let fetchedPatient = try await supabaseController.fetchPatient(id: userId)
+                    await MainActor.run {
+                        self.patient = fetchedPatient
+                    }
+                }
+            } catch {
+                print("Error fetching patient: \(error)")
+            }
+        }
+    }
+}
+
+// Simple loading view
+struct LoadingView: View {
+    var body: some View {
+        VStack {
+            ProgressView()
+                .scaleEffect(2)
+                .padding()
+            Text("Loading...")
+                .font(.headline)
+                .padding()
         }
     }
 }

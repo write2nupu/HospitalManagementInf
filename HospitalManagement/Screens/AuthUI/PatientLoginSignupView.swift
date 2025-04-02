@@ -22,87 +22,76 @@ struct PatientLoginSignupView: View {
     @State private var currentPatient: Patient?
     
     var body: some View {
-        ZStack {
-            // Main login view
-            NavigationStack {
-                VStack(spacing: 30) {
-                    // Title
-                    VStack(spacing: 5) {
-                        Image(systemName: "person.fill")
-                            .resizable()
-                            .frame(width: 100, height: 100)
-                            .foregroundColor(.mint)
-                            .padding(.bottom, 10)
+        NavigationStack {
+            VStack(spacing: 30) {
+                // Title
+                VStack(spacing: 5) {
+                    Image(systemName: "person.fill")
+                        .resizable()
+                        .frame(width: 100, height: 100)
+                        .foregroundColor(.mint)
+                        .padding(.bottom, 10)
 
-                        // **Title**
-                        Text("Patient")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
+                    // **Title**
+                    Text("Patient")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(.mint)
+                }
+                .padding(.top, 40)
+                
+                // Form Fields
+                VStack(spacing: 20) {
+                    customTextField(icon: "envelope.fill", placeholder: "Enter Email", text: $email, keyboardType: .emailAddress)
+                    passwordField(icon: "lock.fill", placeholder: "Enter Password", text: $password)
+                }
+                .padding(.top, 20)
+                
+                // Login Button
+                Button(action: {
+                    Task {
+                        await handleSubmit()
+                    }
+                }) {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Text("Login")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.mint)
+                .cornerRadius(12)
+                .padding(.horizontal)
+                .disabled(isLoading)
+                
+                // Signup Button
+                NavigationLink(destination: PatientSignupView()) {
+                    HStack(spacing: 0) {
+                        Text("Don't have an account? ")
+                            .font(.body)
+                            .foregroundColor(.black)
+                        
+                        Text("Sign Up")
+                            .font(.headline)
                             .foregroundColor(.mint)
                     }
-                    .padding(.top, 40)
-                    
-                    // Form Fields
-                    VStack(spacing: 20) {
-                        customTextField(icon: "envelope.fill", placeholder: "Enter Email", text: $email, keyboardType: .emailAddress)
-                        passwordField(icon: "lock.fill", placeholder: "Enter Password", text: $password)
-                    }
-                    .padding(.top, 20)
-                    
-                    // Login Button
-                    Button(action: {
-                        Task {
-                            await handleSubmit()
-                        }
-                    }) {
-                        if isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        } else {
-                            Text("Login")
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.mint)
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                    .disabled(isLoading)
-                    
-                    // Signup Button
-                    NavigationLink(destination: PatientSignupView()) {
-                        HStack(spacing: 0) {
-                            Text("Don't have an account? ")
-                                .font(.body)
-                                .foregroundColor(.black)
-                            
-                            Text("Sign Up")
-                                .font(.headline)
-                                .foregroundColor(.mint)
-                        }
-                        .padding(.top, 10)
-                        .background(Color.clear)
-                    }
-                    
-                    Spacer()
+                    .padding(.top, 10)
+                    .background(Color.clear)
                 }
-                .padding()
-                .background(Color.mint.opacity(0.05))
-                .alert(isPresented: $showAlert) {
-                    Alert(title: Text("Action Required"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
-                }
+                
+                Spacer()
             }
-            
-            // Full-screen overlay when navigating to dashboard
-            if navigateToDashboard, let patient = currentPatient {
-                PatientDashboard(patient: patient)
-                    .transition(.opacity)
-                    .zIndex(1)
+            .padding()
+            .background(Color.mint.opacity(0.05))
+            .alert(isPresented: $showAlert) {
+                Alert(title: Text("Action Required"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
         }
-        .animation(.default, value: navigateToDashboard)
     }
     
     // MARK: - Submission Logic
@@ -119,7 +108,10 @@ struct PatientLoginSignupView: View {
             currentPatient = try await supabaseController.signInPatient(email: email, password: password)
             currentUserId = currentPatient?.id.uuidString ?? ""
             isUserLoggedIn = true
-            navigateToDashboard = true
+            UserDefaults.standard.set("Patient", forKey: "userRole")
+            
+            // We don't need to navigate using the overlay anymore
+            // The app will automatically show the dashboard based on isLoggedIn and userRole
         } catch {
             alertMessage = error.localizedDescription
             showAlert = true

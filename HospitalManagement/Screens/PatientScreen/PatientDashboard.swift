@@ -45,8 +45,14 @@ struct PatientDashboard: View {
         // Configure navigation bar appearance
         let navBarAppearance = UINavigationBarAppearance()
         navBarAppearance.configureWithDefaultBackground()
+        
+        // Disable back button appearance globally
+        navBarAppearance.setBackIndicatorImage(UIImage(), transitionMaskImage: UIImage())
+        
         UINavigationBar.appearance().standardAppearance = navBarAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navBarAppearance
+        UINavigationBar.appearance().backIndicatorImage = UIImage()
+        UINavigationBar.appearance().backIndicatorTransitionMaskImage = UIImage()
     }
     
     var body: some View {
@@ -59,7 +65,13 @@ struct PatientDashboard: View {
                 )
                 .navigationTitle("Hi, \(patient.fullname)")
                 .navigationBarTitleDisplayMode(.large)
+                .navigationBarBackButtonHidden(true)
                 .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        // Empty view to override back button
+                        Color.clear.frame(width: 0, height: 0)
+                    }
+                    
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button(action: {
                             showProfile = true
@@ -84,6 +96,13 @@ struct PatientDashboard: View {
             // MARK: - Appointments Tab
             NavigationView {
                 AppointmentsTabView()
+                    .navigationBarBackButtonHidden(true)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            // Empty view to override back button
+                            Color.clear.frame(width: 0, height: 0)
+                        }
+                    }
             }
             .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
@@ -94,6 +113,13 @@ struct PatientDashboard: View {
             // MARK: - Records Tab
             NavigationView {
                 RecordsTabView(selectedHospitalId: $selectedHospitalId)
+                    .navigationBarBackButtonHidden(true)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            // Empty view to override back button
+                            Color.clear.frame(width: 0, height: 0)
+                        }
+                    }
             }
             .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
@@ -104,6 +130,13 @@ struct PatientDashboard: View {
             // MARK: - Invoices Tab
             NavigationView {
                 InvoiceListView(patientId: patient.id)
+                    .navigationBarBackButtonHidden(true)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            // Empty view to override back button
+                            Color.clear.frame(width: 0, height: 0)
+                        }
+                    }
             }
             .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
