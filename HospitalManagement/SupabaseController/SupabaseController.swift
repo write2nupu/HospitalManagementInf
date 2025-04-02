@@ -1459,4 +1459,77 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
             throw error
         }
     }
+
+    // MARK: - Doctor Leave Request Functions
+    func fetchLeaveRequests(hospitalId: UUID) async throws -> [Leave] {
+        print("Fetching leaves for hospital: \(hospitalId)")
+        do {
+            print("Executing Supabase query...")
+            let leaves: [Leave] = try await client
+                .from("Leave")
+                .select("""
+                    id,
+                    doctorId,
+                    hospitalId,
+                    type,
+                    reason,
+                    startDate,
+                    endDate,
+                    status
+                """)
+                .eq("hospitalId", value: hospitalId.uuidString)
+                .execute()
+                .value
+            
+            print("Successfully fetched \(leaves.count) leaves")
+            for (index, leave) in leaves.enumerated() {
+                print("Leave \(index + 1):")
+                print("  ID: \(leave.id)")
+                print("  Doctor ID: \(leave.doctorId)")
+                print("  Hospital ID: \(leave.hospitalId)")
+                print("  Type: \(leave.type)")
+                print("  Reason: \(leave.reason)")
+                print("  Start Date: \(leave.startDate)")
+                print("  End Date: \(leave.endDate)")
+                print("  Status: \(leave.status)")
+            }
+            return leaves
+            
+        } catch {
+            print("Error fetching leaves: \(error.localizedDescription)")
+            print("Error details: \(String(describing: error))")
+            throw error
+        }
+    }
+
+    func updateLeaveStatus(leaveId: UUID, status: LeaveStatus) async throws {
+        do{
+            try await client
+                .from("Leave")
+                .update(["status": status.rawValue])
+                .eq("id", value: leaveId.uuidString)
+                .execute()
+        }catch{
+            print(error.localizedDescription)
+        }
+    }
+
+    func getAffectedAppointments(doctorId: UUID, startDate: Date, endDate: Date) async throws -> Int {
+        do{
+            let appointments: [Appointment] = try await client
+                .from("Appointment")
+                .select()
+                .eq("doctorId", value: doctorId.uuidString)
+                .eq("status", value: AppointmentStatus.scheduled.rawValue)
+                .gte("date", value: startDate)
+                .lte("date", value: endDate)
+                .execute()
+                .value
+            
+            return appointments.count
+        }catch{
+            print(error.localizedDescription)
+            throw error
+        }
+    }
 }
