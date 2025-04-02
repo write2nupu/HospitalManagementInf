@@ -543,11 +543,17 @@ struct Leave: Identifiable, Codable {
 }
 
 enum LeaveType: String, Codable {
-    case sick = "sick"
-    case vacation = "vacation"
-    case personal = "personal"
-    case casual = "Casual Leave"
+    case sickLeave = "Sick Leave"
+    case casualLeave = "Casual Leave"
+    case annualLeave = "Annual Leave"
+    case emergencyLeave = "Emergency Leave"
+    case maternityPaternityLeave = "Maternity/Paternity Leave"
+    case conferenceLeave = "Conference Leave"
     case other = "other"
+    
+    var id: String { self.rawValue }
+    var displayName: String { self.rawValue }
+    
 }
 
 enum LeaveStatus: String, Codable {
