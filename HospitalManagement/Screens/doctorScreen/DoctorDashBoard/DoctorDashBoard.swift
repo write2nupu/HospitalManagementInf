@@ -17,6 +17,9 @@ struct DoctorDashBoard: View {
     @State private var error: Error?
     @State private var patientNames: [UUID: String] = [:]
     @AppStorage("currentUserId") private var currentUserId: String = ""
+    @State private var refreshTimer: Timer?
+    @State private var isViewActive = true
+    @State private var loadDataTask: Task<Void, Never>?
     
     // Computed property for upcoming appointments
     private var upcomingAppointments: [Appointment] {
@@ -40,7 +43,7 @@ struct DoctorDashBoard: View {
                         .foregroundColor(.red)
                     Button("Retry") {
                         Task {
-                            await loadData()
+                            await startLoadingData()
                         }
                     }
                 }
@@ -143,63 +146,132 @@ struct DoctorDashBoard: View {
         .sheet(item: $selectedAppointment) { appointment in
             AppointmentDetailView(appointment: appointment)
         }
-        .task {
-            await loadData()
+        .onAppear {
+            isViewActive = true
+            startLoadingData()
+        }
+        .onDisappear {
+            isViewActive = false
+            cancelLoadingTask()
+            stopRefreshTimer()
         }
     }
     
+    private func startLoadingData() {
+        cancelLoadingTask()
+        loadDataTask = Task {
+            await loadData()
+            
+            // Start refresh timer after initial load
+            if isViewActive {
+                startRefreshTimer()
+            }
+        }
+    }
+    
+    private func cancelLoadingTask() {
+        loadDataTask?.cancel()
+        loadDataTask = nil
+    }
+    
+    private func startRefreshTimer() {
+        stopRefreshTimer()
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+            if isViewActive {
+                startLoadingData()
+            }
+        }
+    }
+    
+    private func stopRefreshTimer() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+    
     private func loadData() async {
-        isLoading = true
-        error = nil
+        guard !Task.isCancelled && isViewActive else { return }
+        
+        await MainActor.run {
+            isLoading = true
+            error = nil
+        }
         
         do {
             guard let doctorId = UUID(uuidString: currentUserId) else {
-                self.error = NSError(domain: "", code: -1, 
-                    userInfo: [NSLocalizedDescriptionKey: "Invalid doctor ID"])
-                isLoading = false
-                return
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid doctor ID"])
             }
             
-            // Fetch doctor profile
-            doctorProfile = try await supabase.fetchDoctorProfile(doctorId: doctorId)
+            // Create individual tasks for concurrent fetching
+            async let profileTask = supabase.fetchDoctorProfile(doctorId: doctorId)
+            async let appointmentsTask = supabase.fetchDoctorAppointments(doctorId: doctorId)
+            async let statsTask = supabase.fetchDoctorStats(doctorId: doctorId)
             
-            // Fetch department details if available
-            if let departmentId = doctorProfile?.department_id {
-                department = await supabase.fetchDepartmentDetails(departmentId: departmentId)
+            // Wait for all tasks to complete
+            guard !Task.isCancelled else { return }
+            let (profile, fetchedAppointments, stats) = try await (profileTask, appointmentsTask, statsTask)
+            
+            guard !Task.isCancelled && isViewActive else { return }
+            
+            // Update UI on main thread
+            await MainActor.run {
+                doctorProfile = profile
+                appointments = fetchedAppointments
+                completedAppointments = stats.completedAppointments
+                activePatients = stats.activePatients
             }
             
-            // Fetch hospital details if available
-            if let hospitalId = doctorProfile?.hospital_id {
-                hospital = try await supabase.fetchHospitalById(hospitalId: hospitalId)
-            }
-            
-            // Fetch appointments
-            appointments = try await supabase.fetchDoctorAppointments(doctorId: doctorId)
-            
-            // Fetch patient names for all appointments
-            for appointment in appointments {
-                if patientNames[appointment.patientId] == nil {
-                    do {
-                        let patient = try await supabase.fetchPatientById(patientId: appointment.patientId)
-                        patientNames[appointment.patientId] = patient.fullname
-                    } catch {
-                        print("Error fetching patient name:", error)
-                        patientNames[appointment.patientId] = "Unknown Patient"
+            // Fetch additional details if needed
+            if let departmentId = profile.department_id {
+                guard !Task.isCancelled else { return }
+                if let deptDetails = await supabase.fetchDepartmentDetails(departmentId: departmentId) {
+                    if isViewActive {
+                        await MainActor.run { department = deptDetails }
                     }
                 }
             }
             
-            // Fetch doctor stats
-            let stats = try await supabase.fetchDoctorStats(doctorId: doctorId)
-            completedAppointments = stats.completedAppointments
-            activePatients = stats.activePatients
+            if let hospitalId = profile.hospital_id {
+                guard !Task.isCancelled else { return }
+                let hospitalDetails = try await supabase.fetchHospitalById(hospitalId: hospitalId)
+                if isViewActive {
+                    await MainActor.run { hospital = hospitalDetails }
+                }
+            }
+            
+            // Fetch patient names
+            var updatedNames: [UUID: String] = [:]
+            for appointment in fetchedAppointments {
+                guard !Task.isCancelled else { return }
+                if patientNames[appointment.patientId] == nil {
+                    do {
+                        let patient = try await supabase.fetchPatientById(patientId: appointment.patientId)
+                        updatedNames[appointment.patientId] = patient.fullname
+                    } catch {
+                        print("Error fetching patient name:", error)
+                        updatedNames[appointment.patientId] = "Unknown Patient"
+                    }
+                }
+            }
+            
+            guard !Task.isCancelled && isViewActive else { return }
+            await MainActor.run {
+                for (id, name) in updatedNames {
+                    patientNames[id] = name
+                }
+            }
             
         } catch {
-            self.error = error
-            print("Error loading data:", error)
+            guard !Task.isCancelled && isViewActive else { return }
+            await MainActor.run {
+                self.error = error
+                print("Error loading data:", error)
+            }
         }
         
-        isLoading = false
+        guard !Task.isCancelled && isViewActive else { return }
+        await MainActor.run {
+            isLoading = false
+        }
     }
     
     // **Stat Card Component**

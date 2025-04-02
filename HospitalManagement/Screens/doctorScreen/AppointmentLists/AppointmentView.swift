@@ -9,6 +9,9 @@ struct AppointmentView: View {
     @State private var error: Error?
     @State private var patientNames: [UUID: String] = [:]
     @AppStorage("currentUserId") private var currentUserId: String = ""
+    @State private var refreshTimer: Timer?
+    @State private var isViewActive = true
+    @State private var loadDataTask: Task<Void, Never>?
     
     let screenWidth = UIScreen.main.bounds.width
     
@@ -23,9 +26,7 @@ struct AppointmentView: View {
                     .datePickerStyle(.compact)
                     .padding(.horizontal)
                     .onChange(of: selectedDate) { 
-                        Task {
-                            await loadAppointments()
-                        }
+                        startLoadingData()
                     }
                 
                 if isLoading {
@@ -39,9 +40,7 @@ struct AppointmentView: View {
                             .font(.subheadline)
                             .foregroundColor(.red)
                         Button("Retry") {
-                            Task {
-                                await loadAppointments()
-                            }
+                            startLoadingData()
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -70,44 +69,106 @@ struct AppointmentView: View {
             .sheet(item: $selectedAppointment) { appointment in
                 AppointmentDetailView(appointment: appointment)
             }
-            .task {
-                await loadAppointments()
+            .onAppear {
+                isViewActive = true
+                startLoadingData()
+            }
+            .onDisappear {
+                isViewActive = false
+                cancelLoadingTask()
+                stopRefreshTimer()
             }
         }
     }
     
+    private func startLoadingData() {
+        cancelLoadingTask()
+        loadDataTask = Task {
+            await loadAppointments()
+            
+            // Start refresh timer after initial load
+            if isViewActive {
+                startRefreshTimer()
+            }
+        }
+    }
+    
+    private func cancelLoadingTask() {
+        loadDataTask?.cancel()
+        loadDataTask = nil
+    }
+    
+    private func startRefreshTimer() {
+        stopRefreshTimer()
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+            if isViewActive {
+                startLoadingData()
+            }
+        }
+    }
+    
+    private func stopRefreshTimer() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+    
     private func loadAppointments() async {
-        isLoading = true
-        error = nil
+        guard !Task.isCancelled && isViewActive else { return }
+        
+        await MainActor.run {
+            isLoading = true
+            error = nil
+        }
         
         do {
             guard let doctorId = UUID(uuidString: currentUserId) else {
-                self.error = NSError(domain: "", code: -1, 
-                    userInfo: [NSLocalizedDescriptionKey: "Invalid doctor ID"])
-                isLoading = false
-                return
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid doctor ID"])
             }
             
-            appointments = try await supabase.fetchDoctorAppointments(doctorId: doctorId)
+            guard !Task.isCancelled else { return }
+            let fetchedAppointments = try await supabase.fetchDoctorAppointments(doctorId: doctorId)
             
-            // Fetch patient names for all appointments
-            for appointment in appointments {
+            guard !Task.isCancelled && isViewActive else { return }
+            
+            // Update appointments on main thread
+            await MainActor.run {
+                appointments = fetchedAppointments
+            }
+            
+            // Fetch patient names
+            var updatedNames: [UUID: String] = [:]
+            for appointment in fetchedAppointments {
+                guard !Task.isCancelled else { return }
                 if patientNames[appointment.patientId] == nil {
                     do {
                         let patient = try await supabase.fetchPatientById(patientId: appointment.patientId)
-                        patientNames[appointment.patientId] = patient.fullname
+                        updatedNames[appointment.patientId] = patient.fullname
                     } catch {
                         print("Error fetching patient name:", error)
-                        patientNames[appointment.patientId] = "Unknown Patient"
+                        updatedNames[appointment.patientId] = "Unknown Patient"
                     }
                 }
             }
+            
+            guard !Task.isCancelled && isViewActive else { return }
+            await MainActor.run {
+                for (id, name) in updatedNames {
+                    patientNames[id] = name
+                }
+            }
+            
         } catch {
-            self.error = error
-            print("Error loading appointments:", error)
+            guard !Task.isCancelled && isViewActive else { return }
+            await MainActor.run {
+                self.error = error
+                print("Error loading appointments:", error)
+            }
         }
         
-        isLoading = false
+        guard !Task.isCancelled && isViewActive else { return }
+        await MainActor.run {
+            isLoading = false
+        }
     }
     
     // ✅ Appointment Card View
@@ -156,7 +217,7 @@ struct AppointmentView: View {
         .background(
             RoundedRectangle(cornerRadius: 15)
                 .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 6)
+                .shadow(color: AppConfig.shadowColor, radius: 4, x: 0, y: 2)
         )
         .frame(width: screenWidth * 0.95)
         .frame(height: 150)

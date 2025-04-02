@@ -8,6 +8,9 @@ struct PatientView: View {
     @State private var isLoading = true
     @State private var error: Error?
     @AppStorage("currentUserId") private var currentUserId: String = ""
+    @State private var refreshTimer: Timer?
+    @State private var isViewActive = true
+    @State private var loadDataTask: Task<Void, Never>?
     
     var screenHeight: CGFloat {
         UIScreen.main.bounds.height
@@ -46,7 +49,7 @@ struct PatientView: View {
                         .foregroundColor(.red)
                     Button("Retry") {
                         Task {
-                            await loadPatients()
+                            await startLoadingData()
                         }
                     }
                 }
@@ -68,29 +71,78 @@ struct PatientView: View {
         }
         .background(Color(.systemGray6).opacity(0.2))
         .ignoresSafeArea(.all, edges: .bottom)
-        .task {
-            await loadPatients()
+        .onAppear {
+            isViewActive = true
+            startLoadingData()
+        }
+        .onDisappear {
+            isViewActive = false
+            cancelLoadingTask()
+            stopRefreshTimer()
         }
     }
     
+    private func startLoadingData() {
+        cancelLoadingTask()
+        loadDataTask = Task {
+            await loadPatients()
+            
+            // Start refresh timer after initial load
+            if isViewActive {
+                startRefreshTimer()
+            }
+        }
+    }
+    
+    private func cancelLoadingTask() {
+        loadDataTask?.cancel()
+        loadDataTask = nil
+    }
+    
+    private func startRefreshTimer() {
+        stopRefreshTimer()
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+            if isViewActive {
+                startLoadingData()
+            }
+        }
+    }
+    
+    private func stopRefreshTimer() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+    
     private func loadPatients() async {
-        isLoading = true
-        error = nil
+        guard !Task.isCancelled && isViewActive else { return }
+        
+        await MainActor.run {
+            isLoading = true
+            error = nil
+        }
         
         do {
             guard let doctorId = UUID(uuidString: currentUserId) else {
                 throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid doctor ID"])
             }
             
-            // Fetch appointments for the doctor
-            appointments = try await supabase.fetchDoctorAppointments(doctorId: doctorId)
+            guard !Task.isCancelled else { return }
+            let fetchedAppointments = try await supabase.fetchDoctorAppointments(doctorId: doctorId)
+            
+            guard !Task.isCancelled && isViewActive else { return }
+            
+            // Update appointments on main thread
+            await MainActor.run {
+                appointments = fetchedAppointments
+            }
             
             // Extract unique patient IDs from appointments
-            let uniquePatientIds = Set(appointments.map { $0.patientId })
+            let uniquePatientIds = Set(fetchedAppointments.map { $0.patientId })
             
             // Fetch patient details for each unique patient ID
             var fetchedPatients: [UUID: Patient] = [:]
             for patientId in uniquePatientIds {
+                guard !Task.isCancelled else { return }
                 do {
                     let patient = try await supabase.fetchPatientById(patientId: patientId)
                     fetchedPatients[patientId] = patient
@@ -99,12 +151,22 @@ struct PatientView: View {
                 }
             }
             
-            patients = fetchedPatients
+            guard !Task.isCancelled && isViewActive else { return }
+            await MainActor.run {
+                patients = fetchedPatients
+            }
+            
         } catch {
-            self.error = error
+            guard !Task.isCancelled && isViewActive else { return }
+            await MainActor.run {
+                self.error = error
+            }
         }
         
-        isLoading = false
+        guard !Task.isCancelled && isViewActive else { return }
+        await MainActor.run {
+            isLoading = false
+        }
     }
 }
 
@@ -151,7 +213,7 @@ struct PatientCard: View {
             }
         }
         .padding()
-        .background(AppConfig.backgroundColor)
+        .background(.white)
         .cornerRadius(12)
         .shadow(color: AppConfig.shadowColor, radius: 4, x: 0, y: 2)
     }
