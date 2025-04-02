@@ -31,11 +31,6 @@ struct AnalyticsView: View {
             VStack(spacing: 24) {
                 // Header with refresh button
                 HStack {
-                    Text("Hospital Analytics")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
-                    
                     Spacer()
                     
                     Button(action: {
@@ -188,6 +183,9 @@ struct AnalyticsView: View {
             .padding(.vertical)
         }
         .background(Color(.systemGray6).ignoresSafeArea())
+        .navigationTitle("Analytics")
+        .navigationBarTitleDisplayMode(.large)
+        .navigationBarBackButtonHidden(true)
         .task {
             await loadData()
         }

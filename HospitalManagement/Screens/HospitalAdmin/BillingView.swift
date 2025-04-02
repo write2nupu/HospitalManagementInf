@@ -51,46 +51,45 @@ struct BillingView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Main content
-                VStack(spacing: 20) {
-                    // Revenue Overview Section
-                    revenueOverviewSection
-                    
-                    // Recent Payments Section
-                    recentPaymentsSection
-                }
+        ZStack {
+            // Main content
+            VStack(spacing: 20) {
+                // Revenue Overview Section
+                revenueOverviewSection
                 
-                // Loading overlay
-                if isLoading {
-                    Color.black.opacity(0.1)
-                        .ignoresSafeArea()
-                        .overlay(ProgressView())
+                // Recent Payments Section
+                recentPaymentsSection
+            }
+            
+            // Loading overlay
+            if isLoading {
+                Color.black.opacity(0.1)
+                    .ignoresSafeArea()
+                    .overlay(ProgressView())
+            }
+        }
+        .padding(.top)
+        .navigationTitle("Billing")
+        .navigationBarTitleDisplayMode(.large)
+        .navigationBarBackButtonHidden(true)
+        .background(Color(.systemGray6).ignoresSafeArea())
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showAdminProfile = true
+                } label: {
+                    Image(systemName: "person.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.mint)
                 }
             }
-            .padding(.top)
-            .navigationTitle("Billing")
-            .navigationBarTitleDisplayMode(.large)
-            .background(Color(.systemGroupedBackground))
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showAdminProfile = true
-                    } label: {
-                        Image(systemName: "person.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.mint)
-                    }
-                }
-            }
-            .sheet(isPresented: $showAdminProfile) {
-                AdminProfileView()
-            }
-            .task {
-                // Load hospital ID first, then invoices
-                await loadHospitalId()
-            }
+        }
+        .sheet(isPresented: $showAdminProfile) {
+            AdminProfileView()
+        }
+        .task {
+            // Load hospital ID first, then invoices
+            await loadHospitalId()
         }
     }
     
