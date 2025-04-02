@@ -618,12 +618,8 @@ enum LeaveStatus: String, Codable {
 }
 
 struct labTest{
-    let id: UUID
-    let patientId: UUID
-    let doctorId: UUID
-    let appointmentId: UUID
-    let prescriptionId: UUID
-    let testName: labTestName
+    let bookingId: UUID
+    let testName: [labTestName]
     let components : [String]?
     let testValue: Float
     let status: TestStatus

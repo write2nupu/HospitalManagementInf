@@ -2048,3 +2048,122 @@ private struct LeaveResponse: Codable {
         case status
     }
 }
+
+// MARK: - Lab Test Booking Functions
+extension SupabaseController {
+    private func calculateTotalAmount(_ tests: [labTest.labTestName]) -> Double {
+        tests.reduce(0.0) { total, test in
+            total + test.price
+        }
+    }
+    
+    func bookLabTest(patientId: UUID, tests: [labTest.labTestName], scheduledDate: Date, hospitalId: UUID) async throws {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+        
+        do {
+            // Create a single lab test entry with all selected tests
+            let labTestData: [String: AnyJSON] = [
+                "bookingId": .string(UUID().uuidString),
+                "testName": .array(tests.map { .string($0.rawValue) }), // Store array of test names
+                "status": .string(labTest.TestStatus.pending.rawValue),
+                "testDate": .string(dateFormatter.string(from: scheduledDate)),
+                "testValue": .double(0.0),
+                "testComponents": .array([]),
+                "labTestPrice": .double(calculateTotalAmount(tests)) // Total price of all tests
+            ]
+            
+            print("Attempting to insert lab test:", labTestData)
+            
+            try await client
+                .from("LabTest")
+                .insert(labTestData)
+                .execute()
+            
+            // Create the invoice
+            let invoiceData: [String: AnyJSON] = [
+                "id": .string(UUID().uuidString),
+                "createdAt": .string(dateFormatter.string(from: Date())),
+                "patientid": .string(patientId.uuidString),
+                "amount": .double(calculateTotalAmount(tests)),
+                "paymentType": .string(PaymentType.labTest.rawValue),
+                "status": .string(PaymentStatus.paid.rawValue),
+                "hospitalId": .string(hospitalId.uuidString)
+            ]
+            
+            try await client
+                .from("Invoice")
+                .insert(invoiceData)
+                .execute()
+            
+        } catch let error as PostgrestError {
+            print("Postgrest error:", error)
+            throw error
+        } catch {
+            print("Unexpected error:", error)
+            throw error
+        }
+    }
+    
+    // Fetch lab tests
+    func fetchLabTests() async throws -> [LabTestResult] {
+        let tests: [LabTestResult] = try await client
+            .from("LabTest")
+            .select()
+            .order("testDate", ascending: false)
+            .execute()
+            .value
+        
+        return tests
+    }
+}
+
+// Update LabTestResult to match your schema with array of test names
+public struct LabTestResult: Codable {
+    let bookingId: UUID
+    let testName: [String]   // Array of test names
+    let status: String     
+    let testDate: Date     
+    let testValue: Float   
+    let testComponents: [String]  
+    let labTestPrice: Float  
+    
+    enum CodingKeys: String, CodingKey {
+        case bookingId
+        case testName
+        case status
+        case testDate
+        case testValue
+        case testComponents
+        case labTestPrice
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        bookingId = try container.decode(UUID.self, forKey: .bookingId)
+        
+        // Handle testName as an array
+        if let singleTest = try? container.decode(String.self, forKey: .testName) {
+            // If it's a single string, wrap it in an array
+            testName = [singleTest]
+        } else {
+            // If it's already an array, decode it directly
+            testName = try container.decode([String].self, forKey: .testName)
+        }
+        
+        status = try container.decode(String.self, forKey: .status)
+        testValue = try container.decode(Float.self, forKey: .testValue)
+        testComponents = try container.decode([String].self, forKey: .testComponents)
+        labTestPrice = try container.decode(Float.self, forKey: .labTestPrice)
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+        if let dateString = try? container.decode(String.self, forKey: .testDate),
+           let date = dateFormatter.date(from: dateString) {
+            testDate = date
+        } else {
+            testDate = Date()
+        }
+    }
+}
