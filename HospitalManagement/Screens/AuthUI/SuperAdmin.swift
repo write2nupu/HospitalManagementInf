@@ -12,6 +12,8 @@ struct SuperAdminLoginView: View {
     @State private var isLoading = false
     @State private var shouldShowDashboard = false
     @State private var showForgotPassword = false
+    @State private var showOTPVerification = false
+    @State private var isEmailVerified = false
     @StateObject private var supabaseController = SupabaseController()
     @AppStorage("currentUserId") private var currentUserId: String = ""
     @AppStorage("isLoggedIn") private var isUserLoggedIn = false
@@ -100,6 +102,22 @@ struct SuperAdminLoginView: View {
             .sheet(isPresented: $showForgotPassword) {
                 ForgotPasswordView()
             }
+            .sheet(isPresented: $showOTPVerification) {
+                OTPVerificationView(
+                    email: email,
+                    onVerificationComplete: {
+                        isEmailVerified = true
+                        showOTPVerification = false
+                        Task {
+                            await completeLogin()
+                        }
+                    },
+                    onCancel: {
+                        showOTPVerification = false
+                        isLoading = false
+                    }
+                )
+            }
         }
     }
 
@@ -127,43 +145,58 @@ struct SuperAdminLoginView: View {
             print("Found \(superAdmins.count) super admin(s) with email:", email)
             
             if let superAdmin = superAdmins.first {
-                print("Found super admin in database, attempting authentication")
+                print("Found super admin in database, sending OTP")
                 
-                // Then try to authenticate
-                do {
-                    let authResponse = try await supabaseController.client.auth.signIn(
-                        email: email,
-                        password: password
-                    )
-                    print("Authentication successful")
-                    
-                    // Store user info
-                    currentUserId = authResponse.user.id.uuidString
-                    isUserLoggedIn = true
-                    
-                    // Check if first login
-                    if superAdmin.is_first_login {
-                        superAdminUser = superAdmin
-                        isLoggedIn = true
-                        print("First login detected, showing password update screen")
-                    } else {
-                        shouldShowDashboard = true
-                        print("Not first login, showing dashboard")
-                    }
-                    print("Successfully logged in as Super Admin")
-                } catch let authError {
-                    print("Authentication error:", authError.localizedDescription)
-                    errorMessage = "Invalid credentials. Please check your email and password."
-                    showAlert = true
-                }
+                // Send OTP first and wait for verification
+                try await supabaseController.sendOTP(email: email)
+                showOTPVerification = true
+                
             } else {
                 errorMessage = "Access denied. You must be a Super Admin to login."
                 showAlert = true
+                isLoading = false
                 print("Access denied. Email not found in Users table with super_admin role")
             }
-        } catch let dbError {
-            print("Database error:", dbError.localizedDescription)
+        } catch {
+            print("Error:", error.localizedDescription)
             errorMessage = "An error occurred. Please try again."
+            showAlert = true
+            isLoading = false
+        }
+    }
+    
+    private func completeLogin() async {
+        do {
+            // Only authenticate with password after OTP verification is successful
+            let authResponse = try await supabaseController.client.auth.signIn(
+                email: email,
+                password: password
+            )
+            print("Authentication successful")
+            
+            // Get super admin details
+            let superAdmins: [users] = try await supabaseController.client
+                .from("users")
+                .select()
+                .eq("email", value: email)
+                .eq("role", value: "super_admin")
+                .execute()
+                .value
+            
+            if let superAdmin = superAdmins.first {
+                // Store user info
+                currentUserId = authResponse.user.id.uuidString
+                isUserLoggedIn = true
+                
+                if superAdmin.is_first_login {
+                    superAdminUser = superAdmin
+                    isLoggedIn = true
+                } else {
+                    shouldShowDashboard = true
+                }
+            }
+        } catch {
+            errorMessage = "Authentication failed. Please try again."
             showAlert = true
         }
         isLoading = false

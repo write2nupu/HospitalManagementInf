@@ -16,6 +16,7 @@ struct PatientLoginSignupView: View {
     @State private var isLoading = false
     @State private var showDashboard = false
     @State private var showForgotPassword = false
+    @State private var showOTPVerification = false
     @StateObject private var supabaseController = SupabaseController()
     @State private var currentPatient: Patient?
     @State private var isEmailValid = true
@@ -117,6 +118,21 @@ struct PatientLoginSignupView: View {
         .sheet(isPresented: $showForgotPassword) {
             ForgotPasswordView()
         }
+        .sheet(isPresented: $showOTPVerification) {
+            OTPVerificationView(
+                email: email,
+                onVerificationComplete: {
+                    showOTPVerification = false
+                    Task {
+                        await completeLogin()
+                    }
+                },
+                onCancel: {
+                    showOTPVerification = false
+                    isLoading = false
+                }
+            )
+        }
     }
     
     // MARK: - Submission Logic
@@ -160,15 +176,39 @@ struct PatientLoginSignupView: View {
         isLoading = true
         
         do {
-            currentPatient = try await supabaseController.signInPatient(email: email, password: password)
+            // First check if patient exists
+            let patients: [Patient] = try await supabaseController.client
+                .from("Patient")
+                .select()
+                .eq("email", value: email)
+                .execute()
+                .value
             
-            // Completely replace the view instead of navigating
+            if let patient = patients.first {
+                // Send OTP
+                try await supabaseController.sendOTP(email: email)
+                showOTPVerification = true
+            } else {
+                alertMessage = "No account found with this email"
+                showAlert = true
+                isLoading = false
+            }
+        } catch {
+            alertMessage = error.localizedDescription
+            showAlert = true
+            isLoading = false
+        }
+    }
+    
+    private func completeLogin() async {
+        do {
+            // After OTP verification, proceed with sign in
+            currentPatient = try await supabaseController.signInPatient(email: email, password: password)
             showDashboard = true
         } catch {
             alertMessage = error.localizedDescription
             showAlert = true
         }
-        
         isLoading = false
     }
     

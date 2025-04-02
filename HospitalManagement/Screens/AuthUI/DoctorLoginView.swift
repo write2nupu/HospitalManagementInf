@@ -17,6 +17,8 @@ struct DoctorLoginView: View {
     @AppStorage("isLoggedIn") private var isUserLoggedIn = false
     @State private var passwordErrorMessage = ""
     @State private var emailErrorMessage = ""
+    @State private var showOTPVerification = false
+    @State private var isEmailVerified = false
     
 //    doctor to be deleted when Superbase function get integrated
     
@@ -89,6 +91,22 @@ struct DoctorLoginView: View {
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Login Failed"), message: Text(errorMessage), dismissButton: .default(Text("OK")))
             }
+            .sheet(isPresented: $showOTPVerification) {
+                OTPVerificationView(
+                    email: emailOrPhone,
+                    onVerificationComplete: {
+                        isEmailVerified = true
+                        showOTPVerification = false
+                        Task {
+                            await completeLogin()
+                        }
+                    },
+                    onCancel: {
+                        showOTPVerification = false
+                        isLoading = false
+                    }
+                )
+            }
             // ✅ Navigation only triggers when isLoggedIn becomes true
             .navigationDestination(isPresented: $isLoggedIn) {
                 if let user = doctorUser {
@@ -128,83 +146,93 @@ struct DoctorLoginView: View {
             print("Found \(doctors.count) doctor(s) with email:", emailOrPhone)
             
             if let doctor = doctors.first {
-                print("Found doctor in database, attempting authentication")
+                print("Found doctor in database, sending OTP")
                 
-                // Then try to authenticate
-                do {
-                    let authResponse = try await supabaseController.client.auth.signIn(
-                        email: emailOrPhone,
-                        password: password
-                    )
-                    print("Authentication successful")
-                    
-                    // Store hospital and department IDs in UserDefaults
-                    if let hospitalId = doctor.hospital_id {
-                        UserDefaults.standard.set(hospitalId.uuidString, forKey: "hospitalId")
-                        print("Stored hospital ID in UserDefaults:", hospitalId.uuidString)
-                    }
-                    if let departmentId = doctor.department_id {
-                        UserDefaults.standard.set(departmentId.uuidString, forKey: "departmentId")
-                        print("Stored department ID in UserDefaults:", departmentId.uuidString)
-                    }
-                    
-                    // Check users table for existing user
-                    let existingUsers: [users] = try await supabaseController.client
-                        .from("users")
-                        .select()
-                        .eq("id", value: authResponse.user.id.uuidString)
-                        .execute()
-                        .value
-                    
-                    if let existingUser = existingUsers.first {
-                        // Use existing user's data
-                        doctorUser = existingUser
-                        currentUserId = existingUser.id.uuidString
-                        isUserLoggedIn = true
-                        isLoggedIn = true
-                        print("Found existing user, is_first_login:", existingUser.is_first_login)
-                    } else {
-                        // Create new user object for doctor
-                        let user = users(
-                            id: authResponse.user.id,
-                            email: doctor.email_address,
-                            full_name: doctor.full_name,
-                            phone_number: doctor.phone_num,
-                            role: "doctor",
-                            is_first_login: true,
-                            is_active: doctor.is_active,
-                            hospital_id: doctor.hospital_id,
-                            created_at: ISO8601DateFormatter().string(from: Date()),
-                            updated_at: ISO8601DateFormatter().string(from: Date())
-                        )
-                        
-                        // Create new user in users table
-                        try await supabaseController.client
-                            .from("users")
-                            .insert(user)
-                            .execute()
-                        print("Created new user record in users table")
-                        
-                        // Store user info
-                        doctorUser = user
-                        currentUserId = user.id.uuidString
-                        isUserLoggedIn = true
-                        isLoggedIn = true
-                    }
-                    print("Successfully logged in as Doctor")
-                } catch let authError {
-                    print("Authentication error:", authError.localizedDescription)
-                    errorMessage = "Invalid credentials. Please check your email and password."
-                    showAlert = true
-                }
+                // Send OTP
+                try await supabaseController.sendOTP(email: emailOrPhone)
+                showOTPVerification = true
+                
             } else {
                 errorMessage = "Access denied. You must be a Doctor to login."
                 showAlert = true
+                isLoading = false
                 print("Access denied. Email not found in Doctor table")
             }
-        } catch let dbError {
-            print("Database error:", dbError.localizedDescription)
+        } catch {
+            print("Error:", error.localizedDescription)
             errorMessage = "An error occurred. Please try again."
+            showAlert = true
+            isLoading = false
+        }
+    }
+    
+    private func completeLogin() async {
+        do {
+            // Authenticate with password after OTP verification
+            let authResponse = try await supabaseController.client.auth.signIn(
+                email: emailOrPhone,
+                password: password
+            )
+            print("Authentication successful")
+            
+            // Get doctor details
+            let doctors: [Doctor] = try await supabaseController.client
+                .from("Doctor")
+                .select()
+                .eq("email_address", value: emailOrPhone)
+                .execute()
+                .value
+            
+            if let doctor = doctors.first {
+                // Store hospital and department IDs in UserDefaults
+                if let hospitalId = doctor.hospital_id {
+                    UserDefaults.standard.set(hospitalId.uuidString, forKey: "hospitalId")
+                }
+                if let departmentId = doctor.department_id {
+                    UserDefaults.standard.set(departmentId.uuidString, forKey: "departmentId")
+                }
+                
+                // Check users table for existing user
+                let existingUsers: [users] = try await supabaseController.client
+                    .from("users")
+                    .select()
+                    .eq("id", value: authResponse.user.id.uuidString)
+                    .execute()
+                    .value
+                
+                if let existingUser = existingUsers.first {
+                    doctorUser = existingUser
+                    currentUserId = existingUser.id.uuidString
+                    isUserLoggedIn = true
+                    isLoggedIn = true
+                } else {
+                    // Create new user object for doctor
+                    let user = users(
+                        id: authResponse.user.id,
+                        email: doctor.email_address,
+                        full_name: doctor.full_name,
+                        phone_number: doctor.phone_num,
+                        role: "doctor",
+                        is_first_login: true,
+                        is_active: doctor.is_active,
+                        hospital_id: doctor.hospital_id,
+                        created_at: ISO8601DateFormatter().string(from: Date()),
+                        updated_at: ISO8601DateFormatter().string(from: Date())
+                    )
+                    
+                    try await supabaseController.client
+                        .from("users")
+                        .insert(user)
+                        .execute()
+                    
+                    doctorUser = user
+                    currentUserId = user.id.uuidString
+                    isUserLoggedIn = true
+                    isLoggedIn = true
+                }
+            }
+        } catch {
+            errorMessage = "Authentication failed. Please try again."
             showAlert = true
         }
         isLoading = false
