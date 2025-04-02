@@ -20,11 +20,11 @@ struct AdminLoginViewS: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 30) {
-                // **App Logo**
-                Image(systemName: "building.2.fill")
+                // App Logo - replaced SF symbol with image from assets
+                Image("admin")
                     .resizable()
-                    .frame(width: 100, height: 100)
-                    .foregroundColor(.mint)
+                    .scaledToFit()
+                    .frame(width: 120, height: 120)
                     .padding(.bottom, 10)
 
                 // **Title**

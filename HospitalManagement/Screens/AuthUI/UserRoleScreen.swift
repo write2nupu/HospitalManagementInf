@@ -13,37 +13,45 @@ struct UserRoleScreen: View {
     var body: some View {
         NavigationStack {
             VStack {
-                Text("Select Your Role")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(.black)
-                    .padding(.top, 40)
+                // Main title with image
+                VStack(spacing: 20) {
+                    Image("role")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 120, height: 120)
+                    
+                    Text("Select Your Role")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(.black)
+                }
+                .padding(.top, 40)
                 
                 Spacer()
                 
                 ForEach(roles, id: \.self) { role in
                         if role == "Patient" {
                             NavigationLink(destination: PatientLoginSignupView()) {
-                                RoleCard(role: role)
+                                RoleCard(role: role, imageName: "patient")
                             }
                         }
                     
                     else if role == "Doctor" {
                         NavigationLink(destination: DoctorLoginView(message: "Doctor")) {
-                            RoleCard(role: role)
+                            RoleCard(role: role, imageName: "doctor")
                         }
                     }
                     else if role == "Admin" {
 
                         NavigationLink(destination: AdminLoginViewS(message: "Admin")) {
-                            RoleCard(role: role)
+                            RoleCard(role: role, imageName: "admin")
                         }
                     }
                     else if role == "Super-Admin" {
 
                         NavigationLink(destination: SuperAdminLoginView(message: "Super admin")) {
 
-                            RoleCard(role: role)
+                            RoleCard(role: role, imageName: "superadmin")
                         }
                     }
     
@@ -59,9 +67,17 @@ struct UserRoleScreen: View {
 // MARK: - Role Card
 struct RoleCard: View {
     var role: String
+    var imageName: String
     
     var body: some View {
         HStack {
+            // Role image
+            Image(imageName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 50, height: 50)
+                .padding(.trailing, 10)
+            
             Text(role)
                 .font(.title2)
                 .fontWeight(.semibold)

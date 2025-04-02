@@ -22,11 +22,11 @@ struct DoctorLoginView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 30) {
-                // **App Logo**
-                Image(systemName: "stethoscope")
+                // App Logo
+                Image("doctor")
                     .resizable()
-                    .frame(width: 100, height: 100)
-                    .foregroundColor(.mint)
+                    .scaledToFit()
+                    .frame(width: 120, height: 120)
                     .padding(.bottom, 10)
 
                 // **Title**

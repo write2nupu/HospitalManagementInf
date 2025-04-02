@@ -27,10 +27,10 @@ struct PatientLoginSignupView: View {
             VStack(spacing: 30) {
                 // Title
                 VStack(spacing: 5) {
-                    Image(systemName: "person.fill")
+                    Image("patient")
                         .resizable()
-                        .frame(width: 100, height: 100)
-                        .foregroundColor(.mint)
+                        .scaledToFit()
+                        .frame(width: 120, height: 120)
                         .padding(.bottom, 10)
 
                     // **Title**

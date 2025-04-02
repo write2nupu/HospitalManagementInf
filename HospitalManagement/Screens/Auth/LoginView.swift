@@ -10,6 +10,13 @@ struct LoginView: View {
 
     var body: some View {
         VStack {
+            // App Logo
+            Image("appicon")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 120, height: 120)
+                .padding(.top, 40)
+            
             Text("Login")
                 .font(.largeTitle)
                 .fontWeight(.bold)

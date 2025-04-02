@@ -24,11 +24,11 @@ struct ForgotPasswordView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 30) {
-                    // App Logo
-                    Image(systemName: "key.fill")
+                    // App Logo - using role image which is appropriate for password reset
+                    Image("resetpassword")
                         .resizable()
-                        .frame(width: 80, height: 80)
-                        .foregroundColor(.mint)
+                        .scaledToFit()
+                        .frame(width: 100, height: 100)
                         .padding(.top, 40)
                     
                     Text("Reset Password")
