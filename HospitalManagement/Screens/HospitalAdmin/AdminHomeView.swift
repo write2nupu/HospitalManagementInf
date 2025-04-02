@@ -15,60 +15,69 @@ struct AdminHomeView: View {
     @State private var showAdminProfile = false
     @State private var showAddDepartment = false
     @State private var searchText = ""
+    @State private var departments: [Department] = []
+    @State private var isLoadingDepartments = false
+    @State private var errorMessage: String?
+    @State private var doctorsByDepartment: [UUID: [Doctor]] = [:]
     
-    // Add dummy counters (replace with actual data later)
-    private let emergencyRequestsCount = 5
-    private let bedRequestsCount = 3
+    // Emergency and bed request counts (to be implemented with real data later)
+    @State private var emergencyRequestsCount = 0
+    @State private var leaveRequestsCount = 0
     
     var filteredDepartments: [Department] {
         if searchText.isEmpty {
-            return viewModel.departments
+            return departments
         } else {
-            return viewModel.departments.filter { department in
+            return departments.filter { department in
                 department.name.localizedCaseInsensitiveContains(searchText)
             }
         }
     }
     
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            // Search Bar at the top
+            SearchBar(text: $searchText)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(Color(.systemBackground))
+            
             ScrollView {
-                
-                // Add Department Card
-                Button {
-                    showAddDepartment = true
-                } label: {
-                    VStack(spacing: 12) {
-                        Circle()
-                            .fill(Color.mint.opacity(0.1))
-                            .frame(width: 60, height: 60)
-                            .overlay(
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 30))
-                                    .foregroundColor(.mint)
-                            )
-                        Text("Add Department")
-                            .font(.headline)
-                            .foregroundColor(.mint)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
-                    .background(Color(.systemBackground))
-                    .cornerRadius(15)
-                    .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 0)
-                    .padding(.horizontal)
-                }
-                
-                
                 VStack(spacing: 24) {
-                    // Requests Section
-                    VStack(alignment: .leading, spacing: 20) {
-                        Text("Active Requests")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .padding(.horizontal)
-                        
-                        HStack(spacing: 16) {
+                    // Add Department Card
+                    Button {
+                        showAddDepartment = true
+                    } label: {
+                        VStack(spacing: 12) {
+                            Circle()
+                                .fill(Color.mint.opacity(0.1))
+                                .frame(width: 60, height: 60)
+                                .overlay(
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 30))
+                                        .foregroundColor(.mint)
+                                )
+                            Text("Add Department")
+                                .font(.headline)
+                                .foregroundColor(.mint)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(15)
+                        .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 0)
+                        .padding(.horizontal)
+                    }
+                    .padding(.top)
+                    
+                    VStack(spacing: 24) {
+                        // Requests Section
+                        VStack(alignment: .leading, spacing: 20) {
+                            Text("Active Requests")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .padding(.horizontal)
+                            
                             // Emergency Requests Card
                             NavigationLink {
                                 EmergencyRequestsView()
@@ -79,194 +88,300 @@ struct AdminHomeView: View {
                                     iconColor: .red,
                                     count: emergencyRequestsCount
                                 )
+                                .frame(maxWidth: .infinity)
                             }
+                            .padding(.horizontal)
                             
-                            // Bed Requests Card
+                            // Leave Requests Card
                             NavigationLink {
-                                BedRequestsView()
+                                DoctorLeaveView()
                             } label: {
                                 RequestCard(
-                                    title: "Bed",
-                                    iconName: "bed.double.fill",
-                                    iconColor: .blue,
-                                    count: bedRequestsCount
+                                    title: "Leave Requests",
+                                    iconName: "calendar.badge.clock",
+                                    iconColor: .orange,
+                                    count: leaveRequestsCount
                                 )
+                                .frame(maxWidth: .infinity)
                             }
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
-                    }
-                    
-                    
-                    // Departments Section
-                    VStack(alignment: .leading, spacing: 20) {
-                        // Section Header
-                        HStack {
-                            Text("Departments")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                            
-                            Spacer()
-                            
-                            if !viewModel.departments.isEmpty {
-                                NavigationLink {
-                                    AllDepartmentsView()
-                                } label: {
-                                    Text("View All")
-                                        .font(.subheadline)
-                                        .foregroundColor(.mint)
+                        
+                        
+                        // Departments Section
+                        VStack(alignment: .leading, spacing: 20) {
+                            // Section Header
+                            HStack {
+                                Text("Departments")
+                                    .font(.title2)
+                                    .fontWeight(.semibold)
+                                
+                                Spacer()
+                                
+                                if !departments.isEmpty {
+                                    NavigationLink {
+                                        AllDepartmentsView()
+                                    } label: {
+                                        Text("View All")
+                                            .font(.subheadline)
+                                            .foregroundColor(.mint)
+                                    }
                                 }
                             }
-                        }
-                        .padding(.horizontal)
-                        
-                        // Department Cards
-                        if viewModel.departments.isEmpty {
-                            VStack(spacing: 12) {
-                                Image(systemName: "building.2")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(.mint.opacity(0.3))
-                                Text("No departments to display")
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                Text("Add a department to get started")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
-                        } else if filteredDepartments.isEmpty {
-                            VStack(spacing: 12) {
-                                Image(systemName: "magnifyingglass")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(.mint.opacity(0.3))
-                                Text("No departments found")
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                Text("Try a different search term")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
-                        } else {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 16) {
-                                    ForEach(filteredDepartments) { department in
-                                        NavigationLink {
-                                            DepartmentDetailView(department: department)
-                                        } label: {
-                                            VStack(alignment: .leading, spacing: 8) {
-                                                // Header with name and count
-                                                HStack {
-                                                    Text(department.name)
-                                                        .font(.title3)
-                                                        .fontWeight(.bold)
-                                                        .foregroundColor(.primary)
-                                                    Spacer()
-                                                    Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID()).count) doctors")
-                                                        .font(.caption)
-                                                        .foregroundColor(.secondary)
-                                                }
-                                                
-                                                // Department Icon and Info
-                                                HStack(spacing: 8) {
-                                                    Image(systemName: "stethoscope")
-                                                        .font(.system(size: 20))
-                                                        .foregroundColor(.mint)
-                                                    VStack(alignment: .leading, spacing: 4) {
-                                                        Text("Department ID")
-                                                            .font(.subheadline)
+                            .padding(.horizontal)
+                            
+                            // Department Cards
+                            if isLoadingDepartments {
+                                VStack(spacing: 12) {
+                                    ProgressView()
+                                    Text("Loading departments...")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 40)
+                            } else if let error = errorMessage {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "exclamationmark.triangle")
+                                        .font(.system(size: 40))
+                                        .foregroundColor(.red.opacity(0.3))
+                                    Text(error)
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                        .multilineTextAlignment(.center)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 40)
+                            } else if departments.isEmpty {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "building.2")
+                                        .font(.system(size: 40))
+                                        .foregroundColor(.mint.opacity(0.3))
+                                    Text("No departments to display")
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                    Text("Add a department to get started")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 40)
+                            } else if filteredDepartments.isEmpty {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "magnifyingglass")
+                                        .font(.system(size: 40))
+                                        .foregroundColor(.mint.opacity(0.3))
+                                    Text("No departments found")
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                    Text("Try a different search term")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 40)
+                            } else {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 16) {
+                                        ForEach(filteredDepartments) { department in
+                                            NavigationLink {
+                                                DepartmentDetailView(department: department)
+                                            } label: {
+                                                VStack(alignment: .leading, spacing: 8) {
+                                                    // Header with name and count
+                                                    HStack {
+                                                        Text(department.name)
+                                                            .font(.title3)
+                                                            .fontWeight(.bold)
                                                             .foregroundColor(.primary)
-                                                        Text("#\(department.id.uuidString.prefix(8))")
+                                                        Spacer()
+                                                        Text("\(getDoctorCount(for: department).total) doctors")
                                                             .font(.caption)
                                                             .foregroundColor(.secondary)
                                                     }
+                                                    
+                                                    // Department Icon and Info
+                                                    HStack(spacing: 8) {
+                                                        Image(systemName: "stethoscope")
+                                                            .font(.system(size: 20))
+                                                            .foregroundColor(.mint)
+                                                        VStack(alignment: .leading, spacing: 4) {
+                                                            Text("Department ID")
+                                                                .font(.subheadline)
+                                                                .foregroundColor(.primary)
+                                                            Text("#\(department.id.uuidString.prefix(8))")
+                                                                .font(.caption)
+                                                                .foregroundColor(.secondary)
+                                                        }
+                                                    }
+                                                    
+                                                    // Active/Inactive Doctors
+                                                    HStack(spacing: 8) {
+                                                        Image(systemName: "person.2.fill")
+                                                            .foregroundColor(.green)
+                                                        Text("\(getDoctorCount(for: department).active) active")
+                                                            .font(.subheadline)
+                                                            .foregroundColor(.primary)
+                                                        Text("•")
+                                                            .foregroundColor(.secondary)
+                                                        Text("\(getDoctorCount(for: department).total - getDoctorCount(for: department).active) inactive")
+                                                            .font(.subheadline)
+                                                            .foregroundColor(.primary)
+                                                    }
                                                 }
-                                                
-                                                // Active/Inactive Doctors
-                                                HStack(spacing: 8) {
-                                                    Image(systemName: "person.2.fill")
-                                                        .foregroundColor(.green)
-                                                    Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID()).filter { $0.is_active }.count) active")
-                                                        .font(.subheadline)
-                                                        .foregroundColor(.primary)
-                                                    Text("•")
-                                                        .foregroundColor(.secondary)
-                                                    Text("\(viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID()).filter { !$0.is_active }.count) inactive")
-                                                        .font(.subheadline)
-                                                        .foregroundColor(.primary)
-                                                }
+                                                .padding()
+                                                .frame(width: 300, alignment: .leading)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 15)
+                                                        .fill(Color(.systemBackground))
+                                                        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                                                )
                                             }
-                                            .padding()
-                                            .frame(width: 300, alignment: .leading)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 15)
-                                                    .fill(Color(.systemBackground))
-                                                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
-                                            )
                                         }
                                     }
+                                    .padding(.horizontal)
                                 }
-                                .padding(.horizontal)
                             }
                         }
                     }
                 }
-                .padding(.vertical)
-            }
-            .navigationTitle(hospitalName)
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showAdminProfile = true
-                    } label: {
-                        Image(systemName: "person.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.mint)
-                    }
-                }
-            }
-            .searchable(
-                text: $searchText,
-                placement: .navigationBarDrawer(displayMode: .always),
-                prompt: "Search departments..."
-            )
-            .sheet(isPresented: $showAddDepartment) {
-                NavigationStack {
-                    AddDepartmentView()
-                }
-            }
-            .sheet(isPresented: $showAdminProfile) {
-                AdminProfileView()
             }
         }
-        .onAppear {
-            Task {
-                await fetchHospitalName()
+        .navigationTitle(hospitalName)
+        .navigationBarTitleDisplayMode(.large)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showAdminProfile = true
+                } label: {
+                    Image(systemName: "person.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.mint)
+                }
             }
+        }
+        .sheet(isPresented: $showAddDepartment) {
+            NavigationStack {
+                AddDepartmentView()
+            }
+        }
+        .sheet(isPresented: $showAdminProfile) {
+            AdminProfileView()
+        }
+        .task {
+            await fetchHospitalName()
+            await loadDepartments()
         }
     }
     
     private func fetchHospitalName() async {
         do {
-            if let (hospital, adminName) = try await supabaseController.fetchHospitalAndAdmin() {
-                print("Successfully fetched hospital:", hospital)
-                await MainActor.run {
-                    hospitalName = "Hi \(adminName)"
+            // Get hospital ID from UserDefaults (stored during login)
+            if let hospitalIdString = UserDefaults.standard.string(forKey: "hospitalId"),
+               let hospitalId = UUID(uuidString: hospitalIdString) {
+                print("Fetching hospital with ID: \(hospitalId)")
+                
+                // Fetch the specific hospital by ID
+                let hospitals: [Hospital] = try await supabaseController.client
+                    .from("Hospital")
+                    .select("*")
+                    .eq("id", value: hospitalId.uuidString)
+                    .execute()
+                    .value
+                
+                if let hospital = hospitals.first {
+                    print("Successfully fetched hospital for logged-in admin:", hospital)
+                    
+                    // Get admin name from assigned_admin_id
+                    var adminName = "Admin"
+                    if let adminId = hospital.assigned_admin_id {
+                        let admins: [Admin] = try await supabaseController.client
+                            .from("Admin")
+                            .select("*")
+                            .eq("id", value: adminId.uuidString)
+                            .execute()
+                            .value
+                        
+                        if let admin = admins.first {
+                            adminName = admin.full_name
+                        }
+                    }
+                    
+                    await MainActor.run {
+                        hospitalName = "Welcome, \(adminName)"
+                    }
+                } else {
+                    print("No hospital found with ID: \(hospitalId)")
+                    await MainActor.run {
+                        hospitalName = "Welcome"
+                    }
                 }
             } else {
-                print("No hospital or admin found")
-                await MainActor.run {
-                    hospitalName = "No Hospital or Admin Found"
+                // Fallback to old method if hospital ID is not in UserDefaults
+                if let (hospital, adminName) = try await supabaseController.fetchHospitalAndAdmin() {
+                    print("Successfully fetched hospital:", hospital)
+                    await MainActor.run {
+                        hospitalName = "Welcome, \(adminName)"
+                    }
+                } else {
+                    print("No hospital or admin found")
+                    await MainActor.run {
+                        hospitalName = "Welcome"
+                    }
                 }
             }
         } catch {
-            print("Error fetching hospital and admin:", error.localizedDescription)
+            print("Error fetching hospital info:", error.localizedDescription)
             await MainActor.run {
-                hospitalName = "Error Loading Details"
+                hospitalName = "Welcome"
             }
         }
+    }
+    
+    private func loadDepartments() async {
+        isLoadingDepartments = true
+        departments = []
+        doctorsByDepartment = [:]
+        errorMessage = nil
+        
+        guard let hospitalId = UserDefaults.standard.string(forKey: "hospitalId"),
+              let hospitalUUID = UUID(uuidString: hospitalId) else {
+            errorMessage = "Could not determine hospital ID"
+            isLoadingDepartments = false
+            return
+        }
+        
+        do {
+            // Fetch departments
+            let fetchedDepartments = try await supabaseController.fetchHospitalDepartments(hospitalId: hospitalUUID)
+            
+            // For each department, fetch its doctors
+            var doctorsMap: [UUID: [Doctor]] = [:]
+            for department in fetchedDepartments {
+                let doctors = try await supabaseController.getDoctorsByDepartment(departmentId: department.id)
+                doctorsMap[department.id] = doctors
+            }
+            
+            await MainActor.run {
+                departments = fetchedDepartments
+                doctorsByDepartment = doctorsMap
+                isLoadingDepartments = false
+            }
+        } catch {
+            print("Error loading departments: \(error)")
+            await MainActor.run {
+                errorMessage = "Failed to load departments: \(error.localizedDescription)"
+                isLoadingDepartments = false
+            }
+        }
+    }
+
+    // Update the department card to use the fetched doctors
+    private func getDoctorCount(for department: Department) -> (total: Int, active: Int) {
+        let doctors = doctorsByDepartment[department.id] ?? []
+        let activeDoctors = doctors.filter { $0.is_active }
+        return (doctors.count, activeDoctors.count)
     }
 }
 
@@ -430,10 +545,37 @@ struct RequestCard: View {
                 .foregroundColor(.secondary)
         }
         .padding()
-        .frame(width: 180,height: 150 ,alignment: .leading)
+        .frame(maxWidth: .infinity)
         .background(Color(.systemBackground))
         .cornerRadius(15)
         .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+    }
+}
+
+struct SearchBar: View {
+    @Binding var text: String
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+            
+            TextField("Search departments...", text: $text)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .autocapitalization(.none)
+                .disableAutocorrection(true)
+            
+            if !text.isEmpty {
+                Button(action: {
+                    text = ""
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding(.vertical, 8)
+        .background(Color(.systemBackground))
     }
 }
 

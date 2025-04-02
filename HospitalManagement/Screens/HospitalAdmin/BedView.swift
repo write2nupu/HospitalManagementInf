@@ -166,47 +166,49 @@ struct BedView: View {
                                 .padding(.vertical, 30)
                             } else {
                                 VStack(spacing: 12) {
-                                    // Headers
-                                    HStack {
-                                        Text("Patient")
-                                            .fontWeight(.semibold)
-                                            .frame(width: 130, alignment: .leading)
-                                        
-                                        Text("Bed Type")
-                                            .fontWeight(.semibold)
-                                            .frame(width: 100, alignment: .leading)
-                                        
-                                        Spacer()
-                                        
-                                        Text("Amount")
-                                            .fontWeight(.semibold)
-                                            .frame(width: 80, alignment: .trailing)
-                                    }
-                                    .foregroundColor(.secondary)
-                                    .font(.subheadline)
-                                    .padding(.horizontal)
-                                    
                                     // Bookings list
                                     ForEach(recentBookings) { booking in
-                                        HStack {
-                                            Text(booking.patientName)
-                                                .fontWeight(.medium)
-                                                .frame(width: 130, alignment: .leading)
-                                                .lineLimit(1)
-                                            
-                                            Text(booking.bedType.rawValue)
-                                                .frame(width: 100, alignment: .leading)
+                                        HStack(spacing: 12) {
+                                            // Patient info
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(booking.patientName)
+                                                    .font(.headline)
+                                                    .foregroundColor(.primary)
+                                                    .lineLimit(1)
+                                                
+                                                Text(booking.bedType.rawValue)
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.secondary)
+                                            }
                                             
                                             Spacer()
                                             
-                                            Text("₹\(booking.amount)")
-                                                .fontWeight(.medium)
-                                                .frame(width: 80, alignment: .trailing)
+                                            // Date info
+                                            VStack(alignment: .trailing, spacing: 4) {
+                                                HStack(spacing: 4) {
+                                                    Image(systemName: "calendar.badge.plus")
+                                                        .font(.caption)
+                                                        .foregroundColor(.green)
+                                                    Text(formatDate(booking.startDate))
+                                                        .font(.caption)
+                                                        .foregroundColor(.secondary)
+                                                }
+                                                
+                                                HStack(spacing: 4) {
+                                                    Image(systemName: "calendar.badge.minus")
+                                                        .font(.caption)
+                                                        .foregroundColor(.red)
+                                                    Text(formatDate(booking.endDate))
+                                                        .font(.caption)
+                                                        .foregroundColor(.secondary)
+                                                }
+                                            }
                                         }
                                         .padding()
                                         .background(Color(.systemBackground))
                                         .cornerRadius(10)
                                         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                                        .padding(.horizontal)
                                     }
                                 }
                                 .padding(.horizontal)
@@ -244,26 +246,37 @@ struct BedView: View {
         errorMessage = nil
         
         do {
+            // Get hospital ID from UserDefaults
+            guard let hospitalIdString = UserDefaults.standard.string(forKey: "hospitalId"),
+                  let hospitalId = UUID(uuidString: hospitalIdString) else {
+                errorMessage = "Could not determine hospital ID"
+                isLoading = false
+                return
+            }
+            
             // Load beds data
             do {
-                beds = try await supabaseController.fetchAllBeds()
+                beds = try await supabaseController.fetchAllBeds(hospitalId: hospitalId)
             } catch {
                 print("Error loading beds: \(error.localizedDescription)")
                 errorMessage = "Couldn't load beds: \(error.localizedDescription)"
                 beds = []
             }
             
-            // Load bookings data
+            // Load bookings data with hospital ID filter
             do {
-                recentBookings = try await supabaseController.getRecentBedBookings()
+                print("Fetching recent bed bookings for hospital ID: \(hospitalId)")
+                recentBookings = try await supabaseController.getRecentBedBookings(hospitalId: hospitalId, limit: 15)
+                print("Successfully fetched \(recentBookings.count) recent bookings")
             } catch {
                 print("Error loading bookings: \(error.localizedDescription)")
+                errorMessage = "Couldn't load bookings: \(error.localizedDescription)"
                 recentBookings = []
             }
             
             // Load statistics data
             do {
-                bedStats = try await supabaseController.getBedStatistics()
+                bedStats = try await supabaseController.getBedStatistics(hospitalId: hospitalId)
             } catch {
                 print("Error loading bed statistics: \(error.localizedDescription)")
                 // Use fallback stats based on available beds
@@ -281,12 +294,25 @@ struct BedView: View {
                 bedStats = (total: total, available: available, byType: statsByType)
             }
             
-        } catch {
-            errorMessage = "Failed to load data: \(error.localizedDescription)"
-            showErrorAlert = true
-        }
+        } 
         
         isLoading = false
+    }
+    
+    // Helper functions for date formatting and comparison
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+    
+    private func isPastDate(_ date: Date) -> Bool {
+        return date < Date()
+    }
+    
+    private func isFutureDate(_ date: Date) -> Bool {
+        return date > Date()
     }
 }
 
@@ -366,6 +392,8 @@ struct BedCategoryCard: View {
                     Text("Available")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                     
                     Text("\(available)")
                         .font(.title3)
@@ -375,7 +403,7 @@ struct BedCategoryCard: View {
             }
         }
         .padding()
-        .frame(width: 180, height: 140)
+        .frame(width: 200, height: 140)
         .background(Color(.systemBackground))
         .cornerRadius(15)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
@@ -388,6 +416,8 @@ struct BedBookingWithDetails: Identifiable {
     let patientName: String
     let bedType: BedType
     let amount: Int
+    let startDate: Date
+    let endDate: Date
     
     // Initialize from the existing data model
     init(booking: BedBooking, patient: Patient, bed: Bed) {
@@ -395,14 +425,18 @@ struct BedBookingWithDetails: Identifiable {
         self.patientName = patient.fullname
         self.bedType = bed.type
         self.amount = bed.price
+        self.startDate = booking.startDate
+        self.endDate = booking.endDate
     }
     
     // Convenience initializer for preview or testing
-    init(id: UUID, patientName: String, bedType: BedType, amount: Int) {
+    init(id: UUID, patientName: String, bedType: BedType, amount: Int, startDate: Date = Date(), endDate: Date = Date()) {
         self.id = id
         self.patientName = patientName
         self.bedType = bedType
         self.amount = amount
+        self.startDate = startDate
+        self.endDate = endDate
     }
 }
 

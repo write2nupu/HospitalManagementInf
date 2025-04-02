@@ -166,8 +166,26 @@ struct ProfileView: View {
     }
 
     private func handleLogout() {
-        // Perform logout logic here (e.g., clearing user session)
-        print("User logged out")
+        // Post a notification that will be observed by the app
+        NotificationCenter.default.post(
+            name: NSNotification.Name("LogoutNotification"),
+            object: nil
+        )
+        
+        // Clear any stored user data
+        UserDefaults.standard.removeObject(forKey: "currentUserId")
+        UserDefaults.standard.removeObject(forKey: "isLoggedIn")
+        UserDefaults.standard.removeObject(forKey: "userRole")
+        
+        // Dismiss the profile sheet first
+        dismiss()
+        
+        // Use UIApplication to restart the app's navigation from the beginning
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            window.rootViewController = UIHostingController(rootView: UserRoleScreen())
+            window.makeKeyAndVisible()
+        }
     }
 }
 

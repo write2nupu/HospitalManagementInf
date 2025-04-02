@@ -9,6 +9,9 @@ import SwiftUI
 
 struct InvoiceDetailView: View {
     let invoice: Invoice
+    @State private var patientName: String = "Patient"
+    @StateObject private var supabaseController = SupabaseController()
+    @State private var isLoadingPatient: Bool = false
     
     var body: some View {
         ScrollView {
@@ -25,7 +28,18 @@ struct InvoiceDetailView: View {
                         .foregroundColor(.mint)
                 }
                 .padding(.top, 20)
-                Spacer()
+                
+                // Patient Information (if loaded)
+                if !isLoadingPatient && patientName != "Patient" {
+                    VStack(alignment: .leading, spacing: 15) {
+                        DetailRow(icon: "person.fill", label: "Patient", value: patientName)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(.systemGray6)))
+                    .padding(.horizontal)
+                }
+                
                 // Invoice Information Card
                 VStack(alignment: .leading, spacing: 15) {
                     DetailRow(icon: "number", label: "Invoice ID", value: String(invoice.id.uuidString.prefix(8)))
@@ -43,7 +57,23 @@ struct InvoiceDetailView: View {
             
             }
         }
-        .navigationBarTitleDisplayMode(.inline) // Fixes the double nav title issue
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await loadPatientDetails()
+        }
+    }
+    
+    private func loadPatientDetails() async {
+        isLoadingPatient = true
+        
+        do {
+            // Fetch patient details using the patientid from the invoice
+            let patients = await supabaseController.fetchPatients()
+            if let patient = patients.first(where: { $0.id == invoice.patientid }) {
+                patientName = patient.fullname
+            }
+        }        
+        isLoadingPatient = false
     }
 }
 

@@ -14,6 +14,7 @@ struct HomeTabView: View {
                         .fontWeight(.bold)
                         .foregroundColor(AppConfig.fontColor)
                         .padding(.horizontal)
+                        .padding(.top, 20)
                     
                     NavigationLink(destination: HospitalListView()) {
                         VStack(spacing: 12) {
@@ -280,6 +281,7 @@ struct HomeTabView: View {
                                             .fill(Color(.systemBackground))
                                             .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
                                     )
+                                   // .isNavigationBarHidden
                                 }
                             }
                         }

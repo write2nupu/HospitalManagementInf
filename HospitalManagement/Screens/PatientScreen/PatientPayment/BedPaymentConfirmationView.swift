@@ -5,153 +5,130 @@ struct BedPaymentConfirmationView: View {
     let bedBooking: BedBooking
     let hospital: Hospital
     let invoice: Invoice
-
+    @State private var navigateToBookedBed = false
+    
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Success Icon
-                    Image(systemName: "checkmark.circle.fill")
-                        .resizable()
-                        .frame(width: 80, height: 80)
-                        .foregroundColor(.mint)
-                        .padding(.top)
-
+                    // Success Animation
+                    LottieView(name: "payment-success")
+                        .frame(width: 200, height: 200)
+                    
                     // Success Message
-                    Text("Payment Successful")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(.mint)
-
-                    Text("Your bed booking has been confirmed.")
-                        .font(.body)
-                        .foregroundColor(.gray)
-
-                    // Bed Booking & Payment Details
-                    bedDetailsSection
-                    invoiceDetailsSection
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 20)
-            }
-
-            // Fixed Buttons
-            VStack {
-                Divider()
-                
-                HStack {
-                    // View Invoice Button
-                    Button(action: { viewInvoice() }) {
-                        Text("View Invoice")
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .cornerRadius(10)
-                            .shadow(radius: 2)
+                    VStack(spacing: 8) {
+                        Text("Payment Successful!")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.mint)
+                        
+                        Text("Your bed has been booked successfully")
+                            .font(.body)
+                            .foregroundColor(.gray)
                     }
                     
-                    // Done Button
-                    Button(action: { dismiss() }) {
-                        Text("Done")
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.mint)
-                            .cornerRadius(10)
-                            .shadow(radius: 2)
+                    // Booking Details Card
+                    VStack(spacing: 20) {
+                        // Hospital Info
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Hospital Details")
+                                .font(.headline)
+                                .foregroundColor(.mint)
+                            
+                            VStack(spacing: 8) {
+                                detailRow(icon: "building.2", title: hospital.name)
+                                detailRow(icon: "location", title: "\(hospital.address), \(hospital.city)")
+                                detailRow(icon: "phone", title: hospital.mobile_number)
+                            }
+                        }
+                        .padding()
+                        .background(Color.mint.opacity(0.1))
+                        .cornerRadius(12)
+                        
+                        // Booking Info
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Booking Details")
+                                .font(.headline)
+                                .foregroundColor(.mint)
+                            
+                            VStack(spacing: 8) {
+                                detailRow(icon: "calendar", title: "Check In: \(formatDate(bedBooking.startDate))")
+                                detailRow(icon: "calendar", title: "Check Out: \(formatDate(bedBooking.endDate))")
+                                detailRow(icon: "creditcard", title: "Payment ID: \(invoice.id.uuidString.prefix(8))")
+                                detailRow(icon: "indianrupeesign", title: "Amount Paid: ₹\(invoice.amount)")
+                            }
+                        }
+                        .padding()
+                        .background(Color.mint.opacity(0.1))
+                        .cornerRadius(12)
                     }
+                    .padding(.horizontal)
                 }
                 .padding()
             }
-            .background(Color.white)
-            .shadow(radius: 3)
+            
+            // Bottom Done Button
+            Button(action: {
+                // Dismiss both sheets
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    NotificationCenter.default.post(name: NSNotification.Name("DismissAllSheets"), object: nil)
+                }
+            }) {
+                Text("Done")
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.mint)
+                    .cornerRadius(10)
+            }
+            .padding()
         }
-        .background(Color.white.edgesIgnoringSafeArea(.all))
-        .navigationBarBackButtonHidden(true)
+        .navigationTitle("Booking Confirmation")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    dismiss()
+                }) {
+                    Text("Cancel")
+                        .foregroundColor(.red)
+                }
+            }
+        }
     }
-
-    // MARK: - Bed Booking Details Section
-    private var bedDetailsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Bed Booking Details")
-                .font(.headline)
+    
+    private func detailRow(icon: String, title: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
                 .foregroundColor(.mint)
-
-            detailRow(label: "Bed Type", value: bedType)
-            detailRow(label: "Hospital", value: hospital.name)
-            detailRow(label: "Booking Date", value: formattedBookingDate)
-            detailRow(label: "Total Price", value: "₹\(invoice.amount)")
-
-            Divider()
-        }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(12)
-        .shadow(radius: 3)
-    }
-
-    // MARK: - Invoice Details Section
-    private var invoiceDetailsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Payment Details")
-                .font(.headline)
-                .foregroundColor(.mint)
-
-            detailRow(label: "Booking ID", value: bedBooking.id.uuidString)
-            detailRow(label: "Payment Method", value: formattedPaymentMethod)
-            detailRow(label: "Amount Paid", value: "₹\(invoice.amount)")
-
-            Divider()
-        }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(12)
-        .shadow(radius: 3)
-    }
-
-    // MARK: - Detail Row Helper Function
-    private func detailRow(label: String, value: String) -> some View {
-        HStack {
-            Text(label + ":")
-                .fontWeight(.medium)
+                .frame(width: 24)
+            Text(title)
+                .font(.body)
             Spacer()
-            Text(value)
-                .fontWeight(.regular)
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.trailing)
         }
     }
-
-    // MARK: - Get Bed Type (Fetching from BedBooking)
-    private var bedType: String {
-        return bedBooking.isAvailable == true ? "Available" : "Not Available"
-    }
-
-    // MARK: - Format Payment Method
-    private var formattedPaymentMethod: String {
-        switch invoice.paymentType {
-        case .appointment:
-            return "Apple Pay"
-        case .labTest:
-            return "Credit/Debit Card"
-        case .bed:
-            return "UPI"
-        }
-    }
-
-    // MARK: - Date Formatter
-    private var formattedBookingDate: String {
+    
+    private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMM d, yyyy"
-        return formatter.string(from: bedBooking.startDate)
+        formatter.dateStyle = .medium
+        return formatter.string(from: date)
     }
+}
 
-    // MARK: - View Invoice Function
-    private func viewInvoice() {
-        print("Viewing Invoice for Booking ID: \(bedBooking.id)")
+struct LottieView: View {
+    let name: String
+    
+    var body: some View {
+        Color.clear // Placeholder for Lottie animation
+            .overlay(
+                Image(systemName: "checkmark.circle.fill")
+                    .resizable()
+                    .foregroundColor(.mint)
+                    .aspectRatio(contentMode: .fit)
+                    .padding(40)
+            )
     }
 }
 

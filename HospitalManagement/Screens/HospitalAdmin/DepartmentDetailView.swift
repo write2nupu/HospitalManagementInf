@@ -3,11 +3,15 @@ import SwiftUI
 struct DepartmentDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var viewModel: HospitalManagementViewModel
+    @StateObject private var supabaseController = SupabaseController()
     
     let department: Department
     @State private var showAddDoctor = false
     @State private var searchText = ""
     @State private var statusFilter: StatusFilter = .all
+    @State private var doctors: [Doctor] = []
+    @State private var isLoading = true
+    @State private var errorMessage: String?
     
     enum StatusFilter {
         case all, active, inactive
@@ -21,11 +25,7 @@ struct DepartmentDetailView: View {
         }
     }
     
-    private var departmentDoctors: [Doctor] {
-        // Make sure we're getting the latest doctors from the view model
-        let doctors = viewModel.getDoctorsByHospital(hospitalId: department.hospital_id ?? UUID())
-            .filter { $0.department_id == department.id }
-        
+    private var filteredDoctors: [Doctor] {
         // First apply status filter
         let statusFiltered = doctors.filter { doctor in
             switch statusFilter {
@@ -85,7 +85,7 @@ struct DepartmentDetailView: View {
                             Text("Total Doctors")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
-                            Text("\(departmentDoctors.count)")
+                            Text("\(doctors.count)")
                                 .font(.title3)
                                 .fontWeight(.bold)
                                 .foregroundColor(.mint)
@@ -98,7 +98,7 @@ struct DepartmentDetailView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    Text("Consultation Fee: $\(String(format: "%.2f", department.fees))")
+                    Text("Consultation Fee: ₹\(String(format: "%.2f", department.fees))")
                         .font(.subheadline)
                         .foregroundColor(.mint)
                 }
@@ -138,7 +138,28 @@ struct DepartmentDetailView: View {
                     }
                     .padding(.horizontal)
                     
-                    if departmentDoctors.isEmpty {
+                    if isLoading {
+                        VStack(spacing: 12) {
+                            ProgressView()
+                            Text("Loading doctors...")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                    } else if let error = errorMessage {
+                        VStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 40))
+                                .foregroundColor(.red.opacity(0.3))
+                            Text(error)
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                    } else if filteredDoctors.isEmpty {
                         VStack(spacing: 12) {
                             Image(systemName: "person.3.fill")
                                 .font(.system(size: 40))
@@ -153,7 +174,7 @@ struct DepartmentDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 40)
                     } else {
-                        ForEach(departmentDoctors) { doctor in
+                        ForEach(filteredDoctors) { doctor in
                             NavigationLink {
                                 DoctorDetailView(doctor: doctor)
                             } label: {
@@ -179,20 +200,32 @@ struct DepartmentDetailView: View {
             }
         }
         .task {
-//            if let hospitalId = getCurrentHospitalId() {
-//                doctor = await SupabaseController.getDoctorsByHospital(hospitalId: hospitalId)
-//                doctors = doctors.filter { $0.department_id == department.id }
-            }
+            await loadDoctors()
+        }
+        .refreshable {
+            await loadDoctors()
         }
     }
     
-    // Helper function to get current hospital ID (implement based on your auth system)
-    private func getCurrentHospitalId() -> UUID? {
-        // Implement this based on your authentication system
-        // For example, get it from UserDefaults or your auth state
-        return nil // Replace with actual implementation
+    private func loadDoctors() async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let fetchedDoctors = try await supabaseController.getDoctorsByDepartment(departmentId: department.id)
+            await MainActor.run {
+                doctors = fetchedDoctors
+                isLoading = false
+            }
+        } catch {
+            print("Error loading doctors:", error)
+            await MainActor.run {
+                errorMessage = "Failed to load doctors: \(error.localizedDescription)"
+                isLoading = false
+            }
+        }
     }
-
+}
 
 struct DoctorListCard: View {
     let doctor: Doctor
@@ -230,36 +263,6 @@ struct DoctorListCard: View {
                 .fill(Color(.systemBackground))
                 .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
         )
-//        .padding(.horizontal)
-//        .contentShape(Rectangle())
-//        .swipeActions(edge: .trailing) {
-//            Button {
-//                showStatusConfirmation = true
-//            } label: {
-//                Label(doctor.is_active ? "Deactivate" : "Activate",
-//                      systemImage: doctor.is_active ? "person.fill.xmark" : "person.fill.checkmark")
-//            }
-//            .tint(doctor.is_active ? .red : .green)
-//        }
-//        .alert(doctor.is_active ? "Confirm Deactivation" : "Confirm Activation", 
-//               isPresented: $showStatusConfirmation) {
-//            Button("Cancel", role: .cancel) { }
-//            Button(doctor.is_active ? "Deactivate" : "Activate", 
-//                  role: doctor.is_active ? .destructive : .none) {
-//                Task {
-//                    await toggleDoctorStatus()
-//                }
-//            }
-//        } message: {
-//            Text(doctor.is_active ? 
-//                "Are you sure you want to deactivate Dr. \(doctor.full_name)?" :
-//                "Do you want to activate Dr. \(doctor.full_name)?")
-//        }
-//        .alert("Status Updated", isPresented: $showStatusChangeAlert) {
-//            Button("OK", role: .cancel) { }
-//        } message: {
-//            Text("\(doctor.full_name) has been \(doctor.is_active ? "deactivated" : "activated")")
-//        }
     }
 }
 
