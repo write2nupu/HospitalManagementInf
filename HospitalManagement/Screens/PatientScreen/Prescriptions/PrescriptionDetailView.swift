@@ -237,6 +237,12 @@ struct ShareSheet: UIViewControllerRepresentable {
 }
 
 class PDFCreator {
+    private func calculateAge(from dateOfBirth: Date) -> String {
+        let calendar = Calendar.current
+        let ageComponents = calendar.dateComponents([.year], from: dateOfBirth, to: Date())
+        return "\(ageComponents.year ?? 0)"
+    }
+    
     func createPrescriptionPDF(
         hospital: Hospital,
         doctor: Doctor,
@@ -252,89 +258,102 @@ class PDFCreator {
             context.beginPage()
             
             let headerFont = UIFont.systemFont(ofSize: 16, weight: .bold)
-            let titleFont = UIFont.systemFont(ofSize: 14, weight: .semibold)
+            let titleFont = UIFont.systemFont(ofSize: 14, weight: .medium)
             let regularFont = UIFont.systemFont(ofSize: 12, weight: .regular)
-            let smallFont = UIFont.systemFont(ofSize: 10, weight: .regular)
             
-            // Hospital Header
-            let hospitalName = NSAttributedString(
-                string: hospital.name,
-                attributes: [.font: headerFont]
-            )
-            hospitalName.draw(at: CGPoint(x: 50, y: 50))
-            
-            let hospitalAddress = NSAttributedString(
-                string: "\(hospital.address)\n\(hospital.city), \(hospital.state) - \(hospital.pincode)",
-                attributes: [.font: smallFont]
-            )
-            hospitalAddress.draw(at: CGPoint(x: 50, y: 70))
-            
-            let contactInfo = NSAttributedString(
-                string: "Phone: \(hospital.mobile_number) | Email: \(hospital.email)",
-                attributes: [.font: smallFont]
-            )
-            contactInfo.draw(at: CGPoint(x: 50, y: 100))
-            
-            // Separator Line
+            // Draw border
             context.cgContext.setStrokeColor(UIColor.gray.cgColor)
-            context.cgContext.setLineWidth(0.5)
-            context.cgContext.move(to: CGPoint(x: 50, y: 120))
-            context.cgContext.addLine(to: CGPoint(x: 545, y: 120))
-            context.cgContext.strokePath()
+            context.cgContext.setLineWidth(1)
+            context.cgContext.stroke(CGRect(x: 40, y: 40, width: pageRect.width - 80, height: pageRect.height - 80))
             
-            // Doctor Info
-            let doctorInfo = NSAttributedString(
-                string: "Dr. \(doctor.full_name)\n\(doctor.qualifications ?? "")\nReg. No: \(doctor.license_num ?? "")",
-                attributes: [.font: titleFont]
-            )
-            doctorInfo.draw(at: CGPoint(x: 50, y: 140))
+            var yPosition = 60
             
-            // Patient Info and Date
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "dd MMM yyyy"
-            let patientInfo = NSAttributedString(
-                string: "Patient Name: \(patient.fullname)\nDate: \(dateFormatter.string(from: date))",
+            // Hospital Header - Left side
+            let hospitalInfo = NSAttributedString(
+                string: "\(hospital.name)\n\(hospital.address)\n\(hospital.city), \(hospital.state) - \(hospital.pincode)\nPhone: \(hospital.mobile_number)\nEmail: \(hospital.email)",
                 attributes: [.font: regularFont]
             )
-            patientInfo.draw(at: CGPoint(x: 50, y: 190))
+            hospitalInfo.draw(at: CGPoint(x: 60, y: CGFloat(yPosition)))
+            
+            // Doctor Info - Right side
+            let doctorInfo = NSAttributedString(
+                string: "Dr. \(doctor.full_name)\n\(doctor.qualifications)\nReg. No: \(doctor.license_num ?? "")",
+                attributes: [.font: regularFont]
+            )
+            doctorInfo.draw(at: CGPoint(x: pageRect.width - 250, y: CGFloat(yPosition)))
+            
+            // Horizontal line after header
+            yPosition += 100
+            drawLine(context: context.cgContext, startX: 60, endX: Int(pageRect.width - 60), y: yPosition)
+            
+            // Patient Info
+            yPosition += 30
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "dd MMM yyyy"
+            
+            // Calculate age from date of birth
+            let age = calculateAge(from: patient.dateofbirth)
+            
+            let patientInfo = NSAttributedString(
+                string: "Patient Name: \(patient.fullname)          Age: \(age)          Gender: \(patient.gender ?? "")",
+                attributes: [.font: regularFont]
+            )
+            patientInfo.draw(at: CGPoint(x: 60, y: CGFloat(yPosition)))
+            
+            // Rx Symbol
+            yPosition += 30
+            let rx = NSAttributedString(
+                string: "Rx.",
+                attributes: [.font: titleFont]
+            )
+            rx.draw(at: CGPoint(x: 60, y: CGFloat(yPosition)))
             
             // Diagnosis
+            yPosition += 30
             let diagnosisTitle = NSAttributedString(
                 string: "Diagnosis:",
                 attributes: [.font: titleFont]
             )
-            diagnosisTitle.draw(at: CGPoint(x: 50, y: 240))
+            diagnosisTitle.draw(at: CGPoint(x: 60, y: CGFloat(yPosition)))
             
+            yPosition += 25
             let diagnosis = NSAttributedString(
                 string: prescription.diagnosis,
                 attributes: [.font: regularFont]
             )
-            diagnosis.draw(at: CGPoint(x: 70, y: 260))
+            diagnosis.draw(at: CGPoint(x: 80, y: CGFloat(yPosition)))
             
             // Medicines
-            var yPosition = 300
+            yPosition += 40
             if let medicines = prescription.medicineName {
                 let medicinesTitle = NSAttributedString(
                     string: "Medicines:",
                     attributes: [.font: titleFont]
                 )
-                medicinesTitle.draw(at: CGPoint(x: 50, y: CGFloat(yPosition)))
+                medicinesTitle.draw(at: CGPoint(x: 60, y: CGFloat(yPosition)))
                 
-                let medicinesList = NSAttributedString(
-                    string: medicines,
-                    attributes: [.font: regularFont]
-                )
-                medicinesList.draw(at: CGPoint(x: 70, y: CGFloat(yPosition + 20)))
-                yPosition += 60
+                // Split medicines by comma and display each on new line
+                let medicinesList = medicines.components(separatedBy: ",")
+                yPosition += 25
+                
+                for medicine in medicinesList {
+                    let medicineText = NSAttributedString(
+                        string: "• \(medicine.trimmingCharacters(in: .whitespaces))",
+                        attributes: [.font: regularFont]
+                    )
+                    medicineText.draw(at: CGPoint(x: 80, y: CGFloat(yPosition)))
+                    yPosition += 20
+                }
             }
             
             // Lab Tests
+            yPosition += 20
             if let tests = prescription.labTests, !tests.isEmpty {
                 let testsTitle = NSAttributedString(
                     string: "Lab Tests:",
                     attributes: [.font: titleFont]
                 )
-                testsTitle.draw(at: CGPoint(x: 50, y: CGFloat(yPosition)))
+                testsTitle.draw(at: CGPoint(x: 60, y: CGFloat(yPosition)))
                 
                 let cleanedTests = tests.map { test in
                     test.replacingOccurrences(of: "[\"", with: "")
@@ -342,37 +361,33 @@ class PDFCreator {
                         .replacingOccurrences(of: "\"", with: "")
                 }
                 
-                let testsList = NSAttributedString(
-                    string: cleanedTests.map { "• \($0)" }.joined(separator: "\n"),
-                    attributes: [.font: regularFont]
-                )
-                testsList.draw(at: CGPoint(x: 70, y: CGFloat(yPosition + 20)))
-                yPosition += 60 + (20 * tests.count)
-            }
-            
-            // Additional Notes
-            if let notes = prescription.additionalNotes {
-                let notesTitle = NSAttributedString(
-                    string: "Additional Notes:",
-                    attributes: [.font: titleFont]
-                )
-                notesTitle.draw(at: CGPoint(x: 50, y: CGFloat(yPosition)))
-                
-                let notesList = NSAttributedString(
-                    string: notes,
-                    attributes: [.font: regularFont]
-                )
-                notesList.draw(at: CGPoint(x: 70, y: CGFloat(yPosition + 20)))
+                yPosition += 25
+                for test in cleanedTests {
+                    let testText = NSAttributedString(
+                        string: "• \(test.trimmingCharacters(in: .whitespaces))",
+                        attributes: [.font: regularFont]
+                    )
+                    testText.draw(at: CGPoint(x: 80, y: CGFloat(yPosition)))
+                    yPosition += 20
+                }
             }
             
             // Doctor's Signature
             let signature = NSAttributedString(
-                string: "\n\nDoctor's Signature\n\nDr. \(doctor.full_name)",
+                string: "Doctor's Signature\n\nDr. \(doctor.full_name)",
                 attributes: [.font: regularFont]
             )
-            signature.draw(at: CGPoint(x: 350, y: CGFloat(yPosition + 100)))
+            signature.draw(at: CGPoint(x: pageRect.width - 200, y: pageRect.height - 100))
         }
         
         return data
+    }
+    
+    private func drawLine(context: CGContext, startX: Int, endX: Int, y: Int) {
+        context.setStrokeColor(UIColor.gray.cgColor)
+        context.setLineWidth(0.5)
+        context.move(to: CGPoint(x: startX, y: y))
+        context.addLine(to: CGPoint(x: endX, y: y))
+        context.strokePath()
     }
 } 
