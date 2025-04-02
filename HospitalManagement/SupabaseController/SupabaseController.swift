@@ -7,6 +7,11 @@
 
 import Foundation
 import Supabase
+// Add this import if TimeSlot is in a separate file
+// import YourModuleName where TimeSlot is defined
+
+// Add this import if AppointmentShift is in a separate module
+// import YourModuleName
 
 class SupabaseController: ObservableObject {
     let client: SupabaseClient
@@ -689,7 +694,10 @@ func signInPatient(email: String, password: String) async throws -> Patient {
         throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Patient account not found. Please contact support."])
     }
     
-    print("Patient found:", patient.fullname)
+    // Store the patient ID in UserDefaults
+    UserDefaults.standard.set(patient.id.uuidString, forKey: "currentPatientId")
+    print("Stored patient ID in UserDefaults:", patient.id.uuidString)
+    
     return patient
 }
 
@@ -1364,9 +1372,11 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
     }
     
     func createInvoice(invoice: Invoice) async throws {
+        let dateFormatter = ISO8601DateFormatter()
+        
         let invoiceData: [String: AnyJSON] = [
             "id": .string(invoice.id.uuidString),
-            "createdAt": .string(ISO8601DateFormatter().string(from: invoice.createdAt)),
+            "createdAt": .string(dateFormatter.string(from: invoice.createdAt)),
             "patientid": .string(invoice.patientid.uuidString),
             "amount": .double(Double(invoice.amount)),
             "paymentType": .string(invoice.paymentType.rawValue),
@@ -1378,6 +1388,8 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
             .from("Invoice")
             .insert(invoiceData)
             .execute()
+        
+        print("Invoice stored in database successfully")
     }
     
     func getBookingsByPatientId(patientId: UUID) async throws -> [BedBookingWithDetails] {
@@ -1458,5 +1470,198 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
             print("Error loading bed bookings: \(error)")
             throw error
         }
+    }
+    
+    func createAppointment(appointment: Appointment, timeSlot: TimeSlot) async throws {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss" // Use 24-hour format for database storage
+        
+        let appointmentData: [String: AnyJSON] = [
+            "id": .string(appointment.id.uuidString),
+            "patientId": .string(appointment.patientId.uuidString),
+            "doctorId": .string(appointment.doctorId.uuidString),
+            "date": .string(dateFormatter.string(from: timeSlot.startTime)),
+            "status": .string(appointment.status.rawValue),
+            "type": .string(appointment.type.rawValue),
+            "prescriptionId": .null,
+            "createdAt": .string(dateFormatter.string(from: Date()))
+        ]
+        
+        try await client
+            .from("Appointment")
+            .insert(appointmentData)
+            .execute()
+    }
+    
+    func getBookedTimeSlots(doctorId: UUID, date: Date) async throws -> [TimeSlot] {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        
+        let appointments: [Appointment] = try await client
+            .from("Appointment")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .gte("date", value: startOfDay)
+            .lt("date", value: endOfDay)
+            .execute()
+            .value
+        
+        return appointments.map { appointment in
+            TimeSlot(
+                startTime: appointment.date,
+                endTime: Calendar.current.date(byAdding: .minute, value: 20, to: appointment.date)!
+            )
+        }
+    }
+
+//    func fetchAppointmentsForPatient(patientId: UUID) async throws -> [Appointment] {
+//        let appointments: [Appointment] = try await client
+//            .from("Appointment")
+//            .select()
+//            .eq("patientId", value: patientId.uuidString)
+//            .execute()
+//            .value
+//        
+//        return appointments
+//    }
+}
+
+extension SupabaseController {
+    func checkTimeSlotAvailability(doctorId: UUID, timeSlot: TimeSlot) async throws -> Bool {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: timeSlot.startTime)
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        
+        // Get all appointments for this doctor on this date
+        let appointments: [Appointment] = try await client
+            .from("Appointment")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .gte("date", value: dateFormatter.string(from: startOfDay))
+            .lt("date", value: dateFormatter.string(from: calendar.date(byAdding: .day, value: 1, to: startOfDay)!))
+            .execute()
+            .value
+        
+        // Check if there's any overlap with existing appointments
+        for appointment in appointments {
+            let appointmentStart = appointment.date
+            let appointmentEnd = calendar.date(byAdding: .minute, value: 20, to: appointmentStart)!
+            
+            if (timeSlot.startTime >= appointmentStart && timeSlot.startTime < appointmentEnd) ||
+               (timeSlot.endTime > appointmentStart && timeSlot.endTime <= appointmentEnd) ||
+               (timeSlot.startTime <= appointmentStart && timeSlot.endTime >= appointmentEnd) {
+                return false
+            }
+        }
+        
+        return true
+    }
+    
+    func getAvailableTimeSlots(doctorId: UUID, date: Date) async throws -> [TimeSlot] {
+        // Generate all possible time slots for the date
+        let allTimeSlots = TimeSlot.generateTimeSlots(for: date)
+        
+        // Create a mutable calendar
+        var calendar = Calendar.current
+        // Set the timezone
+        calendar.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+        
+        // Format dates for Supabase query
+        let isoFormatter = ISO8601DateFormatter()
+        
+        // Get the start of the day for the appointment date
+        let startOfDay = calendar.startOfDay(for: date)
+        
+        // Get all appointments for this doctor on this date
+        let appointments: [Appointment] = try await client
+            .from("Appointment")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .gte("date", value: isoFormatter.string(from: startOfDay))
+            .lt("date", value: isoFormatter.string(from: calendar.date(byAdding: .day, value: 1, to: startOfDay)!))
+            .execute()
+            .value
+        
+        // Create a list of booked time slots
+        var bookedTimeSlots: [TimeSlot] = []
+        for appointment in appointments {
+            let appointmentStart = appointment.date
+            let appointmentEnd = calendar.date(byAdding: .minute, value: 20, to: appointmentStart)!
+            bookedTimeSlots.append(TimeSlot(startTime: appointmentStart, endTime: appointmentEnd))
+        }
+        
+        // Filter out booked time slots
+        let availableSlots = allTimeSlots.filter { slot in
+            for bookedSlot in bookedTimeSlots {
+                // Check for any kind of overlap
+                if (slot.startTime >= bookedSlot.startTime && slot.startTime < bookedSlot.endTime) ||
+                   (slot.endTime > bookedSlot.startTime && slot.endTime <= bookedSlot.endTime) ||
+                   (slot.startTime <= bookedSlot.startTime && slot.endTime >= bookedSlot.endTime) {
+                    return false
+                }
+            }
+            return true
+        }
+        
+        return availableSlots
+    }
+}
+
+extension SupabaseController {
+    func fetchAppointmentsForPatient(patientId: UUID) async throws -> [Appointment] {
+        let appointments: [Appointment] = try await client
+            .from("Appointment")
+            .select()
+            .eq("patientId", value: patientId.uuidString)
+            .execute()
+            .value
+        
+        return appointments
+    }
+    
+    func fetchDoctorById(doctorId: UUID) async throws -> Doctor? {
+        let doctors: [Doctor] = try await client
+            .from("Doctor")
+            .select()
+            .eq("id", value: doctorId.uuidString)
+            .execute()
+            .value
+        
+        return doctors.first
+    }
+    
+    func cancelAppointment(appointmentId: UUID) async throws {
+        try await client
+            .from("Appointment")
+            .update(["status": "cancelled"])
+            .eq("id", value: appointmentId.uuidString)
+            .execute()
+    }
+    
+    func rescheduleAppointment(appointmentId: UUID, newDate: Date, newTime: String) async throws {
+        let calendar = Calendar.current
+        var dateComponents = calendar.dateComponents([.year, .month, .day], from: newDate)
+        
+        // Parse the time string (expecting format "HH:mm")
+        let timeComponents = newTime.split(separator: ":")
+        if let hour = Int(timeComponents[0]), let minute = Int(timeComponents[1]) {
+            dateComponents.hour = hour
+            dateComponents.minute = minute
+        }
+        
+        let finalDate = calendar.date(from: dateComponents)!
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss" // Use 24-hour format for database storage
+        let dateString = dateFormatter.string(from: finalDate)
+        
+        try await client
+            .from("Appointment")
+            .update(["date": dateString])
+            .eq("id", value: appointmentId.uuidString)
+            .execute()
     }
 }
