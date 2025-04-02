@@ -103,7 +103,7 @@ struct PatientDashboard: View {
                     NavigationConfigurator()
                         .frame(width: 0, height: 0)
                 }
-                .navigationTitle("Hi, \(patient.fullname)")
+                .navigationTitle("Home")
                 .navigationBarTitleDisplayMode(.large)
                 .navigationBarBackButtonHidden(true)
                 .toolbar {
@@ -261,8 +261,6 @@ struct PatientDashboard: View {
                         selectedHospital = hospital
                     }
                 }
-            } catch {
-                print("Error fetching selected hospital: \(error)")
             }
         } 
     }

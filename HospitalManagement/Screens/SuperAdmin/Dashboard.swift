@@ -176,7 +176,7 @@ struct AddHospitalView: View {
                         .textInputAutocapitalization(.words)
                     TextField("Pincode (6 digits)", text: $pincode)
                         .keyboardType(.numberPad)
-                        .onChange(of: pincode) { newValue in
+                        .onChange(of: pincode) { oldValue, newValue in
                             // Only allow numbers and limit to 6 digits
                             let filtered = newValue.filter { $0.isNumber }
                             if filtered != newValue {
@@ -642,8 +642,6 @@ struct ContentView: View {
         do {
             let fetchedHospitals = await supabaseController.fetchHospitals()
             viewModel.hospitals = fetchedHospitals
-        } catch {
-            errorMessage = "Failed to load hospitals: \(error.localizedDescription)"
         }
         isLoading = false
     }

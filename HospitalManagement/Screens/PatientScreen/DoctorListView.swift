@@ -143,7 +143,7 @@ struct DoctorListView: View {
                 }
             }
         }
-        .onChange(of: coordinator.shouldDismissToRoot) { shouldDismiss in
+        .onChange(of: coordinator.shouldDismissToRoot) { oldValue, shouldDismiss in
             print("🔄 DoctorListView: shouldDismissToRoot changed to \(shouldDismiss)")
             if shouldDismiss {
                 print("👋 DoctorListView: Dismissing view")
@@ -513,7 +513,7 @@ struct AppointmentBookingView: View {
                               in: Date()...,
                               displayedComponents: .date)
                         .datePickerStyle(GraphicalDatePickerStyle())
-                        .onChange(of: selectedDate) { _ in
+                        .onChange(of: selectedDate) { oldValue, _ in
                             selectedTimeSlot = nil
                         }
                 }
@@ -563,7 +563,7 @@ struct AppointmentBookingView: View {
                 }
             }
         }
-        .onChange(of: coordinator.shouldDismissToRoot) { shouldDismiss in
+        .onChange(of: coordinator.shouldDismissToRoot) { oldValue, shouldDismiss in
             print("🔄 AppointmentBookingView: shouldDismissToRoot changed to \(shouldDismiss)")
             if shouldDismiss {
                 print("👋 AppointmentBookingView: Dismissing view")

@@ -279,9 +279,6 @@ struct BedPaymentView: View {
                 onPaymentSuccess(invoice)
                 isProcessingPayment = false
                 showingConfirmation = true
-            } catch {
-                isProcessingPayment = false
-                errorMessage = "Payment failed: \(error.localizedDescription)"
             }
         }
     }

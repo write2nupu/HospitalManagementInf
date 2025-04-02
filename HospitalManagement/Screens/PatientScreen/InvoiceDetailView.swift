@@ -72,10 +72,7 @@ struct InvoiceDetailView: View {
             if let patient = patients.first(where: { $0.id == invoice.patientid }) {
                 patientName = patient.fullname
             }
-        } catch {
-            print("Error loading patient details: \(error)")
-        }
-        
+        }        
         isLoadingPatient = false
     }
 }

@@ -28,7 +28,7 @@ struct AddDepartmentView: View {
                 TextField("Description", text: $description)
                 TextField("Consultation Fee (₹)", text: $feesString)
                     .keyboardType(.decimalPad)
-                    .onChange(of: feesString) { newValue in
+                    .onChange(of: feesString) { oldValue, newValue in
                         // Clean the input to only allow numbers and decimal point
                         let filtered = newValue.filter { "0123456789.".contains($0) }
                         if filtered != newValue {
