@@ -6,17 +6,9 @@ struct LoginView: View {
     @State private var password: String = ""
     @State private var isLoading: Bool = false
     @State private var errorMessage: String? = nil
-    @State private var showForgotPassword = false
 
     var body: some View {
         VStack {
-            // App Logo
-            Image("appicon")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 120, height: 120)
-                .padding(.top, 40)
-            
             Text("Login")
                 .font(.largeTitle)
                 .fontWeight(.bold)
@@ -31,18 +23,6 @@ struct LoginView: View {
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal, 20)
                 .padding(.bottom, 10)
-                
-            // Forgot Password Button
-            Button(action: {
-                showForgotPassword = true
-            }) {
-                Text("Forgot Password?")
-                    .font(.subheadline)
-                    .foregroundColor(.mint)
-            }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 10)
 
             if isLoading {
                 ProgressView()
@@ -62,9 +42,6 @@ struct LoginView: View {
                     .foregroundColor(.red)
                     .padding(.top, 10)
             }
-        }
-        .sheet(isPresented: $showForgotPassword) {
-            ForgotPasswordView()
         }
     }
 

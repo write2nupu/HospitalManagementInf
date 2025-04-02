@@ -91,7 +91,7 @@ struct PaymentView: View {
                 }
             }
         }
-        .onChange(of: coordinator.isNavigatingBack) { isNavigating in
+        .onChange(of: coordinator.isNavigatingBack) { oldValue, isNavigating in
             if isNavigating {
                 showPaymentConfirmation = false
             }

@@ -294,10 +294,7 @@ struct BedView: View {
                 bedStats = (total: total, available: available, byType: statsByType)
             }
             
-        } catch {
-            errorMessage = "Failed to load data: \(error.localizedDescription)"
-            showErrorAlert = true
-        }
+        } 
         
         isLoading = false
     }

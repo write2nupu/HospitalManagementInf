@@ -39,7 +39,7 @@ struct updateFields: View {
                         .padding(.horizontal, 10)
                         .disabled(!isEditing)
                         .keyboardType(.emailAddress)
-                        .onChange(of: updatedEmail) { _ in validateEmail() }
+                        .onChange(of: updatedEmail) { oldValue, _ in validateEmail() }
                     
                     if let error = errorMessageEmail {
                         Text(error)
@@ -59,7 +59,7 @@ struct updateFields: View {
                         .padding(.horizontal, 10)
                         .disabled(!isEditing)
                         .keyboardType(.numberPad)
-                        .onChange(of: updatePhone) { _ in validatePhone() }
+                        .onChange(of: updatePhone) { oldValue, _ in validatePhone() }
                     
                     if let error = errorMessagePhone {
                         Text(error)
