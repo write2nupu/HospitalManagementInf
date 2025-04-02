@@ -64,22 +64,30 @@ struct UserRoleScreen: View {
             }
         }
     }
+    
+    @ViewBuilder
+    private func getDestinationForRole(_ role: String) -> some View {
+        switch role {
+        case "Patient":
+            PatientLoginSignupView()
+        case "Doctor":
+            DoctorLoginView(message: "Doctor")
+        case "Admin":
+            AdminLoginViewS(message: "Admin")
+        case "Super-Admin":
+            SuperAdminLoginView(message: "Super admin")
+        default:
+            EmptyView()
+        }
+    }
 }
 
 // MARK: - Role Card
 struct RoleCard: View {
     var role: String
-    var imageName: String
     
     var body: some View {
         HStack {
-            // Role image
-            Image(imageName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 50, height: 50)
-                .padding(.trailing, 10)
-            
             Text(role)
                 .font(.title2)
                 .fontWeight(.semibold)

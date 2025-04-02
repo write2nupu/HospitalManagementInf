@@ -11,7 +11,6 @@ struct AdminLoginViewS: View {
     @State private var isLoggedIn = false
     @State private var isPasswordVisible = false
     @State private var isLoading = false
-    @State private var showForgotPassword = false
     @StateObject private var supabaseController = SupabaseController()
     @State private var userAdminData: users?
     @AppStorage("currentUserId") private var currentUserId: String = ""
@@ -22,11 +21,11 @@ struct AdminLoginViewS: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 30) {
-                // App Logo - replaced SF symbol with image from assets
-                Image("admin")
+                // **App Logo**
+                Image(systemName: "building.2.fill")
                     .resizable()
-                    .scaledToFit()
-                    .frame(width: 120, height: 120)
+                    .frame(width: 100, height: 100)
+                    .foregroundColor(.mint)
                     .padding(.bottom, 10)
 
                 // **Title**
@@ -44,19 +43,6 @@ struct AdminLoginViewS: View {
                 VStack(alignment: .leading, spacing: 5) {
                     passwordField(icon: "lock.fill", placeholder: "Enter Password", text: $password)
                 }
-                
-                // **Forgot Password Button**
-                Button(action: {
-                    showForgotPassword = true
-                }) {
-                    Text("Forgot Password?")
-                        .font(.subheadline)
-                        .foregroundColor(.mint)
-                }
-                .padding(.top, -15)
-                .padding(.bottom, 15)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(.horizontal)
 
                 // **Login Button**
                 Button(action: {
@@ -98,9 +84,6 @@ struct AdminLoginViewS: View {
                         AdminTabView()
                     }
                 }
-            }
-            .sheet(isPresented: $showForgotPassword) {
-                ForgotPasswordView()
             }
         }
     }

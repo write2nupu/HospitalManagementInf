@@ -10,41 +10,44 @@ import SwiftUI
 @main
 struct HospitalManagementApp: App {
     @StateObject private var viewModel = HospitalManagementViewModel()
-    @AppStorage("isLoggedIn") private var isLoggedIn = false
-    @AppStorage("userRole") private var userRole: String?
-    @State private var shouldShowUserRoleScreen = false
+    @State private var isLoggedIn = false
+    @State private var userRole: String? = nil
+    @AppStorage("currentUserId") private var currentUserId: String = ""
+    @State private var patient: Patient?
     @StateObject private var supabaseController = SupabaseController()
     
     var body: some Scene {
         WindowGroup {
-            Group {
-                if shouldShowUserRoleScreen {
-                    UserRoleScreen()
-                } else {
-                    UserRoleScreen()
-                }
-            }
-            .environmentObject(viewModel)
-            .onAppear {
-                // Create default super admin
-                Task {
-                    do {
-                        try await supabaseController.createDefaultSuperAdmin()
-                        
-                    } catch {
-                        print("Error creating default super admin: \(error)")
+            UserRoleScreen()
+                .environmentObject(viewModel)
+                .onAppear {
+                    // Clear any stored login state on app launch
+                    UserDefaults.standard.removeObject(forKey: "isLoggedIn")
+                    UserDefaults.standard.removeObject(forKey: "userRole")
+                    
+                    // Create default super admin
+                    Task {
+                        do {
+                            try await supabaseController.createDefaultSuperAdmin()
+                        } catch {
+                            print("Error creating default super admin: \(error)")
+                        }
                     }
                 }
-                
-                // Setup notification observer
-                NotificationCenter.default.addObserver(
-                    forName: .init("LogoutNotification"),
-                    object: nil,
-                    queue: .main
-                ) { _ in
-                    shouldShowUserRoleScreen = true
-                }
-            }
+        }
+    }
+}
+
+// Simple loading view
+struct LoadingView: View {
+    var body: some View {
+        VStack {
+            ProgressView()
+                .scaleEffect(2)
+                .padding()
+            Text("Loading...")
+                .font(.headline)
+                .padding()
         }
     }
 }
