@@ -27,8 +27,14 @@ struct DoctorDashBoard: View {
     // Computed property for upcoming appointments
     private var upcomingAppointments: [Appointment] {
         let now = Date()
+        let calendar = Calendar.current
+        let sevenDaysFromNow = calendar.date(byAdding: .day, value: 7, to: now)!
+        
         return appointments
-            .filter { $0.date > now }
+            .filter { appointment in
+                // Filter appointments that are in the future but within next 7 days
+                appointment.date > now && appointment.date <= sevenDaysFromNow
+            }
             .sorted { $0.date < $1.date }
     }
     

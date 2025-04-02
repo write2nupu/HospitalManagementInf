@@ -946,13 +946,13 @@ private struct AnyCodingKey: CodingKey {
     }
 }
 
-    func savePrescription(_ prescription: PrescriptionData) async throws {
-        try await client
-            .from("Prescription")
-            .upsert(prescription)
-            .execute()
-    }
-    
+//    func savePrescription(_ prescription: PrescriptionData) async throws {
+//        try await client
+//            .from("Prescription")
+//            .upsert(prescription)
+//            .execute()
+//    }
+//    
     // MARK: - Patient Operations
     func fetchPatientById(patientId: UUID) async throws -> Patient {
         let patients: [Patient] = try await client
