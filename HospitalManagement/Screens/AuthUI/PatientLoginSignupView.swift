@@ -13,13 +13,9 @@ struct PatientLoginSignupView: View {
     @State private var isPasswordVisible = false
     @State private var showAlert = false
     @State private var alertMessage = ""
-    @State private var navigateToDashboard = false
     @State private var isLoading = false
-    @State private var showForgotPassword = false
-    @AppStorage("isLoggedIn") private var isUserLoggedIn = false
-    @AppStorage("currentUserId") private var currentUserId: String = ""
+    @State private var showDashboard = false
     @StateObject private var supabaseController = SupabaseController()
-    
     @State private var currentPatient: Patient?
     @State private var isEmailValid = true
     @State private var isPasswordValid = true
@@ -27,94 +23,82 @@ struct PatientLoginSignupView: View {
     @State private var passwordErrorMessage = ""
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 30) {
-                // Title
-                VStack(spacing: 5) {
-                    Image("patient")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 120, height: 120)
-                        .padding(.bottom, 10)
+        Group {
+            if showDashboard, let patient = currentPatient {
+                // When logged in, replace entire view with PatientDashboard
+                PatientDashboard(patient: patient)
+                    .navigationBarBackButtonHidden(true)
+                    .toolbar(.hidden, for: .navigationBar)
+            } else {
+                // Login UI
+                VStack(spacing: 30) {
+                    // Title
+                    VStack(spacing: 5) {
+                        Image(systemName: "person.fill")
+                            .resizable()
+                            .frame(width: 100, height: 100)
+                            .foregroundColor(.mint)
+                            .padding(.bottom, 10)
 
-                    // **Title**
-                    Text("Patient")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.mint)
-                }
-                .padding(.top, 40)
-                
-                // Form Fields
-                VStack(spacing: 20) {
-                    customTextField(icon: "envelope.fill", placeholder: "Enter Email", text: $email, keyboardType: .emailAddress)
-                    passwordField(icon: "lock.fill", placeholder: "Enter Password", text: $password)
+                        // **Title**
+                        Text("Patient")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.mint)
+                    }
+                    .padding(.top, 40)
                     
-                    // Forgot Password Button
+                    // Form Fields
+                    VStack(spacing: 20) {
+                        customTextField(icon: "envelope.fill", placeholder: "Enter Email", text: $email, keyboardType: .emailAddress)
+                        passwordField(icon: "lock.fill", placeholder: "Enter Password", text: $password)
+                    }
+                    .padding(.top, 20)
+                    
+                    // Login Button
                     Button(action: {
-                        showForgotPassword = true
+                        Task {
+                            await handleSubmit()
+                        }
                     }) {
-                        Text("Forgot Password?")
-                            .font(.subheadline)
-                            .foregroundColor(.mint)
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            Text("Login")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                        }
                     }
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.mint)
+                    .cornerRadius(12)
                     .padding(.horizontal)
-                    .padding(.top, -10)
-                }
-                .padding(.top, 20)
-                
-                // Login Button
-                Button(action: {
-                    Task {
-                        await handleSubmit()
+                    .disabled(isLoading)
+                    
+                    // Signup Button
+                    NavigationLink(destination: PatientSignupView()) {
+                        HStack(spacing: 0) {
+                            Text("Don't have an account? ")
+                                .font(.body)
+                                .foregroundColor(.black)
+                            
+                            Text("Sign Up")
+                                .font(.headline)
+                                .foregroundColor(.mint)
+                        }
+                        .padding(.top, 10)
+                        .background(Color.clear)
                     }
-                }) {
-                    if isLoading {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    } else {
-                        Text("Login")
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                    }
+                    
+                    Spacer()
                 }
-                .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.mint)
-                .cornerRadius(12)
-                .padding(.horizontal)
-                .disabled(isLoading)
-                
-                // Signup Button
-                NavigationLink(destination: PatientSignupView()) {
-                    HStack(spacing: 0) {
-                        Text("Don't have an account? ")
-                            .font(.body)
-                            .foregroundColor(.black)
-                        
-                        Text("Sign Up")
-                            .font(.headline)
-                            .foregroundColor(.mint)
-                    }
-                    .padding(.top, 10)
-                    .background(Color.clear)
+                .background(Color.mint.opacity(0.05))
+                .alert(isPresented: $showAlert) {
+                    Alert(title: Text("Action Required"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
                 }
-                
-                Spacer()
-            }
-            .padding()
-            .background(Color.mint.opacity(0.05))
-            .alert(isPresented: $showAlert) {
-                Alert(title: Text("Action Required"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
-            }
-            .navigationDestination(isPresented: $navigateToDashboard) {
-                if let patient = currentPatient {
-                    PatientDashboard(patient: patient)
-                }
-            }
-            .sheet(isPresented: $showForgotPassword) {
-                ForgotPasswordView()
             }
         }
     }
@@ -161,9 +145,9 @@ struct PatientLoginSignupView: View {
         
         do {
             currentPatient = try await supabaseController.signInPatient(email: email, password: password)
-            currentUserId = currentPatient?.id.uuidString ?? ""
-            isUserLoggedIn = true
-            navigateToDashboard = true
+            
+            // Completely replace the view instead of navigating
+            showDashboard = true
         } catch {
             alertMessage = error.localizedDescription
             showAlert = true

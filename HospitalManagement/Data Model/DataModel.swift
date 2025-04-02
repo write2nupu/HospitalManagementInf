@@ -397,34 +397,161 @@ enum DurationOption: String, CaseIterable, Codable {
     case continuous = "Continuous"
 }
 
-// MARK: - Leave Data Model
-struct Leave {
+// MARK: - Leave Request Model
+struct Leave: Identifiable, Codable {
     let id: UUID
     let doctorId: UUID
     let hospitalId: UUID
-    var type: LeaveType
+    let type: LeaveType
     let reason: String
     let startDate: Date
     let endDate: Date
     var status: LeaveStatus
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case doctorId
+        case hospitalId
+        case type
+        case reason
+        case startDate
+        case endDate
+        case status
+    }
+    
+    init(from decoder: Decoder) throws {
+        print("Starting to decode Leave object")
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        do {
+            id = try container.decode(UUID.self, forKey: .id)
+            print("Successfully decoded id: \(id)")
+        } catch {
+            print("Error decoding id: \(error)")
+            throw error
+        }
+        
+        do {
+            doctorId = try container.decode(UUID.self, forKey: .doctorId)
+            print("Successfully decoded doctorId: \(doctorId)")
+        } catch {
+            print("Error decoding doctorId: \(error)")
+            throw error
+        }
+        
+        do {
+            hospitalId = try container.decode(UUID.self, forKey: .hospitalId)
+            print("Successfully decoded hospitalId: \(hospitalId)")
+        } catch {
+            print("Error decoding hospitalId: \(error)")
+            throw error
+        }
+        
+        do {
+            type = try container.decode(LeaveType.self, forKey: .type)
+            print("Successfully decoded type: \(type)")
+        } catch {
+            print("Error decoding type: \(error)")
+            throw error
+        }
+        
+        do {
+            reason = try container.decode(String.self, forKey: .reason)
+            print("Successfully decoded reason: \(reason)")
+        } catch {
+            print("Error decoding reason: \(error)")
+            throw error
+        }
+        
+        do {
+            status = try container.decode(LeaveStatus.self, forKey: .status)
+            print("Successfully decoded status: \(status)")
+        } catch {
+            print("Error decoding status: \(error)")
+            throw error
+        }
+        
+        // Handle date decoding with multiple formats
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = TimeZone.current
+        
+        let dateFormats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+            "yyyy-MM-dd'T'HH:mm:ssZ",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm",
+            "yyyy-MM-dd",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+        ]
+        
+        func parseDate(_ dateString: String, formats: [String]) -> Date? {
+            print("Attempting to parse date string: \(dateString)")
+            for format in formats {
+                dateFormatter.dateFormat = format
+                if let date = dateFormatter.date(from: dateString) {
+                    print("Successfully parsed date using format: \(format)")
+                    return date
+                }
+            }
+            print("Failed to parse date string with any format")
+            return nil
+        }
+        
+        do {
+            let startDateString = try container.decode(String.self, forKey: .startDate)
+            print("Successfully decoded startDate string: \(startDateString)")
+            
+            if let parsedStartDate = parseDate(startDateString, formats: dateFormats) {
+                startDate = parsedStartDate
+                print("Successfully parsed startDate: \(startDate)")
+            } else {
+                print("Failed to parse startDate string: \(startDateString)")
+                throw DecodingError.dataCorruptedError(
+                    forKey: .startDate,
+                    in: container,
+                    debugDescription: "Invalid start date format: \(startDateString)"
+                )
+            }
+        } catch {
+            print("Error decoding startDate: \(error)")
+            throw error
+        }
+        
+        do {
+            let endDateString = try container.decode(String.self, forKey: .endDate)
+            print("Successfully decoded endDate string: \(endDateString)")
+            
+            if let parsedEndDate = parseDate(endDateString, formats: dateFormats) {
+                endDate = parsedEndDate
+                print("Successfully parsed endDate: \(endDate)")
+            } else {
+                print("Failed to parse endDate string: \(endDateString)")
+                throw DecodingError.dataCorruptedError(
+                    forKey: .endDate,
+                    in: container,
+                    debugDescription: "Invalid end date format: \(endDateString)"
+                )
+            }
+        } catch {
+            print("Error decoding endDate: \(error)")
+            throw error
+        }
+        
+        print("Successfully decoded all fields of Leave object")
+    }
 }
 
-// MARK: - Leave Status Enum
-enum LeaveStatus: String {
+enum LeaveType: String, Codable {
+    case sick = "sick"
+    case vacation = "vacation"
+    case personal = "personal"
+    case casual = "Casual Leave"
+    case other = "other"
+}
+
+enum LeaveStatus: String, Codable {
     case pending = "Pending"
     case approved = "Approved"
     case rejected = "Rejected"
-}
-
-// MARK: - Leave Types Enum
-enum LeaveType: String, CaseIterable, Identifiable {
-    case sickLeave = "Sick Leave"
-    case casualLeave = "Casual Leave"
-    case annualLeave = "Annual Leave"
-    case emergencyLeave = "Emergency Leave"
-    case maternityPaternityLeave = "Maternity/Paternity Leave"
-    case conferenceLeave = "Conference Leave"
-    
-    var id: String { self.rawValue }
-    var displayName: String { self.rawValue }
 }

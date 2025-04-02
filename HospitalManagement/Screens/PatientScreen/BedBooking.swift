@@ -35,7 +35,7 @@ struct BedBookingView: View {
                                         Text("Personal").tag(BedType.Personal)
                                     }
                                     .pickerStyle(SegmentedPickerStyle())
-                                    .onChange(of: selectedBedType) { newValue in
+                                    .onChange(of: selectedBedType) { oldValue, newValue in
                                         Task {
                                             await fetchAvailableBeds(type: newValue)
                                         }
@@ -67,7 +67,7 @@ struct BedBookingView: View {
                                             DatePicker("", selection: $fromDate, in: Date()..., displayedComponents: .date)
                                                 .labelsHidden()
                                                 .accentColor(.mint)
-                                                .onChange(of: fromDate) { _ in
+                                                .onChange(of: fromDate) { oldValue, _ in
                                                     // Ensure toDate is always after fromDate
                                                     if toDate < fromDate {
                                                         toDate = Calendar.current.date(byAdding: .day, value: 1, to: fromDate) ?? fromDate

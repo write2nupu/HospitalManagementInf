@@ -1,10 +1,3 @@
-//
-//  Invoice.swift
-//  HospitalManagement
-//
-//  Created by Shivani Verma on 26/03/25.
-//
-
 import SwiftUI
 
 struct InvoiceListView: View {
@@ -12,29 +5,35 @@ struct InvoiceListView: View {
     @State private var isLoading: Bool = true
     @State private var errorMessage: String? = nil
     @State private var selectedFilter: PaymentType? = nil
+    @State private var searchText: String = ""
     @StateObject private var supabaseController = SupabaseController()
-    
+    @StateObject private var speechRecognizer = SpeechRecognizer()
+
     // Optional: If you want to filter by a specific patient ID
     var patientId: UUID? = nil
-    
+
     var filteredInvoices: [Invoice] {
         invoices.filter { invoice in
-            selectedFilter == nil || invoice.paymentType == selectedFilter
+            (selectedFilter == nil || invoice.paymentType == selectedFilter) &&
+            (searchText.isEmpty || invoiceContainsSearchText(invoice, searchText: searchText))
         }
     }
-    
+
     var body: some View {
         ZStack {
             Color(.systemBackground).edgesIgnoringSafeArea(.all)
-            
+
             VStack(spacing: 0) {
+                // Search Bar with Microphone
+                SearchBars(text: $searchText, speechRecognizer: speechRecognizer)
+
                 HStack {
                     Text("Invoices")
                         .font(.largeTitle)
                         .fontWeight(.bold)
-                    
+
                     Spacer()
-                    
+
                     Menu {
                         Button("All", action: { selectedFilter = nil })
                         ForEach(PaymentType.allCases, id: \.self) { type in
@@ -47,7 +46,7 @@ struct InvoiceListView: View {
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 8)
-                
+
                 if isLoading {
                     ProgressView("Loading invoices...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -57,11 +56,11 @@ struct InvoiceListView: View {
                             .font(.system(size: 50))
                             .foregroundColor(.orange)
                             .padding()
-                        
+
                         Text(error)
                             .multilineTextAlignment(.center)
                             .padding()
-                        
+
                         Button("Try Again") {
                             Task {
                                 await fetchInvoices()
@@ -79,10 +78,10 @@ struct InvoiceListView: View {
                             .font(.system(size: 50))
                             .foregroundColor(.gray)
                             .padding()
-                        
+
                         Text("No invoices found")
                             .font(.headline)
-                        
+
                         Text("Your invoice history will appear here")
                             .font(.subheadline)
                             .foregroundColor(.gray)
@@ -99,47 +98,18 @@ struct InvoiceListView: View {
                                         .background(Color(.systemBackground))
                                 }
                                 .buttonStyle(PlainButtonStyle())
-                                
+
                                 Divider()
                                     .padding(.horizontal)
                             }
-                            
+
                             // Add extra space at the bottom to ensure content doesn't go under tab bar
                             Color.clear.frame(height: 60)
                         }
                         .background(Color(.systemBackground))
                     }
                     .refreshable {
-                        // Create a temporary array to hold data during refresh
-                        let tempInvoices = invoices
-                        
-                        // Start refresh with loading indicator
-                        isLoading = true
-                        
-                        // Fetch invoices
-                        if let patientId = patientId {
-                            let newInvoices = await supabaseController.fetchInvoicesByPatientId(patientId: patientId)
-                            
-                            // Only update if we got data back
-                            if !newInvoices.isEmpty {
-                                invoices = newInvoices
-                            } else if !tempInvoices.isEmpty {
-                                // Keep existing data if refresh returned empty
-                                invoices = tempInvoices
-                            }
-                        } else {
-                            let newInvoices = await supabaseController.fetchAllInvoices()
-                            
-                            // Only update if we got data back
-                            if !newInvoices.isEmpty {
-                                invoices = newInvoices
-                            } else if !tempInvoices.isEmpty {
-                                // Keep existing data if refresh returned empty
-                                invoices = tempInvoices 
-                            }
-                        }
-                        
-                        isLoading = false
+                        await fetchInvoices()
                     }
                 }
             }
@@ -150,58 +120,76 @@ struct InvoiceListView: View {
                 await fetchInvoices()
             }
         }
+        .alert(item: $speechRecognizer.errorMessage) { alertMessage in
+            Alert(
+                title: Text("Error"),
+                message: Text(alertMessage.message),
+                dismissButton: .default(Text("OK"))
+            )
+        }
     }
-    
+
     func fetchInvoices() async {
         isLoading = true
         errorMessage = nil
-        
+
         if let patientId = patientId {
-            // Fetch invoices for a specific patient
             let fetchedInvoices = await supabaseController.fetchInvoicesByPatientId(patientId: patientId)
             if !fetchedInvoices.isEmpty {
                 invoices = fetchedInvoices
             } else if invoices.isEmpty {
-                // Only show empty state if we have no existing data
                 errorMessage = "Unable to load invoices. Please try again later."
             }
         } else {
-            // Fetch all invoices
             let fetchedInvoices = await supabaseController.fetchAllInvoices()
             if !fetchedInvoices.isEmpty {
                 invoices = fetchedInvoices
             } else if invoices.isEmpty {
-                // Only show empty state if we have no existing data
                 errorMessage = "Unable to load invoices. Please try again later."
             }
         }
-        
+
         isLoading = false
+    }
+
+    private func invoiceContainsSearchText(_ invoice: Invoice, searchText: String) -> Bool {
+        let searchTerm = searchText.lowercased()
+        return invoice.paymentType.rawValue.lowercased().contains(searchTerm) ||
+            formatDate(invoice.createdAt).lowercased().contains(searchTerm) ||
+            invoice.id.uuidString.lowercased().contains(searchTerm) ||
+            "\(invoice.amount)".contains(searchTerm)
     }
 }
 
-// MARK: - Invoice Row
+
+// MARK: - Preview
+struct InvoiceListView_Previews: PreviewProvider {
+    static var previews: some View {
+        InvoiceListView()
+    }
+}
+
 struct InvoiceRow: View {
     let invoice: Invoice
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 5) {
                 Text(invoice.paymentType.rawValue.capitalized)
                     .font(.headline)
-                
+
                 Text("\(formatDate(invoice.createdAt)) #\(invoice.id.uuidString.prefix(8))")
                     .font(.subheadline)
                     .foregroundColor(.gray)
             }
-            
+
             Spacer()
-            
+
             HStack {
                 Text("₹ \(invoice.amount)")
                     .font(.headline)
                     .foregroundColor(.mint)
-                
+
                 Image(systemName: "chevron.right")
                     .foregroundColor(.gray)
                     .font(.footnote)
@@ -210,16 +198,8 @@ struct InvoiceRow: View {
     }
 }
 
-// MARK: - Helper Function
 func formatDate(_ date: Date) -> String {
     let formatter = DateFormatter()
-    formatter.dateFormat = "dd MMM yyyy"
+    formatter.dateFormat = "dd MMM yyyy" // Customize the date format as needed
     return formatter.string(from: date)
-}
-
-// MARK: - Preview
-struct InvoiceListView_Previews: PreviewProvider {
-    static var previews: some View {
-        InvoiceListView()
-    }
 }
