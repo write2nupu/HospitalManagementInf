@@ -377,7 +377,49 @@ struct PrescriptionData: Codable {
         case medicineDosage
         case medicineDuration
     }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // Decode the standard fields
+        id = try container.decode(UUID.self, forKey: .id)
+        patientId = try container.decode(UUID.self, forKey: .patientId)
+        doctorId = try container.decode(UUID.self, forKey: .doctorId)
+        diagnosis = try container.decode(String.self, forKey: .diagnosis)
+        additionalNotes = try container.decodeIfPresent(String.self, forKey: .additionalNotes)
+        medicineName = try container.decodeIfPresent(String.self, forKey: .medicineName)
+        medicineDosage = try container.decodeIfPresent(DosageOption.self, forKey: .medicineDosage)
+        medicineDuration = try container.decodeIfPresent(DurationOption.self, forKey: .medicineDuration)
+        
+        // Special handling for labTests that could be either string or array
+        if let testsString = try? container.decode(String.self, forKey: .labTests) {
+            // If it's a string, split by comma and clean up
+            labTests = testsString.split(separator: ",")
+                .map { String($0.trimmingCharacters(in: .whitespaces)) }
+                .filter { !$0.isEmpty }
+        } else if let testsArray = try? container.decode([String].self, forKey: .labTests) {
+            // If it's already an array, use it directly
+            labTests = testsArray
+        } else {
+            // If neither format works or if it's null
+            labTests = nil
+        }
+    }
+    
+    // Add initializer for creating new prescriptions
+    init(id: UUID, patientId: UUID, doctorId: UUID, diagnosis: String, labTests: [String]?, additionalNotes: String?, medicineName: String?, medicineDosage: DosageOption?, medicineDuration: DurationOption?) {
+        self.id = id
+        self.patientId = patientId
+        self.doctorId = doctorId
+        self.diagnosis = diagnosis
+        self.labTests = labTests
+        self.additionalNotes = additionalNotes
+        self.medicineName = medicineName
+        self.medicineDosage = medicineDosage
+        self.medicineDuration = medicineDuration
+    }
 }
+
 enum DosageOption: String, CaseIterable, Codable {
     case oneDaily = "Once Daily"
     case twiceDaily = "Twice Daily"
