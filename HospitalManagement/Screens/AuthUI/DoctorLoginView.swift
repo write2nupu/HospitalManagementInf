@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct DoctorLoginView: View {
     var message: String
@@ -9,6 +10,7 @@ struct DoctorLoginView: View {
     @State private var isLoggedIn = false // ✅ State for Navigation
     @State private var isPasswordVisible = false // ✅ Toggle password visibility
     @State private var isLoading = false
+    @State private var showForgotPassword = false
     @StateObject private var supabaseController = SupabaseController()
     @State private var doctorUser: users? = nil
     @AppStorage("currentUserId") private var currentUserId: String = ""
@@ -23,10 +25,10 @@ struct DoctorLoginView: View {
         NavigationStack {
             VStack(spacing: 30) {
                 // **App Logo**
-                Image(systemName: "stethoscope")
+                Image("doctor")
                     .resizable()
-                    .frame(width: 100, height: 100)
-                    .foregroundColor(.mint)
+                    .scaledToFit()
+                    .frame(width: 120, height: 120)
                     .padding(.bottom, 10)
 
                 // **Title**
@@ -44,7 +46,18 @@ struct DoctorLoginView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     passwordField(icon: "lock.fill", placeholder: "Enter Password", text: $password)
                 }
-
+                
+                Button(action: {
+                    showForgotPassword = true
+                }) {
+                    Text("Forgot Password?")
+                        .font(.subheadline)
+                        .foregroundColor(.mint)
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.horizontal)
+                .padding(.top, -10)
+                
                 // **Login Button**
                 Button(action: {
                     Task {
@@ -85,6 +98,9 @@ struct DoctorLoginView: View {
                         mainBoard()
                     }
                 }
+            }
+            .sheet(isPresented: $showForgotPassword) {
+                ForgotPasswordView()
             }
         }
     }

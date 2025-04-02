@@ -11,6 +11,7 @@ struct AdminLoginViewS: View {
     @State private var isLoggedIn = false
     @State private var isPasswordVisible = false
     @State private var isLoading = false
+    @State private var showForgotPassword = false
     @StateObject private var supabaseController = SupabaseController()
     @State private var userAdminData: users?
     @AppStorage("currentUserId") private var currentUserId: String = ""
@@ -22,10 +23,10 @@ struct AdminLoginViewS: View {
         NavigationStack {
             VStack(spacing: 30) {
                 // **App Logo**
-                Image(systemName: "building.2.fill")
+                Image("admin")
                     .resizable()
-                    .frame(width: 100, height: 100)
-                    .foregroundColor(.mint)
+                    .scaledToFit()
+                    .frame(width: 120, height: 120)
                     .padding(.bottom, 10)
 
                 // **Title**
@@ -43,7 +44,19 @@ struct AdminLoginViewS: View {
                 VStack(alignment: .leading, spacing: 5) {
                     passwordField(icon: "lock.fill", placeholder: "Enter Password", text: $password)
                 }
-
+                
+                Button(action: {
+                                   showForgotPassword = true
+                               }) {
+                                   Text("Forgot Password?")
+                                       .font(.subheadline)
+                                       .foregroundColor(.mint)
+                               }
+                               .padding(.top, -15)
+                               .padding(.bottom, 15)
+                               .frame(maxWidth: .infinity, alignment: .trailing)
+                               .padding(.horizontal)
+                
                 // **Login Button**
                 Button(action: {
                     Task {
@@ -85,6 +98,9 @@ struct AdminLoginViewS: View {
                     }
                 }
             }
+            .sheet(isPresented: $showForgotPassword) {
+                            ForgotPasswordView()
+                        }
         }
     }
 
