@@ -411,3 +411,6 @@ struct AnalyticCard: View {
     return AnalyticsView()
         .environmentObject(mockViewModel)
 } 
+
+
+

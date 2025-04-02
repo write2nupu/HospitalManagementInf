@@ -327,3 +327,4 @@ struct AdminLoginViewS: View {
 #Preview {
     AdminLoginViewS(message: "Admin")
 }
+

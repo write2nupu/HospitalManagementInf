@@ -1460,3 +1460,4 @@ func fetchPatientById(patientId: UUID) async throws -> Patient {
         }
     }
 }
+
