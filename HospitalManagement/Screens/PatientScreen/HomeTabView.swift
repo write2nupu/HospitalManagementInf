@@ -193,46 +193,32 @@ struct HomeTabView: View {
                             .foregroundColor(AppConfig.fontColor)
                             .padding(.horizontal)
                         
-                        HStack(spacing: 15) {
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: 15) {
                             // Book Appointment Card
                             NavigationLink(destination: DepartmentListView()) {
-                                VStack(spacing: 12) {
-                                    Image(systemName: "calendar.badge.plus")
-                                        .font(.system(size: 30))
-                                        .foregroundColor(AppConfig.buttonColor)
-                                    
-                                    Text("Book\nAppointment")
-                                        .font(.headline)
-                                        .multilineTextAlignment(.center)
-                                        .foregroundColor(AppConfig.fontColor)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .fill(Color(.systemBackground))
-                                        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                                ServiceCard(
+                                    icon: "calendar.badge.plus",
+                                    title: "Book\nAppointment"
+                                )
+                            }
+                            
+                            // Book Lab Test Card
+                            NavigationLink(destination: LabTestBookingView()) {
+                                ServiceCard(
+                                    icon: "cross.vial.fill",
+                                    title: "Book\nLab Test"
                                 )
                             }
                             
                             // Book Bed Card
                             NavigationLink(destination: CurrentBedBookingView()) {
-                                VStack(spacing: 12) {
-                                    Image(systemName: "bed.double.fill")
-                                        .font(.system(size: 30))
-                                        .foregroundColor(AppConfig.buttonColor)
-                                    
-                                    Text("Book\nBed")
-                                        .font(.headline)
-                                        .multilineTextAlignment(.center)
-                                        .foregroundColor(AppConfig.fontColor)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .fill(Color(.systemBackground))
-                                        .shadow(color: Color.black.opacity(0.1), radius: 10, y: 5)
+                                ServiceCard(
+                                    icon: "bed.double.fill",
+                                    title: "Book\nBed"
                                 )
                             }
                         }
@@ -292,5 +278,32 @@ struct HomeTabView: View {
             .padding(.vertical)
         }
         .background(AppConfig.backgroundColor)
+    }
+}
+
+// Add this helper view for consistent card styling
+struct ServiceCard: View {
+    let icon: String
+    let title: String
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 30))
+                .foregroundColor(AppConfig.buttonColor)
+            
+            Text(title)
+                .font(.headline)
+                .multilineTextAlignment(.center)
+                .foregroundColor(AppConfig.fontColor)
+        }
+        .frame(height: 120)
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+        )
     }
 }
