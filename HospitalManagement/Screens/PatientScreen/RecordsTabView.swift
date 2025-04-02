@@ -70,41 +70,63 @@ struct RecordsTabView: View {
     
     private func fetchPrescriptions() {
         isLoading = true
+        print("🔍 Starting prescription fetch...")
+        
         Task {
-            if let patientIdString = UserDefaults.standard.string(forKey: "currentPatientId"),
-               let patientId = UUID(uuidString: patientIdString) {
-                do {
-                    // Fetch prescriptions directly
-                    let fetchedPrescriptions: [PrescriptionData] = try await supabase.client
-                        .from("PrescriptionData")
-                        .select()
-                        .eq("patientId", value: patientId.uuidString)
-                        .execute()
-                        .value
-                    
-                    // Create custom decoder for handling lab tests
-                    let decoder = JSONDecoder()
-                    decoder.dateDecodingStrategy = .iso8601
-                    
-                    // Fetch doctor names
-                    var doctorNamesDict: [UUID: String] = [:]
-                    for prescription in fetchedPrescriptions {
-                        if let doctor = try? await supabase.fetchDoctorById(doctorId: prescription.doctorId) {
-                            doctorNamesDict[prescription.doctorId] = doctor.full_name
+            print("📱 Checking for patient ID in UserDefaults...")
+            if let patientIdString = UserDefaults.standard.string(forKey: "currentPatientId") {
+                print("✅ Found patient ID: \(patientIdString)")
+                
+                if let patientId = UUID(uuidString: patientIdString) {
+                    print("✅ Valid UUID format for patient ID")
+                    do {
+                        print("🔄 Fetching prescriptions from Supabase...")
+                        let fetchedPrescriptions: [PrescriptionData] = try await supabase.client
+                            .from("PrescriptionData")
+                            .select()
+                            .eq("patientId", value: patientId.uuidString)
+                            .execute()
+                            .value
+                        
+                        print("📊 Fetched prescriptions count: \(fetchedPrescriptions.count)")
+                        print("📝 Prescription data: \(fetchedPrescriptions)")
+                        
+                        print("👨‍⚕️ Fetching doctor names...")
+                        var doctorNamesDict: [UUID: String] = [:]
+                        for prescription in fetchedPrescriptions {
+                            print("🔍 Fetching doctor info for ID: \(prescription.doctorId)")
+                            if let doctor = try? await supabase.fetchDoctorById(doctorId: prescription.doctorId) {
+                                doctorNamesDict[prescription.doctorId] = doctor.full_name
+                                print("✅ Found doctor: \(doctor.full_name)")
+                            } else {
+                                print("⚠️ Could not find doctor for ID: \(prescription.doctorId)")
+                            }
+                        }
+                        
+                        await MainActor.run {
+                            print("🔄 Updating UI with fetched data...")
+                            self.prescriptions = fetchedPrescriptions
+                            self.doctorNames = doctorNamesDict
+                            self.isLoading = false
+                            print("✅ UI update complete. Prescriptions count: \(self.prescriptions.count)")
+                        }
+                    } catch {
+                        print("❌ Error fetching prescriptions: \(error)")
+                        print("🔍 Detailed error: \(String(describing: error))")
+                        await MainActor.run {
+                            self.isLoading = false
                         }
                     }
-                    
-                    await MainActor.run {
-                        self.prescriptions = fetchedPrescriptions
-                        self.doctorNames = doctorNamesDict
-                        self.isLoading = false
-                    }
-                } catch {
-                    print("Error fetching prescriptions:", error)
-                    print("Detailed error:", String(describing: error))
+                } else {
+                    print("❌ Invalid UUID format for patient ID: \(patientIdString)")
                     await MainActor.run {
                         self.isLoading = false
                     }
+                }
+            } else {
+                print("❌ No patient ID found in UserDefaults")
+                await MainActor.run {
+                    self.isLoading = false
                 }
             }
         }

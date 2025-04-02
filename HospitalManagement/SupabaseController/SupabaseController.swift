@@ -1636,7 +1636,7 @@ extension SupabaseController {
     func cancelAppointment(appointmentId: UUID) async throws {
         try await client
             .from("Appointment")
-            .update(["status": "cancelled"])
+            .update(["status": AppointmentStatus.cancelled.rawValue])
             .eq("id", value: appointmentId.uuidString)
             .execute()
     }
