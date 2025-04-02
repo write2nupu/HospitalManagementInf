@@ -623,14 +623,58 @@ struct labTest{
     let doctorId: UUID
     let appointmentId: UUID
     let prescriptionId: UUID
-    let testName: String
+    let testName: labTestName
     let components : [String]?
     let testValue: Float
     let status: TestStatus
     let testDate: Date
+    let labTestPrice: Double
     
     enum TestStatus: String, Codable {
-            case pending = "Pending"
-            case completed = "Completed"
+        case pending = "Pending"
+        case completed = "Completed"
+    }
+    enum labTestName: String, Codable, CaseIterable {
+        case completeBloodCount = "Complete Blood Count"
+        case bloodSugarTest = "Blood Sugar Test"
+        case lipidProfile = "Lipid Profile"
+        case thyroidFunctionTest = "Thyroid Function Test"
+        case liverFunctionTest = "Liver Function Test"
+        case kidneyFunctionTest = "Kidney Function Test"
+        case urineAnalysis = "Urine Analysis"
+        case vitaminDTest = "Vitamin D Test"
+        case vitaminB12Test = "Vitamin B12 Test"
+        case calciumTest = "Calcium Test"
+        case cReactiveProtein = "C-Reactive Protein (CRP)"
+        case erythrocyteSedimentationRate = "Erythrocyte Sedimentation Rate (ESR)"
+        case hba1c = "HbA1c"
+        case bloodCulture = "Blood Culture"
+        case urineCulture = "Urine Culture"
+        case fastingBloodSugar = "Fasting Blood Sugar"
+        case postprandialBloodSugar = "Postprandial Blood Sugar"
+        
+        var price: Double {
+            switch self {
+            case .completeBloodCount: return 500.0
+            case .bloodSugarTest: return 200.0
+            case .lipidProfile: return 700.0
+            case .thyroidFunctionTest: return 800.0
+            case .liverFunctionTest: return 750.0
+            case .kidneyFunctionTest: return 650.0
+            case .urineAnalysis: return 300.0
+            case .vitaminDTest: return 900.0
+            case .vitaminB12Test: return 850.0
+            case .calciumTest: return 400.0
+            case .cReactiveProtein: return 500.0
+            case .erythrocyteSedimentationRate: return 350.0
+            case .hba1c: return 600.0
+            case .bloodCulture: return 1000.0
+            case .urineCulture: return 950.0
+            case .fastingBloodSugar: return 250.0
+            case .postprandialBloodSugar: return 300.0
+            }
         }
+        
+    }
+    
 }
