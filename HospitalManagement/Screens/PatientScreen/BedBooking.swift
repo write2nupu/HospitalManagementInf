@@ -17,106 +17,99 @@ struct BedBookingView: View {
     let hospital: Hospital
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                VStack {
-                    if isLoading {
-                        ProgressView("Loading bed availability...")
-                    } else {
-                        if patient != nil {
-                            ScrollView {
-                                VStack(alignment: .leading, spacing: 16) {
-                                    Text("Select Bed Type")
-                                        .font(.headline)
-                                        .foregroundColor(.mint)
-                                    Picker("Bed Type", selection: $selectedBedType) {
-                                        Text("General").tag(BedType.General)
-                                        Text("ICU").tag(BedType.ICU)
-                                        Text("Personal").tag(BedType.Personal)
-                                    }
-                                    .pickerStyle(SegmentedPickerStyle())
-                                    .onChange(of: selectedBedType) { oldValue, newValue in
-                                        Task {
-                                            await fetchAvailableBeds(type: newValue)
-                                        }
-                                    }
-                                    
-                                    Text("Price")
-                                        .font(.headline)
-                                        .foregroundColor(.mint)
-                                    Text("₹\(calculateTotalPrice())")
-                                        .padding()
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(Color.mint.opacity(0.1))
-                                        .cornerRadius(8)
-                                    
-                                    Text("Available Beds")
-                                        .font(.headline)
-                                        .foregroundColor(.mint)
-                                    Text("\(availableBeds[selectedBedType]?.available ?? 0) beds available")
-                                        .padding()
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(Color.mint.opacity(0.1))
-                                        .cornerRadius(8)
-                                    
-                                    VStack(spacing: 16) {
-                                        HStack {
-                                            Text("From Date")
-                                                .font(.body)
-                                            Spacer()
-                                            DatePicker("", selection: $fromDate, in: Date()..., displayedComponents: .date)
-                                                .labelsHidden()
-                                                .accentColor(.mint)
-                                                .onChange(of: fromDate) { oldValue, _ in
-                                                    // Ensure toDate is always after fromDate
-                                                    if toDate < fromDate {
-                                                        toDate = Calendar.current.date(byAdding: .day, value: 1, to: fromDate) ?? fromDate
-                                                    }
-                                                }
-                                        }
-                                        .padding()
-                                        .background(Color.mint.opacity(0.1))
-                                        .cornerRadius(8)
-                                        
-                                        HStack {
-                                            Text("To Date")
-                                                .font(.body)
-                                            Spacer()
-                                            DatePicker("", selection: $toDate, in: fromDate..., displayedComponents: .date)
-                                                .labelsHidden()
-                                                .accentColor(.mint)
-                                        }
-                                        .padding()
-                                        .background(Color.mint.opacity(0.1))
-                                        .cornerRadius(8)
-                                    }
+        ScrollView {
+            VStack {
+                if isLoading {
+                    ProgressView("Loading bed availability...")
+                } else {
+                    if patient != nil {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Select Bed Type")
+                                .font(.headline)
+                                .foregroundColor(.mint)
+                            Picker("Bed Type", selection: $selectedBedType) {
+                                Text("General").tag(BedType.General)
+                                Text("ICU").tag(BedType.ICU)
+                                Text("Personal").tag(BedType.Personal)
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .onChange(of: selectedBedType) { oldValue, newValue in
+                                Task {
+                                    await fetchAvailableBeds(type: newValue)
                                 }
-                                .padding()
                             }
                             
-                            Button(action: {
-                                
-                                let generator = UIImpactFeedbackGenerator(style: .rigid)
-                                generator.impactOccurred()
-                                
-                                proceedToPayment()
-                            }) {
-                                Text("Proceed to Payment")
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(selectedBed != nil ? Color.mint : Color.gray)
-                                    .cornerRadius(10)
-                                    .shadow(radius: 2)
-                            }
-                            .disabled(selectedBed == nil)
-                            .padding()
-                        } else {
-                            Text("Please log in as a patient to book a bed")
-                                .foregroundColor(.red)
+                            Text("Price")
+                                .font(.headline)
+                                .foregroundColor(.mint)
+                            Text("₹\(calculateTotalPrice())")
                                 .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.mint.opacity(0.1))
+                                .cornerRadius(8)
+                            
+                            Text("Available Beds")
+                                .font(.headline)
+                                .foregroundColor(.mint)
+                            Text("\(availableBeds[selectedBedType]?.available ?? 0) beds available")
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.mint.opacity(0.1))
+                                .cornerRadius(8)
+                            
+                            VStack(spacing: 16) {
+                                HStack {
+                                    Text("From Date")
+                                        .font(.body)
+                                    Spacer()
+                                    DatePicker("", selection: $fromDate, in: Date()..., displayedComponents: .date)
+                                        .labelsHidden()
+                                        .accentColor(.mint)
+                                        .onChange(of: fromDate) { oldValue, _ in
+                                            if toDate < fromDate {
+                                                toDate = Calendar.current.date(byAdding: .day, value: 1, to: fromDate) ?? fromDate
+                                            }
+                                        }
+                                }
+                                .padding()
+                                .background(Color.mint.opacity(0.1))
+                                .cornerRadius(8)
+                                
+                                HStack {
+                                    Text("To Date")
+                                        .font(.body)
+                                    Spacer()
+                                    DatePicker("", selection: $toDate, in: fromDate..., displayedComponents: .date)
+                                        .labelsHidden()
+                                        .accentColor(.mint)
+                                }
+                                .padding()
+                                .background(Color.mint.opacity(0.1))
+                                .cornerRadius(8)
+                            }
                         }
+                        .padding()
+                        
+                        Button(action: {
+                            let generator = UIImpactFeedbackGenerator(style: .rigid)
+                            generator.impactOccurred()
+                            proceedToPayment()
+                        }) {
+                            Text("Proceed to Payment")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(selectedBed != nil ? Color.mint : Color.gray)
+                                .cornerRadius(10)
+                                .shadow(radius: 2)
+                        }
+                        .disabled(selectedBed == nil)
+                        .padding()
+                    } else {
+                        Text("Please log in as a patient to book a bed")
+                            .foregroundColor(.red)
+                            .padding()
                     }
                 }
                 
@@ -126,66 +119,62 @@ struct BedBookingView: View {
                         .padding()
                 }
             }
-            .navigationTitle("Book Bed")
-            .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $navigateToPayment) {
-                if let bedBooking = createBedBooking(), let bed = selectedBed, let currentPatient = patient {
-                    NavigationStack {
-                        BedPaymentView(
-                            bedBooking: bedBooking,
-                            bed: Bed(
-                                id: bed.id,
-                                hospitalId: bed.hospitalId,
-                                price: calculateTotalPrice(),
-                                type: bed.type,
-                                isAvailable: bed.isAvailable
-                            ),
-                            hospital: hospital,
-                            onPaymentSuccess: { invoice in
-                                Task {
-                                    do {
-                                        // 1. Create the bed booking record in Supabase
-                                        try await supabaseController.createBedBooking(
-                                            patientId: currentPatient.id,
-                                            bedId: bed.id,
-                                            hospitalId: hospital.id,
-                                            startDate: fromDate,
-                                            endDate: toDate
-                                        )
-                                        print("Bed booking created successfully")
+        }
+        .navigationTitle("Book Bed")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $navigateToPayment) {
+            if let bedBooking = createBedBooking(), let bed = selectedBed, let currentPatient = patient {
+                NavigationStack {
+                    BedPaymentView(
+                        bedBooking: bedBooking,
+                        bed: Bed(
+                            id: bed.id,
+                            hospitalId: bed.hospitalId,
+                            price: calculateTotalPrice(),
+                            type: bed.type,
+                            isAvailable: bed.isAvailable
+                        ),
+                        hospital: hospital,
+                        onPaymentSuccess: { invoice in
+                            Task {
+                                do {
+                                    try await supabaseController.createBedBooking(
+                                        patientId: currentPatient.id,
+                                        bedId: bed.id,
+                                        hospitalId: hospital.id,
+                                        startDate: fromDate,
+                                        endDate: toDate
+                                    )
+                                    print("Bed booking created successfully")
 
-                                        // 2. Update bed availability status in Bed table
-                                        try await supabaseController.updateBedAvailability(
-                                            bedId: bed.id,
-                                            isAvailable: false
-                                        )
-                                        print("Bed availability updated successfully")
+                                    try await supabaseController.updateBedAvailability(
+                                        bedId: bed.id,
+                                        isAvailable: false
+                                    )
+                                    print("Bed availability updated successfully")
 
-                                        // 3. Create invoice record with all required fields
-                                        let updatedInvoice = Invoice(
-                                            id: UUID(),
-                                            createdAt: Date(),
-                                            patientid: currentPatient.id,
-                                            amount: bed.price,
-                                            paymentType: .bed,
-                                            status: .paid,
-                                            hospitalId: hospital.id
-                                        )
-                                        try await supabaseController.createInvoice(invoice: updatedInvoice)
-                                        print("Invoice created successfully")
+                                    let updatedInvoice = Invoice(
+                                        id: UUID(),
+                                        createdAt: Date(),
+                                        patientid: currentPatient.id,
+                                        amount: bed.price,
+                                        paymentType: .bed,
+                                        status: .paid,
+                                        hospitalId: hospital.id
+                                    )
+                                    try await supabaseController.createInvoice(invoice: updatedInvoice)
+                                    print("Invoice created successfully")
 
-                                        // Dismiss all the way back to the main view
-                                        DispatchQueue.main.async {
-                                            dismiss()
-                                        }
-                                    } catch {
-                                        print("Error in booking process: \(error.localizedDescription)")
-                                        errorMessage = "Failed to complete booking: \(error.localizedDescription)"
+                                    DispatchQueue.main.async {
+                                        dismiss()
                                     }
+                                } catch {
+                                    print("Error in booking process: \(error.localizedDescription)")
+                                    errorMessage = "Failed to complete booking: \(error.localizedDescription)"
                                 }
                             }
-                        )
-                    }
+                        }
+                    )
                 }
             }
         }
