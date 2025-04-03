@@ -1498,7 +1498,7 @@ private struct AnyCodingKey: CodingKey {
             "amount": .double(Double(invoice.amount)),
             "paymentType": .string(invoice.paymentType.rawValue),
             "status": .string(invoice.status.rawValue),
-            "hospitalId": .string(invoice.hospitalId!.uuidString)
+            "hospitalid": .string(invoice.hospitalId!.uuidString)
         ]
         
         try await client
@@ -2051,70 +2051,105 @@ private struct LeaveResponse: Codable {
 
 // MARK: - Lab Test Booking Functions
 extension SupabaseController {
-    private func calculateTotalAmount(_ tests: [labTest.labTestName]) -> Double {
-        tests.reduce(0.0) { total, test in
-            total + test.price
-        }
-    }
-    
-    func bookLabTest(patientId: UUID, tests: [labTest.labTestName], scheduledDate: Date, hospitalId: UUID) async throws {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
-        
-        do {
-            // Create a single lab test entry with all selected tests
-            let labTestData: [String: AnyJSON] = [
+    func bookLabTest(
+        tests: [LabTest.LabTestName],
+        prescriptionId: UUID?,
+        testDate: Date,
+        paymentMethod: PaymentOption
+    ) async throws {
+        let labTestData = tests.map { test -> [String: AnyJSON] in
+            var data: [String: AnyJSON] = [
                 "bookingId": .string(UUID().uuidString),
-                "testName": .array(tests.map { .string($0.rawValue) }), // Store array of test names
-                "status": .string(labTest.TestStatus.pending.rawValue),
-                "testDate": .string(dateFormatter.string(from: scheduledDate)),
+                "testName": .string(test.rawValue),
+                "status": .string(LabTest.TestStatus.pending.rawValue),
+                "testDate": .string(testDate.ISO8601Format()),
                 "testValue": .double(0.0),
-                "testComponents": .array([]),
-                "labTestPrice": .double(calculateTotalAmount(tests)) // Total price of all tests
+                "testComponents": .string(""),
+                "labTestPrice": .double(test.price),
+                "hospitalid": .string(UserDefaults.standard.string(forKey: "hospitalId") ?? ""),
+                "patientid": .string(UserDefaults.standard.string(forKey: "currentPatientId") ?? "")
             ]
             
-            print("Attempting to insert lab test:", labTestData)
+            if let prescriptionId = prescriptionId {
+                data["prescriptionId"] = .string(prescriptionId.uuidString)
+            } else {
+                data["prescriptionId"] = .null
+            }
             
-            try await client
-                .from("LabTest")
-                .insert(labTestData)
-                .execute()
-            
-            // Create the invoice
-            let invoiceData: [String: AnyJSON] = [
-                "id": .string(UUID().uuidString),
-                "createdAt": .string(dateFormatter.string(from: Date())),
-                "patientid": .string(patientId.uuidString),
-                "amount": .double(calculateTotalAmount(tests)),
-                "paymentType": .string(PaymentType.labTest.rawValue),
-                "status": .string(PaymentStatus.paid.rawValue),
-                "hospitalId": .string(hospitalId.uuidString)
-            ]
-            
-            try await client
-                .from("Invoice")
-                .insert(invoiceData)
-                .execute()
-            
-        } catch let error as PostgrestError {
-            print("Postgrest error:", error)
-            throw error
-        } catch {
-            print("Unexpected error:", error)
-            throw error
+            return data
         }
+        
+        try await client
+            .from("LabTest")
+            .insert(labTestData)
+            .execute()
     }
     
-    // Fetch lab tests
-    func fetchLabTests() async throws -> [LabTestResult] {
-        let tests: [LabTestResult] = try await client
+    func fetchLabTests(patientId: UUID? = nil, hospitalId: UUID? = nil) async throws -> [LabTest] {
+        var query = client
             .from("LabTest")
             .select()
+        
+        if let patientId = patientId {
+            query = query.eq("patientid", value: patientId.uuidString)
+        }
+        
+        if let hospitalId = hospitalId {
+            query = query.eq("hospitalid", value: hospitalId.uuidString)
+        }
+        
+        let response = try await query
             .order("testDate", ascending: false)
             .execute()
-            .value
         
-        return tests
+        // Create a decoder with custom date decoding strategy
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateString = try container.decode(String.self)
+            
+            // Try parsing with ISO8601
+            let iso8601Formatter = ISO8601DateFormatter()
+            if let date = iso8601Formatter.date(from: dateString) {
+                return date
+            }
+            
+            // If ISO8601 fails, try a more flexible date formatter
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+            
+            if let date = dateFormatter.date(from: dateString) {
+                return date
+            }
+            
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Cannot decode date string \(dateString)"
+            )
+        }
+        
+        // Get the raw data from the response
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: response.data ?? [], options: []) else {
+            return []
+        }
+        
+        // Decode the data into LabTest array
+        do {
+            let labTests = try decoder.decode([LabTest].self, from: jsonData)
+            return labTests
+        } catch {
+            print("Error decoding lab tests: \(error)")
+            return []
+        }
+    }
+    
+    func updateLabTestStatus(testId: UUID, status: LabTest.TestStatus) async throws {
+        try await client
+            .from("LabTest")
+            .update(["status": status.rawValue])
+            .eq("id", value: testId.uuidString)
+            .execute()
     }
 }
 
