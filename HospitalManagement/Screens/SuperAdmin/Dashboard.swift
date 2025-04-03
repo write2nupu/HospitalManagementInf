@@ -687,6 +687,7 @@ struct HospitalList: View {
         }
         .background(AppConfig.backgroundColor)
         .navigationTitle("All Hospitals")
+        .navigationBarTitleDisplayMode(.inline)
         
     }
 }
