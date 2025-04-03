@@ -216,7 +216,7 @@ struct ProfileRow: View {
         HStack {
             Text(title + ":")
                 .font(.system(size: 16)) // Same font
-                .foregroundColor(.black) // Title in black
+                .foregroundColor(.primary) // Title in black
             Spacer()
             Text(value?.isEmpty == false ? value! : "")
                 .font(.system(size: 16)) // Same font
