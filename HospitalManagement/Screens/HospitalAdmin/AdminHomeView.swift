@@ -207,27 +207,27 @@ struct AdminHomeView: View {
     }
 }
 
-struct QuickActionButton: View {
-    let title: String
-    let systemImage: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack {
-                Image(systemName: systemImage)
-                    .font(.title2)
-                Text(title)
-                    .font(.caption)
-            }
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(Color.mint.opacity(0.1))
-            .foregroundColor(.mint)
-            .cornerRadius(10)
-        }
-    }
-}
+//struct QuickActionButton: View {
+//    let title: String
+//    let systemImage: String
+//    let action: () -> Void
+//    
+//    var body: some View {
+//        Button(action: action) {
+//            VStack {
+//                Image(systemName: systemImage)
+//                    .font(.title2)
+//                Text(title)
+//                    .font(.caption)
+//            }
+//            .frame(maxWidth: .infinity)
+//            .padding()
+//            .background(Color.mint.opacity(0.1))
+//            .foregroundColor(.mint)
+//            .cornerRadius(10)
+//        }
+//    }
+//}
 
 struct DepartmentsSection: View {
     let departments: [Department]

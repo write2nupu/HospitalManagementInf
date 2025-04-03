@@ -2056,4 +2056,156 @@ private struct LeaveResponse: Codable {
     }
 }
 
+// MARK: - Lab Test Booking Functions
+extension SupabaseController {
+    func bookLabTest(
+        tests: [LabTest.LabTestName],
+        prescriptionId: UUID?,
+        testDate: Date,
+        paymentMethod: PaymentOption
+    ) async throws {
+        let labTestData = tests.map { test -> [String: AnyJSON] in
+            var data: [String: AnyJSON] = [
+                "bookingId": .string(UUID().uuidString),
+                "testName": .string(test.rawValue),
+                "status": .string(LabTest.TestStatus.pending.rawValue),
+                "testDate": .string(testDate.ISO8601Format()),
+                "testValue": .double(0.0),
+                "testComponents": .string(""),
+                "labTestPrice": .double(test.price),
+                "hospitalid": .string(UserDefaults.standard.string(forKey: "hospitalId") ?? ""),
+                "patientid": .string(UserDefaults.standard.string(forKey: "currentPatientId") ?? "")
+            ]
+            
+            if let prescriptionId = prescriptionId {
+                data["prescriptionId"] = .string(prescriptionId.uuidString)
+            } else {
+                data["prescriptionId"] = .null
+            }
+            
+            return data
+        }
+        
+        try await client
+            .from("LabTest")
+            .insert(labTestData)
+            .execute()
+    }
+    
+    func fetchLabTests(patientId: UUID? = nil, hospitalId: UUID? = nil) async throws -> [LabTest] {
+        var query = client
+            .from("LabTest")
+            .select()
+        
+        if let patientId = patientId {
+            query = query.eq("patientid", value: patientId.uuidString)
+        }
+        
+        if let hospitalId = hospitalId {
+            query = query.eq("hospitalid", value: hospitalId.uuidString)
+        }
+        
+        let response = try await query
+            .order("testDate", ascending: false)
+            .execute()
+        
+        // Create a decoder with custom date decoding strategy
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateString = try container.decode(String.self)
+            
+            // Try parsing with ISO8601
+            let iso8601Formatter = ISO8601DateFormatter()
+            if let date = iso8601Formatter.date(from: dateString) {
+                return date
+            }
+            
+            // If ISO8601 fails, try a more flexible date formatter
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+            
+            if let date = dateFormatter.date(from: dateString) {
+                return date
+            }
+            
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Cannot decode date string \(dateString)"
+            )
+        }
+        
+        // Get the raw data from the response
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: response.data ?? [], options: []) else {
+            return []
+        }
+        
+        // Decode the data into LabTest array
+        do {
+            let labTests = try decoder.decode([LabTest].self, from: jsonData)
+            return labTests
+        } catch {
+            print("Error decoding lab tests: \(error)")
+            return []
+        }
+    }
+    
+    func updateLabTestStatus(testId: UUID, status: LabTest.TestStatus) async throws {
+        try await client
+            .from("LabTest")
+            .update(["status": status.rawValue])
+            .eq("id", value: testId.uuidString)
+            .execute()
+    }
+}
 
+// Update LabTestResult to match your schema with array of test names
+public struct LabTestResult: Codable {
+    let bookingId: UUID
+    let testName: [String]   // Array of test names
+    let status: String     
+    let testDate: Date     
+    let testValue: Float   
+    let testComponents: [String]  
+    let labTestPrice: Float  
+    
+    enum CodingKeys: String, CodingKey {
+        case bookingId
+        case testName
+        case status
+        case testDate
+        case testValue
+        case testComponents
+        case labTestPrice
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        bookingId = try container.decode(UUID.self, forKey: .bookingId)
+        
+        // Handle testName as an array
+        if let singleTest = try? container.decode(String.self, forKey: .testName) {
+            // If it's a single string, wrap it in an array
+            testName = [singleTest]
+        } else {
+            // If it's already an array, decode it directly
+            testName = try container.decode([String].self, forKey: .testName)
+        }
+        
+        status = try container.decode(String.self, forKey: .status)
+        testValue = try container.decode(Float.self, forKey: .testValue)
+        testComponents = try container.decode([String].self, forKey: .testComponents)
+        labTestPrice = try container.decode(Float.self, forKey: .labTestPrice)
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+        if let dateString = try? container.decode(String.self, forKey: .testDate),
+           let date = dateFormatter.date(from: dateString) {
+            testDate = date
+        } else {
+            testDate = Date()
+        }
+    }
+}
