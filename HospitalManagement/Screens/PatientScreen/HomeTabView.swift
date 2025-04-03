@@ -170,7 +170,7 @@ struct ServicesGridView: View {
                 )
             }
             
-            NavigationLink(destination: LabTestBookingView()) {
+            NavigationLink(destination: PrescriptionLabTestView()) {
                 ServiceCard(
                     icon: "cross.vial.fill",
                     title: "Book\nLab Test"

@@ -2090,7 +2090,8 @@ extension SupabaseController {
         tests: [LabTest.LabTestName],
         prescriptionId: UUID?,
         testDate: Date,
-        paymentMethod: PaymentOption
+        paymentMethod: PaymentOption,
+        hospitalId: UUID
     ) async throws {
         print("📝 Creating lab test booking...")
         
@@ -2102,17 +2103,13 @@ extension SupabaseController {
             "testDate": .string(testDate.ISO8601Format()),
             "testValue": .double(0.0),
             // Calculate total price for all tests
-            "labTestPrice": .double(Double(tests.reduce(0) { $0 + $1.price }))
+            "labTestPrice": .double(Double(tests.reduce(0) { $0 + $1.price })),
+            "hospitalid": .string(hospitalId.uuidString)  // Add hospitalId directly
         ]
         
         // Add patientId if available
         if let patientIdString = UserDefaults.standard.string(forKey: "currentPatientId") {
             labTestData["patientid"] = .string(patientIdString)
-        }
-        
-        // Add hospitalId if available
-        if let hospitalIdString = UserDefaults.standard.string(forKey: "hospitalId") {
-            labTestData["hospitalid"] = .string(hospitalIdString)
         }
         
         // Add prescriptionId if available

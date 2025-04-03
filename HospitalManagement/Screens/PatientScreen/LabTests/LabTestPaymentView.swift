@@ -37,7 +37,8 @@ struct LabTestPaymentView: View {
                 tests: selectedTests,
                 prescriptionId: prescriptionId,
                 testDate: preferredDate,
-                paymentMethod: selectedPaymentMethod
+                paymentMethod: selectedPaymentMethod,
+                hospitalId: hospitalId
             )
             print("✅ Lab test booking created successfully!")
             
