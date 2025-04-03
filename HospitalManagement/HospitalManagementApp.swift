@@ -10,30 +10,43 @@ import SwiftUI
 @main
 struct HospitalManagementApp: App {
     @StateObject private var viewModel = HospitalManagementViewModel()
-    @State private var isLoggedIn = false
-    @State private var userRole: String? = nil
+    @AppStorage("isLoggedIn") private var isLoggedIn = false
     @AppStorage("currentUserId") private var currentUserId: String = ""
+    @AppStorage("userRole") private var userRole: String = ""
     @State private var patient: Patient?
     @StateObject private var supabaseController = SupabaseController()
     
     var body: some Scene {
         WindowGroup {
-            UserRoleScreen()
-                .environmentObject(viewModel)
-                .onAppear {
-                    // Clear any stored login state on app launch
-                    UserDefaults.standard.removeObject(forKey: "isLoggedIn")
-                    UserDefaults.standard.removeObject(forKey: "userRole")
-                    
-                    // Create default super admin
-                    Task {
-                        do {
-                            try await supabaseController.createDefaultSuperAdmin()
-                        } catch {
-                            print("Error creating default super admin: \(error)")
+            if isLoggedIn && !currentUserId.isEmpty {
+                // User is logged in, show appropriate view based on role
+                switch userRole {
+                case "admin":
+                    AdminTabView()
+                case "super_admin":
+                    ContentView()
+                case "doctor":
+                    mainBoard()
+                case "patient":
+                    PatientDashboard(patient: self.patient!)
+                default:
+                    UserRoleScreen()
+                }
+            } else {
+                // User is not logged in, show role selection
+                UserRoleScreen()
+                    .environmentObject(viewModel)
+                    .onAppear {
+                        // Create default super admin if needed
+                        Task {
+                            do {
+                                try await supabaseController.createDefaultSuperAdmin()
+                            } catch {
+                                print("Error creating default super admin: \(error)")
+                            }
                         }
                     }
-                }
+            }
         }
     }
 }

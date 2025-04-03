@@ -205,6 +205,7 @@ struct DoctorLoginView: View {
                     currentUserId = existingUser.id.uuidString
                     isUserLoggedIn = true
                     isLoggedIn = true
+                    UserDefaults.standard.set("doctor", forKey: "userRole")
                 } else {
                     // Create new user object for doctor
                     let user = users(
@@ -229,6 +230,7 @@ struct DoctorLoginView: View {
                     currentUserId = user.id.uuidString
                     isUserLoggedIn = true
                     isLoggedIn = true
+                    UserDefaults.standard.set("doctor", forKey: "userRole")
                 }
             }
         } catch {

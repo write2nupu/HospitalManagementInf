@@ -187,6 +187,7 @@ struct SuperAdminLoginView: View {
                 // Store user info
                 currentUserId = authResponse.user.id.uuidString
                 isUserLoggedIn = true
+                UserDefaults.standard.set("super_admin", forKey: "userRole")
                 
                 if superAdmin.is_first_login {
                     superAdminUser = superAdmin

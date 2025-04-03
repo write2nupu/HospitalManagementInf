@@ -201,6 +201,7 @@ struct AdminLoginViewS: View {
                     currentUserId = existingUser.id.uuidString
                     isUserLoggedIn = true
                     isLoggedIn = true
+                    UserDefaults.standard.set("admin", forKey: "userRole")
                 } else {
                     // Create new user object for admin
                     let user = users(
@@ -225,6 +226,7 @@ struct AdminLoginViewS: View {
                     currentUserId = user.id.uuidString
                     isUserLoggedIn = true
                     isLoggedIn = true
+                    UserDefaults.standard.set("admin", forKey: "userRole")
                 }
             }
         } catch {

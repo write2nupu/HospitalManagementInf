@@ -204,6 +204,7 @@ struct PatientLoginSignupView: View {
         do {
             // After OTP verification, proceed with sign in
             currentPatient = try await supabaseController.signInPatient(email: email, password: password)
+            UserDefaults.standard.set("patient", forKey: "userRole")
             showDashboard = true
         } catch {
             alertMessage = error.localizedDescription
