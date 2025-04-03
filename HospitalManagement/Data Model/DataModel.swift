@@ -620,11 +620,14 @@ enum LeaveStatus: String, Codable {
 struct labTest{
     let bookingId: UUID
     let testName: [labTestName]
-    let components : [String]?
-    let testValue: Float
     let status: TestStatus
     let testDate: Date
+    let testValue: Float
+    let components : [String]?
     let labTestPrice: Double
+    let hospitalid: UUID
+    let prescriptionId: UUID
+    let patientid: UUID
     
     enum TestStatus: String, Codable {
         case pending = "Pending"
