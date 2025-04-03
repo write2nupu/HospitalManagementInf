@@ -44,102 +44,113 @@ struct BillingView: View {
         return total
     }
     
-    // Helper property for recent paid invoices
+    // Helper property for recent paid invoices - limit to 5
     private var recentPaidInvoices: [Invoice] {
         let paid = invoices.filter { $0.status == .paid }
-        return paid.sorted { $0.createdAt > $1.createdAt }
+        return paid.sorted { $0.createdAt > $1.createdAt }.prefix(5).map { $0 }
     }
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Main content
+        ZStack {
+            // Main content
+            ScrollView {
                 VStack(spacing: 20) {
-                    // Revenue Overview Section
-                    revenueOverviewSection
+                    // Total Revenue Card
+                    VStack {
+                        Text("Total Revenue")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Text("₹\(String(format: "%.2f", totalRevenue))")
+                            .font(.system(size: 34, weight: .bold))
+                            .foregroundColor(.primary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.05), radius: 8)
+                    .padding(.horizontal)
                     
-                    // Recent Payments Section
-                    recentPaymentsSection
-                }
-                
-                // Loading overlay
-                if isLoading {
-                    Color.black.opacity(0.1)
-                        .ignoresSafeArea()
-                        .overlay(ProgressView())
-                }
-            }
-            .padding(.top)
-            .navigationTitle("Billing")
-            .navigationBarTitleDisplayMode(.large)
-            .background(Color(.systemGroupedBackground))
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showAdminProfile = true
-                    } label: {
-                        Image(systemName: "person.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.mint)
+                    // Revenue Breakdown Cards - Single column vertical layout
+                    VStack(spacing: 16) {
+                        RevenueCard(title: "Consultants", amount: consultantRevenue, color: .blue)
+                        RevenueCard(title: "Tests", amount: testRevenue, color: .green)
+                        RevenueCard(title: "Beds", amount: bedRevenue, color: .purple)
+                    }
+                    .padding(.horizontal)
+                    
+                    // Recent Payments Section Header
+                    HStack {
+                        Text("Recent Payments")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                        Spacer()
+                        navigationLinkToAllPayments
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 10)
+                    
+                    // Recent Payments List
+                    if isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding()
+                    } else if let error = errorMessage {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding()
+                    } else if invoices.isEmpty {
+                        Text("No invoices found")
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding()
+                    } else {
+                        // Display payments directly in the VStack
+                        ForEach(recentPaidInvoices) { invoice in
+                            RecentPaymentRow(
+                                invoice: invoice,
+                                patientName: patientNames[invoice.patientid]
+                            )
+                            .padding(.horizontal)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(12)
+                            .shadow(color: Color.black.opacity(0.05), radius: 4)
+                            .padding(.horizontal)
+                        }
                     }
                 }
+                .padding(.vertical)
             }
-            .sheet(isPresented: $showAdminProfile) {
-                AdminProfileView()
-            }
-            .task {
-                // Load hospital ID first, then invoices
-                await loadHospitalId()
-            }
-        }
-    }
-    
-    // MARK: - View Components
-    
-    private var revenueOverviewSection: some View {
-        VStack(spacing: 16) {
-            // Total Revenue Card
-            VStack {
-                Text("Total Revenue")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                Text("₹\(String(format: "%.2f", totalRevenue))")
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundColor(.primary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 20)
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.05), radius: 8)
-
-            // Revenue Breakdown Cards
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 16) {
-                RevenueCard(title: "Consultants", amount: consultantRevenue, color: .blue)
-                RevenueCard(title: "Tests", amount: testRevenue, color: .green)
-                RevenueCard(title: "Beds", amount: bedRevenue, color: .purple)
+            
+            // Loading overlay
+            if isLoading {
+                Color.black.opacity(0.1)
+                    .ignoresSafeArea()
+                    .overlay(ProgressView())
             }
         }
-        .padding(.horizontal)
-    }
-    
-    private var recentPaymentsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Recent Payments")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                Spacer()
-                navigationLinkToAllPayments
+        .navigationTitle("Billing")
+        .navigationBarTitleDisplayMode(.large)
+        .navigationBarBackButtonHidden(true)
+        .background(Color(.systemGray6).ignoresSafeArea())
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showAdminProfile = true
+                } label: {
+                    Image(systemName: "person.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.mint)
+                }
             }
-            .padding(.horizontal)
-
-            // Table View for Recent Payments
-            recentPaymentsList
+        }
+        .sheet(isPresented: $showAdminProfile) {
+            AdminProfileView()
+        }
+        .task {
+            // Load hospital ID first, then invoices
+            await loadHospitalId()
         }
     }
     
@@ -150,36 +161,6 @@ struct BillingView: View {
         return NavigationLink(destination: AllPaymentsView(invoices: paidInvoices, patientNames: patientNames)) {
             Text("See All")
                 .foregroundColor(.blue)
-        }
-    }
-    
-    private var recentPaymentsList: some View {
-        Group {
-            if isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
-            } else if let error = errorMessage {
-                Text(error)
-                    .foregroundColor(.red)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
-            } else if invoices.isEmpty {
-                Text("No invoices found")
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
-            } else {
-                List(recentPaidInvoices) { invoice in
-                    RecentPaymentRow(
-                        invoice: invoice,
-                        patientName: patientNames[invoice.patientid]
-                    )
-                    .listRowInsets(EdgeInsets())
-                }
-                .listStyle(PlainListStyle())
-                .frame(maxHeight: .infinity)
-            }
         }
     }
     

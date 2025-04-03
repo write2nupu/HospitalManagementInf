@@ -20,6 +20,7 @@ struct AdminLoginViewS: View {
     @State private var emailErrorMessage = ""
     @State private var showOTPVerification = false
     @State private var isEmailVerified = false
+    @StateObject private var viewModel = HospitalManagementViewModel()
 
     var body: some View {
         NavigationStack {
@@ -90,16 +91,6 @@ struct AdminLoginViewS: View {
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Login Failed"), message: Text(errorMessage), dismissButton: .default(Text("OK")))
             }
-            // ✅ Navigation only triggers when isLoggedIn becomes true
-            .navigationDestination(isPresented: $isLoggedIn) {
-                if let user = userAdminData {
-                    if user.is_first_login {
-                        forcePasswordUpdate(user: user)
-                    } else {
-                        AdminTabView()
-                    }
-                }
-            }
             .sheet(isPresented: $showForgotPassword) {
                             ForgotPasswordView()
                         }
@@ -118,6 +109,16 @@ struct AdminLoginViewS: View {
                         isLoading = false
                     }
                 )
+            }
+        }
+        .fullScreenCover(isPresented: $isLoggedIn) {
+            if let user = userAdminData {
+                if user.is_first_login {
+                    forcePasswordUpdate(user: user)
+                } else {
+                    AdminTabView()
+                        .environmentObject(viewModel)
+                }
             }
         }
     }

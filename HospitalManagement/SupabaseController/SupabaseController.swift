@@ -952,7 +952,7 @@ private struct AnyCodingKey: CodingKey {
 //            .upsert(prescription)
 //            .execute()
 //    }
-//    
+
     // MARK: - Patient Operations
     func fetchPatientById(patientId: UUID) async throws -> Patient {
         let patients: [Patient] = try await client
