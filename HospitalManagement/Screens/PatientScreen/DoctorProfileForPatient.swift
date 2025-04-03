@@ -45,25 +45,25 @@ struct DoctorProfileForPatient: View {
                     
                     // Professional Information
                     InfoSection(title: "Professional Information") {
-                        InfoRow(icon: "book.fill", title: "Qualifications", value: doctor.qualifications)
-                        InfoRow(icon: "clock.fill", title: "Experience", value: "\(doctor.experience) years")
+                        InfoRow4(icon: "book.fill", title: "Qualifications", value: doctor.qualifications)
+                        InfoRow4(icon: "clock.fill", title: "Experience", value: "\(doctor.experience) years")
                         if let department = departmentDetails {
-                            InfoRow(icon: "indianrupeesign", title: "Consultation Fee", value: String(format: "₹%.2f", department.fees))
+                            InfoRow4(icon: "indianrupeesign", title: "Consultation Fee", value: String(format: "₹%.2f", department.fees))
                         }
-                        InfoRow(icon: "creditcard.fill", title: "License Number", value: doctor.license_num)
+                        InfoRow4(icon: "creditcard.fill", title: "License Number", value: doctor.license_num)
                     }
                     
                     // Contact Information
                     InfoSection(title: "Contact Information") {
-                        InfoRow(icon: "phone.fill", title: "Phone", value: doctor.phone_num)
-                        InfoRow(icon: "envelope.fill", title: "Email", value: doctor.email_address)
+                        InfoRow4(icon: "phone.fill", title: "Phone", value: doctor.phone_num)
+                        InfoRow4(icon: "envelope.fill", title: "Email", value: doctor.email_address)
                     }
                     
                     // Hospital Affiliations
                     if !hospitalAffiliations.isEmpty {
                         InfoSection(title: "Hospital Affiliations") {
                             ForEach(hospitalAffiliations, id: \.self) { hospital in
-                                InfoRow(icon: "building.2.fill", title: "Hospital", value: hospital)
+                                InfoRow4(icon: "building.2.fill", title: "Hospital", value: hospital)
                             }
                         }
                     }
@@ -138,7 +138,7 @@ private struct InfoSection<Content: View>: View {
     }
 }
 
-private struct InfoRow: View {
+private struct InfoRow4: View {
     let icon: String
     let title: String
     let value: String

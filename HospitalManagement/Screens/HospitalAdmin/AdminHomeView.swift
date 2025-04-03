@@ -20,8 +20,9 @@ struct AdminHomeView: View {
     @State private var isLoadingDepartments = false
     @State private var errorMessage: String?
     @State private var doctorsByDepartment: [UUID: [Doctor]] = [:]
+    @AppStorage("hospitalId") private var hospitalIdString: String?
     
-    // Emergency and bed request counts (to be implemented with real data later)
+    // Emergency and bed request counts
     @State private var emergencyRequestsCount = 0
     @State private var leaveRequestsCount = 0
     @State private var labReportRequestsCount = 0
@@ -50,7 +51,7 @@ struct AdminHomeView: View {
                         // Departments Section
                         DepartmentsListSection(
                             departments: departments,
-                            filteredDepartments: departments, // Use departments directly without filtering
+                            filteredDepartments: departments,
                             isLoading: isLoadingDepartments,
                             errorMessage: errorMessage,
                             getDoctorCount: getDoctorCount
@@ -87,6 +88,12 @@ struct AdminHomeView: View {
         .task {
             await fetchHospitalName()
             await loadDepartments()
+            await loadEmergencyRequestsCount()
+        }
+        .refreshable {
+            await fetchHospitalName()
+            await loadDepartments()
+            await loadEmergencyRequestsCount()
         }
     }
     
@@ -194,6 +201,21 @@ struct AdminHomeView: View {
                 errorMessage = "Failed to load departments: \(error.localizedDescription)"
                 isLoadingDepartments = false
             }
+        }
+    }
+
+    private func loadEmergencyRequestsCount() async {
+        guard let hospitalIdString = hospitalIdString,
+              let hospitalId = UUID(uuidString: hospitalIdString) else {
+            return
+        }
+        
+        do {
+            let requests = try await supabaseController.fetchEmergencyRequests(hospitalId: hospitalId)
+            // Only count pending requests
+            emergencyRequestsCount = requests.filter { $0.status.rawValue == "Pending" }.count
+        } catch {
+            print("Error loading emergency requests count: \(error)")
         }
     }
 
