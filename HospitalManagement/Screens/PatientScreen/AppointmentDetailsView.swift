@@ -48,7 +48,7 @@ struct AppointmentDetailsView: View {
     }
     
     var appointmentBackgroundColor: Color {
-        appointmentType == "Emergency" ? Color.red.opacity(0.1) : Color.mint.opacity(0.1)
+        appointmentType == "Emergency" ? Color.red.opacity(0.1) : AppConfig.buttonColor
     }
     
     var appointmentTextColor: Color {

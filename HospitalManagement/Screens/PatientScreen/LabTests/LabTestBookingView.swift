@@ -1,35 +1,29 @@
+//
+//  LabTestBookingView.swift
+//  HospitalManagement
+//
+//  Created by Nikhil Gupta on 03/04/25.
+//
+
+import Foundation
 import SwiftUI
 
 struct LabTestBookingView: View {
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var supabase = SupabaseController()
     
-    @State private var selectedTests: [labTest.labTestName] = []
+    let prescription: PrescriptionData
+    
+    @State private var selectedTests: [LabTest.LabTestName] = []
     @State private var preferredDate = Date()
     @State private var showTestSelection = false
     @State private var showPayment = false
     @State private var isLoading = false
+    @State private var tempSelectedTests: [LabTest.LabTestName] = []
     
     // Break down test prices into a function for better compiler performance
-    private func getTestPrice(_ test: labTest.labTestName) -> Double {
-        switch test {
-        case .completeBloodCount: return 500
-        case .bloodSugarTest: return 300
-        case .lipidProfile: return 800
-        case .thyroidFunctionTest: return 1200
-        case .liverFunctionTest: return 1000
-        case .kidneyFunctionTest: return 1000
-        case .urineAnalysis: return 400
-        case .vitaminDTest: return 900
-        case .vitaminB12Test: return 800
-        case .calciumTest: return 400
-        case .cReactiveProtein: return 600
-        case .erythrocyteSedimentationRate: return 400
-        case .hba1c: return 700
-        case .bloodCulture: return 1000
-        case .urineCulture: return 800
-        case .fastingBloodSugar: return 300
-        case .postprandialBloodSugar: return 300
-        }
+    private func getTestPrice(_ test: LabTest.LabTestName) -> Double {
+        test.price
     }
     
     private var totalAmount: Double {
@@ -39,6 +33,7 @@ struct LabTestBookingView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
+                prescriptionInfoSection
                 selectedTestsSection
                 dateSelectionSection
                 if !selectedTests.isEmpty {
@@ -50,13 +45,14 @@ struct LabTestBookingView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Book Lab Test")
         .sheet(isPresented: $showTestSelection) {
-            TestSelectionView(selectedTests: $selectedTests)
+            TestSelectionView(selectedTests: $selectedTests, prescriptionTests: prescription.labTests ?? [])
         }
         .sheet(isPresented: $showPayment) {
-            labTestPaymentView(
+            LabTestPaymentView(
                 amount: totalAmount,
                 selectedTests: selectedTests,
                 preferredDate: preferredDate,
+                prescriptionId: prescription.id,
                 onComplete: { success in
                     if success {
                         dismiss()
@@ -64,9 +60,51 @@ struct LabTestBookingView: View {
                 }
             )
         }
+        .onAppear {
+            // Convert prescription tests to LabTestName enum values and pre-select them
+            if let tests = prescription.labTests {
+                selectedTests = tests.compactMap { testName in
+                    LabTest.LabTestName.allCases.first { $0.rawValue == testName }
+                }
+                // Also set them as temporary selected tests
+                tempSelectedTests = selectedTests
+            }
+        }
     }
     
-    // Break down the view into smaller components
+    private var prescriptionInfoSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Prescription Details")
+                .font(.title)
+                .fontWeight(.bold)
+                .padding(.horizontal)
+            
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Diagnosis:")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                Text(prescription.diagnosis)
+                    .font(.body)
+                
+                if let tests = prescription.labTests {
+                    Text("Recommended Tests:")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 8)
+                    ForEach(tests, id: \.self) { test in
+                        Text("• \(test)")
+                            .font(.body)
+                    }
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .padding(.horizontal)
+        }
+    }
+    
     private var selectedTestsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -175,33 +213,41 @@ struct LabTestBookingView: View {
         }
     }
     
-    private func removeTest(_ test: labTest.labTestName) {
+    private func removeTest(_ test: LabTest.LabTestName) {
         selectedTests.removeAll { $0 == test }
     }
 }
 
 struct TestSelectionView: View {
     @Environment(\.dismiss) private var dismiss
-    @Binding var selectedTests: [labTest.labTestName]
-    @State private var tempSelectedTests: [labTest.labTestName] = []
+    @Binding var selectedTests: [LabTest.LabTestName]
+    let prescriptionTests: [String]
+    @State private var tempSelectedTests: [LabTest.LabTestName] = []
     
     var body: some View {
         NavigationView {
-            List(labTest.labTestName.allCases, id: \.self) { test in
-                HStack {
-                    Text(test.rawValue)
-                    Spacer()
-                    if tempSelectedTests.contains(test) {
-                        Image(systemName: "checkmark")
-                            .foregroundColor(AppConfig.buttonColor)
+            List {
+                ForEach(LabTest.LabTestName.allCases, id: \.self) { test in
+                    HStack {
+                        Text(test.rawValue)
+                        Spacer()
+                        if tempSelectedTests.contains(test) {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(AppConfig.buttonColor)
+                        }
+                        if prescriptionTests.contains(test.rawValue) {
+                            Image(systemName: "star.fill")
+                                .foregroundColor(.yellow)
+                                .font(.system(size: 14))
+                        }
                     }
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    if tempSelectedTests.contains(test) {
-                        tempSelectedTests.removeAll { $0 == test }
-                    } else {
-                        tempSelectedTests.append(test)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if tempSelectedTests.contains(test) {
+                            tempSelectedTests.removeAll { $0 == test }
+                        } else {
+                            tempSelectedTests.append(test)
+                        }
                     }
                 }
             }
@@ -220,284 +266,19 @@ struct TestSelectionView: View {
     }
 }
 
-struct labTestPaymentView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedPaymentMethod: PaymentOption?
-    @State private var showConfirmation = false
-    @State private var showError = false
-    @State private var errorMessage = ""
-    @State private var isProcessing = false
-    
-    let amount: Double
-    let selectedTests: [labTest.labTestName]
-    let preferredDate: Date
-    let onComplete: (Bool) -> Void
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                Text("Make Payment")
-                    .font(.title2)
-                    .foregroundColor(.mint)
-                    .padding(.vertical)
-                
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Booking Details Card
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Booking Details")
-                                .font(.headline)
-                                .foregroundColor(.mint)
-                            
-                            VStack(spacing: 16) {
-                                detailRow(title: "Hospital:", value: "Apollo")
-                                detailRow(title: "Date & Time:", value: "Thursday, Apr 3, 2025 • 11:00 AM")
-                                detailRow(title: "Total Amount:", value: "₹\(String(format: "%.2f", amount))", isTotal: true)
-                            }
-                        }
-                        .padding()
-                        .background(Color(.systemBackground))
-                        .cornerRadius(12)
-                        
-                        // Payment Methods
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Select Payment Method")
-                                .font(.headline)
-                                .foregroundColor(.mint)
-                            
-                            VStack(spacing: 12) {
-                                ForEach(paymentMethods, id: \.name) { method in
-                                    Button(action: { selectedPaymentMethod = method.type }) {
-                                        HStack {
-                                            Image(systemName: method.icon)
-                                                .foregroundColor(.mint)
-                                            
-                                            Text(method.name)
-                                                .foregroundColor(.primary)
-                                            
-                                            Spacer()
-                                            
-                                            if selectedPaymentMethod == method.type {
-                                                Image(systemName: "checkmark.circle.fill")
-                                                    .foregroundColor(.green)
-                                            }
-                                        }
-                                        .padding()
-                                        .background(Color(.systemBackground))
-                                        .cornerRadius(12)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .padding()
-                }
-                
-                // Pay Button
-                Button(action: {
-                    guard !isProcessing else { return }
-                    isProcessing = true
-                    
-                    Task {
-                        do {
-                            guard let patientIdString = UserDefaults.standard.string(forKey: "currentPatientId"),
-                                  let patientId = UUID(uuidString: patientIdString),
-                                  let hospitalId = UserDefaults.standard.string(forKey: "hospitalId"),
-                                  let hospitalUUID = UUID(uuidString: hospitalId) else {
-                                errorMessage = "Missing required information"
-                                showError = true
-                                isProcessing = false
-                                return
-                            }
-                            
-                            try await SupabaseController().bookLabTest(
-                                patientId: patientId,
-                                tests: selectedTests,
-                                scheduledDate: preferredDate,
-                                hospitalId: hospitalUUID
-                            )
-                            
-                            await MainActor.run {
-                                isProcessing = false
-                                showConfirmation = true
-                            }
-                        } catch {
-                            print("Error booking lab test:", error)
-                            await MainActor.run {
-                                errorMessage = "Failed to book lab test. Please try again."
-                                showError = true
-                                isProcessing = false
-                            }
-                        }
-                    }
-                }) {
-                    HStack {
-                        Image(systemName: "lock.fill")
-                        Text("Pay ₹\(String(format: "%.2f", amount))")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(selectedPaymentMethod == nil ? Color.gray : Color.mint)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
-                    .padding()
-                }
-                .disabled(isProcessing || selectedPaymentMethod == nil)
-            }
-            .navigationBarItems(leading: Button("Cancel") { dismiss() })
-            .background(Color(.systemGroupedBackground))
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(errorMessage)
-            }
-            .sheet(isPresented: $showConfirmation) {
-                PaymentConfirmationView(
-                    amount: amount,
-                    selectedTests: selectedTests,
-                    testDate: preferredDate
-                ) {
-                    onComplete(true)
-                    dismiss()
-                }
-            }
-        }
-    }
-    
-    private func detailRow(title: String, value: String, isTotal: Bool = false) -> some View {
-        HStack(alignment: .top) {
-            Text(title)
-                .font(.body)
-                .foregroundColor(.primary)
-            Spacer()
-            Text(value)
-                .font(isTotal ? .headline : .body)
-                .foregroundColor(isTotal ? .mint : .gray)
-                .multilineTextAlignment(.trailing)
-        }
-    }
-}
-
-struct PaymentConfirmationView: View {
-    @Environment(\.dismiss) private var dismiss
-    let amount: Double
-    let selectedTests: [labTest.labTestName]
-    let testDate: Date
-    let onDone: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 24) {
-            // Success Icon
-            Circle()
-                .fill(Color.mint)
-                .frame(width: 80, height: 80)
-                .overlay(
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 40, weight: .bold))
-                        .foregroundColor(.white)
-                )
-                .padding(.top, 40)
-            
-            // Success Message
-            VStack(spacing: 8) {
-                Text("Payment Successful")
-                    .font(.title2)
-                    .foregroundColor(.mint)
-                
-                Text("Your lab tests have been booked.")
-                    .font(.body)
-                    .foregroundColor(.gray)
-            }
-            
-            // Lab Test Details Card
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Lab Test Details")
-                    .font(.headline)
-                    .foregroundColor(.mint)
-                
-                VStack(spacing: 16) {
-                    detailRow(title: "Hospital:", value: "Apollo")
-                    detailRow(title: "Date:", value: formatDate(testDate))
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Selected Tests:")
-                            .font(.body)
-                            .foregroundColor(.primary)
-                        
-                        ForEach(selectedTests, id: \.self) { test in
-                            HStack {
-                                Text("• \(test.rawValue)")
-                                    .font(.subheadline)
-                                Spacer()
-                                Text("₹\(Int(test.price))")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                    }
-                    
-                    detailRow(title: "Total Amount:", value: "₹\(String(format: "%.2f", amount))", isTotal: true)
-                }
-            }
-            .padding()
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            
-            Spacer()
-            
-            // Action Buttons
-            HStack(spacing: 16) {
-                Button(action: { /* Show Invoice */ }) {
-                    Text("View Invoice")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                }
-                
-                Button(action: {
-                    onDone()
-                    dismiss()
-                }) {
-                    Text("Done")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.mint)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.bottom)
-        }
-        .padding()
-        .background(Color(.systemGroupedBackground))
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .full
-        return formatter.string(from: date)
-    }
-    
-    private func detailRow(title: String, value: String, isTotal: Bool = false) -> some View {
-        HStack(alignment: .top) {
-            Text(title)
-                .font(.body)
-                .foregroundColor(.primary)
-            Spacer()
-            Text(value)
-                .font(isTotal ? .headline : .body)
-                .foregroundColor(isTotal ? .mint : .gray)
-                .multilineTextAlignment(.trailing)
-        }
-    }
-}
-
 #Preview {
     NavigationView {
-        LabTestBookingView()
+        LabTestBookingView(prescription: PrescriptionData(
+            id: UUID(),
+            patientId: UUID(),
+            doctorId: UUID(),
+            diagnosis: "Sample diagnosis",
+            labTests: ["Complete Blood Count", "Blood Sugar Test"],
+            additionalNotes: nil,
+            medicineName: nil,
+            medicineDosage: nil,
+            medicineDuration: nil
+        ))
     }
 }
 
@@ -527,4 +308,4 @@ struct PaymentConfirmationView: View {
 //    case mri = "MRI"
 //    case ct = "CT Scan"
 //    case ultrasound = "Ultrasound"
-//} 
+//}

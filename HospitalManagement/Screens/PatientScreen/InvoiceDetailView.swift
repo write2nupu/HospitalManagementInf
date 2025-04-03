@@ -20,12 +20,12 @@ struct InvoiceDetailView: View {
                 VStack {
                     Image(systemName: "doc.text.fill")
                         .font(.system(size: 50))
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                     
                     Text("Invoice Details")
                         .font(.title2)
                         .bold()
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                 }
                 .padding(.top, 20)
                 
@@ -46,7 +46,7 @@ struct InvoiceDetailView: View {
                     DetailRow(icon: "calendar", label: "Date", value: formatDate(invoice.createdAt))
                     DetailRow(icon: "creditcard", label: "Payment Type", value: invoice.paymentType.rawValue.capitalized)
                     DetailRow(icon: invoice.status == .paid ? "checkmark.circle.fill" : "hourglass", label: "Status", value: invoice.status.rawValue.capitalized, color: invoice.status == .paid ? .green : .orange)
-                    DetailRow(icon: "indianrupeesign.circle", label: "Amount", value: "₹ \(invoice.amount)", color: .blue)
+                    DetailRow(icon: "indianrupeesign.circle", label: "Amount", value: "₹ \(invoice.amount)", color: .white)
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -82,12 +82,12 @@ struct DetailRow: View {
     let icon: String
     let label: String
     let value: String
-    var color: Color = .primary
+    var color: Color = .white
     
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
             
             Text(label + ":")
                 .fontWeight(.semibold)

@@ -287,7 +287,7 @@ struct DoctorDashBoard: View {
             
             // Load leave info
             guard !Task.isCancelled else { return }
-            let latestLeave = try await supabase.fetchLatestLeave(doctorId: doctorId)
+            let latestLeave = try await supabase.fetchPendingLeave(doctorId: doctorId)
             
             guard !Task.isCancelled && isViewActive else { return }
             
@@ -328,7 +328,7 @@ struct DoctorDashBoard: View {
                             do {
                                 let patient = try await supabase.fetchPatientById(patientId: appointment.patientId)
                                 await MainActor.run {
-                                    patientNames[appointment.patientId] = patient.fullname
+                                    patientNames[appointment.patientId] = patient?.fullname
                                 }
                             } catch {
                                 print("Error fetching patient name for ID \(appointment.patientId): \(error)")

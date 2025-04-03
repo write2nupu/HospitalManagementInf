@@ -17,18 +17,24 @@ struct AppointmentListView: View {
     @State private var appointmentToReschedule: Appointment?
     @StateObject private var supabaseController = SupabaseController()
     @State private var selectedSegment = 0 // 0 for upcoming, 1 for past
+    @State private var searchText = ""
     
     var body: some View {
         VStack(spacing: 0) {
-            // Segmented control in a separate container
+            // Search bar first
+            searchBar
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+                .background(Color(.systemBackground))
+            
+            // Segmented control below search
             VStack {
                 Picker("Appointment Type", selection: $selectedSegment) {
                     Text("Upcoming").tag(0)
                     Text("Past").tag(1)
                 }
                 .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+                .padding()
             }
             .background(Color(.systemBackground))
             .shadow(color: Color.black.opacity(0.05), radius: 4, y: 2)
@@ -36,7 +42,7 @@ struct AppointmentListView: View {
             if isLoading {
                 ProgressView("Loading appointments...")
                     .frame(maxHeight: .infinity)
-            } else if appointments.isEmpty {
+            } else if filteredAppointments.isEmpty {
                 emptyStateView
             } else {
                 ScrollView {
@@ -83,10 +89,10 @@ struct AppointmentListView: View {
                 )
             }
         }
-        .onChange(of: appointmentToCancel) { newValue in
+        .onChange(of: appointmentToCancel) { oldValue, newValue in
             showCancelConfirmation = newValue != nil
         }
-        .onChange(of: appointmentToReschedule) { newValue in
+        .onChange(of: appointmentToReschedule) { oldValue, newValue in
             showRescheduleSheet = newValue != nil
         }
     }
@@ -94,26 +100,64 @@ struct AppointmentListView: View {
     // Computed property to filter appointments based on selected segment
     private var filteredAppointments: [Appointment] {
         let now = Date()
-        let calendar = Calendar.current
         
-        if selectedSegment == 0 {
-            // Upcoming appointments (in the future)
-            return appointments
-                .filter { appointment in
-                    let isInFuture = appointment.date > now
-                    let isNotCancelled = appointment.status != .cancelled
-                    return isInFuture && isNotCancelled
-                }
-                .sorted { $0.date < $1.date }
-        } else {
-            // Past appointments (already happened)
-            return appointments
-                .filter { appointment in
-                    let isInPast = appointment.date <= now
-                    return isInPast || appointment.status == .cancelled
-                }
-                .sorted { $0.date > $1.date }
+        // First filter by segment (upcoming/past)
+        var filtered = appointments.filter { appointment in
+            if selectedSegment == 0 {
+                // Upcoming appointments
+                let isInFuture = appointment.date > now
+                let isNotCancelled = appointment.status != .cancelled
+                let isCompleted = appointment.status != .completed
+                return isInFuture && isNotCancelled && isCompleted
+            } else {
+                // Past appointments
+                let isInPast = appointment.date <= now
+                return isInPast || appointment.status == .cancelled
+            }
         }
+        
+        // Then apply search if text is not empty
+        if !searchText.isEmpty {
+            let lowercasedSearch = searchText.lowercased()
+            filtered = filtered.filter { appointment in
+                let doctorName = doctorNames[appointment.doctorId]?.lowercased() ?? ""
+                let dateString = appointment.date.formatted(.dateTime.day().month().year())
+                let statusString = appointment.status.rawValue.lowercased()
+                
+                return doctorName.contains(lowercasedSearch) ||
+                       dateString.lowercased().contains(lowercasedSearch) ||
+                       statusString.contains(lowercasedSearch)
+            }
+        }
+        
+        // Sort by date
+        return filtered.sorted { selectedSegment == 0 ? $0.date < $1.date : $0.date > $1.date }
+    }
+    
+    // Updated searchBar view with better styling
+    private var searchBar: some View {
+        HStack {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.gray)
+                TextField("Search by doctor, status, or date...", text: $searchText)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                
+                if !searchText.isEmpty {
+                    Button(action: {
+                        searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            .padding(10)
+            .background(Color(.systemGray6))
+            .cornerRadius(10)
+        }
+        .padding(.horizontal)
     }
     
     private var emptyStateView: some View {
@@ -122,18 +166,31 @@ struct AppointmentListView: View {
                 .font(.system(size: 70))
                 .foregroundColor(.gray)
             
-            Text(selectedSegment == 0 ? "No Upcoming Appointments" : "No Past Appointments")
+            if !searchText.isEmpty {
+                Text("No matching appointments")
                     .font(.title2)
                     .fontWeight(.semibold)
-                .foregroundColor(.gray)
-            
-            Text(selectedSegment == 0 ? 
-                "You don't have any upcoming appointments scheduled. Book a new appointment to get started." :
-                "You don't have any past appointment history.")
-                .font(.body)
+                    .foregroundColor(.gray)
+                
+                Text("Try adjusting your search")
+                    .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
-                .padding(.horizontal)
+                    .padding(.horizontal)
+            } else {
+                Text(selectedSegment == 0 ? "No Upcoming Appointments" : "No Past Appointments")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.gray)
+                
+                Text(selectedSegment == 0 ? 
+                    "You don't have any upcoming appointments scheduled. Book a new appointment to get started." :
+                    "You don't have any past appointment history.")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
         }
         .padding()
         .frame(maxHeight: .infinity)
@@ -223,7 +280,7 @@ struct AppointmentCard: View {
                         .font(.subheadline)
                 } else {
                     dateView
-                    Spacer()
+            Spacer()
                     timeView
                 }
             }
@@ -235,20 +292,20 @@ struct AppointmentCard: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color(AppConfig.cardColor))
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 2)
+        .shadow(color: AppConfig.shadowColor, radius: 8, x: 0, y: 2)
     }
     
     private var doctorSection: some View {
         HStack(spacing: 12) {
-            Circle()
-                .fill(Color.mint.opacity(0.2))
-                .frame(width: 40, height: 40)
-                .overlay(
-                    Image(systemName: appointment.type == .Emergency ? "cross.case.fill" : "person.fill")
-                        .foregroundColor(.mint)
-                )
+//            Circle()
+//                .fill(Color.mint.opacity(0.2))
+//                .frame(width: 40, height: 40)
+//                .overlay(
+//                    Image(systemName: appointment.type == .Emergency ? "cross.case.fill" : "person.fill")
+//                        .foregroundColor(.mint)
+//                )
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(appointment.type == .Emergency ? "Emergency Appointment" : doctorName)
@@ -256,9 +313,9 @@ struct AppointmentCard: View {
                 
                 Text(appointment.type.rawValue)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                .foregroundColor(.secondary)
             }
-            
+        
             Spacer()
             
             statusBadge
@@ -296,7 +353,7 @@ struct AppointmentCard: View {
     private var dateView: some View {
         HStack(spacing: 8) {
             Image(systemName: "calendar")
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
             Text(formatDate(appointment.date))
                 .font(.subheadline)
         }
@@ -305,7 +362,7 @@ struct AppointmentCard: View {
     private var timeView: some View {
         HStack(spacing: 8) {
             Image(systemName: "clock")
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
             Text(formatTime(appointment.date))
                 .font(.subheadline)
         }
@@ -319,10 +376,10 @@ struct AppointmentCard: View {
                     Text("Reschedule")
                 }
                 .font(.subheadline)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.mint, lineWidth: 1))
+                .background(RoundedRectangle(cornerRadius: 8).stroke(AppConfig.buttonColor, lineWidth: 1))
             }
             
             Spacer()
@@ -333,10 +390,10 @@ struct AppointmentCard: View {
                     Text("Cancel")
                 }
                 .font(.subheadline)
-                .foregroundColor(.red)
+                .foregroundColor(AppConfig.redColor)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.red, lineWidth: 1))
+                .background(RoundedRectangle(cornerRadius: 8).stroke(AppConfig.redColor, lineWidth: 1))
             }
         }
     }
@@ -460,7 +517,7 @@ struct RescheduleView: View {
                                                  displayedComponents: .hourAndMinute)
                                             .datePickerStyle(.wheel)
                                             .labelsHidden()
-                                            .onChange(of: selectedTime) { newTime in
+                                            .onChange(of: selectedTime) { oldValue, newTime in
                                                 updateSelectedTimeSlot(time: newTime)
                                             }
                                         
@@ -483,7 +540,7 @@ struct RescheduleView: View {
                                         Button("Confirm Time") {
                                             showTimePicker = false
                                         }
-                                        .foregroundColor(.mint)
+                                        .foregroundColor(AppConfig.buttonColor)
                                         .padding(.top)
                                     }
                                     .padding(.vertical)
@@ -506,7 +563,7 @@ struct RescheduleView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.gray.opacity(0.2))
+                    .background(AppConfig.redColor)
                     .cornerRadius(10)
                     
                     Button("Confirm Changes") {
