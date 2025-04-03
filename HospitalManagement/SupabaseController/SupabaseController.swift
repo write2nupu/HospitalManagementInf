@@ -1983,7 +1983,6 @@ extension SupabaseController {
         )
         
         try await client
-            .database
             .from("Leave")
             .insert(leaveData)
             .execute()
@@ -1991,7 +1990,6 @@ extension SupabaseController {
     
     func fetchPendingLeave(doctorId: UUID) async throws -> Leave? {
         let leaves: [LeaveResponse] = try await client
-            .database
             .from("Leave")
             .select()
             .eq("doctorId", value: doctorId.uuidString)
@@ -2018,7 +2016,6 @@ extension SupabaseController {
     
     func fetchAllLeaves(doctorId: UUID) async throws -> [Leave] {
         let leaves: [LeaveResponse] = try await client
-            .database
             .from("Leave")
             .select()
             .eq("doctorId", value: doctorId.uuidString)
@@ -2039,67 +2036,6 @@ extension SupabaseController {
                 status: LeaveStatus(rawValue: leaveResponse.status) ?? .pending
             )
         }
-    }
-//    
-//    func updateLeaveStatus(leaveId: UUID, status: LeaveStatus) async throws {
-//        try await client
-//            .database
-//            .from("Leave")
-//            .update(["status": status.rawValue])
-//            .eq("id", value: leaveId.uuidString)
-//            .execute()
-//    }
-
-    func fetchLatestLeave(doctorId: UUID) async throws -> Leave? {
-        let leaves: [LeaveResponse] = try await client
-            .database
-            .from("Leave")
-            .select()
-            .eq("doctorId", value: doctorId.uuidString)
-            .order("startDate", ascending: false)
-            .limit(1)
-            .execute()
-            .value
-        
-        guard let leaveResponse = leaves.first else { return nil }
-        
-        print("Raw leave response: \(leaveResponse)")
-        print("Start date string: \(leaveResponse.startDate)")
-        print("End date string: \(leaveResponse.endDate)")
-        
-        // Create a date formatter that matches the format from Supabase
-        let dateFormatter = DateFormatter()
-        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-        dateFormatter.timeZone = TimeZone.current
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        
-        // Parse the dates
-        guard let startDate = dateFormatter.date(from: leaveResponse.startDate),
-              let endDate = dateFormatter.date(from: leaveResponse.endDate) else {
-            print("Failed to parse dates")
-            return nil
-        }
-        
-        print("Parsed start date: \(startDate)")
-        print("Parsed end date: \(endDate)")
-        
-        return Leave(
-            id: leaveResponse.id,
-            doctorId: leaveResponse.doctorId,
-            hospitalId: leaveResponse.hospitalId,
-            type: LeaveType(rawValue: leaveResponse.type) ?? .sickLeave,
-            reason: leaveResponse.reason,
-            startDate: startDate,
-            endDate: endDate,
-            status: LeaveStatus(rawValue: leaveResponse.status) ?? .pending
-        )
-    }
-    func updateAppointmentStatus(appointmentId: UUID, status: AppointmentStatus) async throws {
-        try await client
-            .from("Appointment")
-            .update(["status": status.rawValue])
-            .eq("id", value: appointmentId.uuidString)
-            .execute()
     }
 }
 
@@ -2150,70 +2086,155 @@ private struct LeaveResponse: Codable {
 
 // MARK: - Lab Test Booking Functions
 extension SupabaseController {
-    private func calculateTotalAmount(_ tests: [labTest.labTestName]) -> Double {
-        tests.reduce(0.0) { total, test in
-            total + test.price
-        }
-    }
-    
-    func bookLabTest(patientId: UUID, tests: [labTest.labTestName], scheduledDate: Date, hospitalId: UUID) async throws {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+    func bookLabTest(
+        tests: [LabTest.LabTestName],
+        prescriptionId: UUID?,
+        testDate: Date,
+        paymentMethod: PaymentOption,
+        hospitalId: UUID
+    ) async throws {
+        print("📝 Creating lab test booking...")
         
-        do {
-            // Create a single lab test entry with all selected tests
-            let labTestData: [String: AnyJSON] = [
-                "bookingId": .string(UUID().uuidString),
-                "testName": .array(tests.map { .string($0.rawValue) }), // Store array of test names
-                "status": .string(labTest.TestStatus.pending.rawValue),
-                "testDate": .string(dateFormatter.string(from: scheduledDate)),
-                "testValue": .double(0.0),
-                "testComponents": .array([]),
-                "labTestPrice": .double(calculateTotalAmount(tests)) // Total price of all tests
-            ]
-            
-            print("Attempting to insert lab test:", labTestData)
-            
-            try await client
-                .from("LabTest")
-                .insert(labTestData)
-                .execute()
-            
-            // Create the invoice
-            let invoiceData: [String: AnyJSON] = [
-                "id": .string(UUID().uuidString),
-                "createdAt": .string(dateFormatter.string(from: Date())),
-                "patientid": .string(patientId.uuidString),
-                "amount": .double(calculateTotalAmount(tests)),
-                "paymentType": .string(PaymentType.labTest.rawValue),
-                "status": .string(PaymentStatus.paid.rawValue),
-                "hospitalId": .string(hospitalId.uuidString)
-            ]
-            
-            try await client
-                .from("Invoice")
-                .insert(invoiceData)
-                .execute()
-            
-        } catch let error as PostgrestError {
-            print("Postgrest error:", error)
-            throw error
-        } catch {
-            print("Unexpected error:", error)
-            throw error
+        // Create a single record for all tests
+        var labTestData: [String: AnyJSON] = [
+            "bookingId": .string(UUID().uuidString),
+            "testName": .array(tests.map { .string($0.rawValue) }),  // Store test names as an array
+            "status": .string(LabTest.TestStatus.pending.rawValue),
+            "testDate": .string(testDate.ISO8601Format()),
+            "testValue": .double(0.0),
+            // Calculate total price for all tests
+            "labTestPrice": .double(Double(tests.reduce(0) { $0 + $1.price })),
+            "hospitalid": .string(hospitalId.uuidString)  // Add hospitalId directly
+        ]
+        
+        // Add patientId if available
+        if let patientIdString = UserDefaults.standard.string(forKey: "currentPatientId") {
+            labTestData["patientid"] = .string(patientIdString)
         }
+        
+        // Add prescriptionId if available
+        if let prescriptionId = prescriptionId {
+            labTestData["prescriptionId"] = .string(prescriptionId.uuidString)
+        }
+        
+        print("Attempting to insert lab test with data: \(labTestData)")
+        try await client
+            .from("LabTest")
+            .insert([labTestData])  // Insert a single record
+            .execute()
+        print("✅ Lab test booking created successfully!")
     }
     
-    // Fetch lab tests
-    func fetchLabTests() async throws -> [LabTestResult] {
-        let tests: [LabTestResult] = try await client
+    func fetchLabTests(patientId: UUID? = nil, hospitalId: UUID? = nil) async throws -> [(id: UUID, testName: String, testDate: Date, status: String, doctorName: String?)] {
+        print("🔍 Starting fetchLabTests function")
+        print("Parameters - patientId: \(patientId?.uuidString ?? "nil"), hospitalId: \(hospitalId?.uuidString ?? "nil")")
+        
+        var query = client
             .from("LabTest")
-            .select()
+            .select("""
+                bookingId,
+                testName,
+                testDate,
+                status,
+                prescriptionId,
+                Prescription:prescriptionId (
+                    doctorId,
+                    Doctor:doctorId (
+                        full_name
+                    )
+                )
+            """)
+        
+        if let patientId = patientId {
+            query = query.eq("patientid", value: patientId.uuidString)
+            print("Added patient filter: \(patientId.uuidString)")
+        }
+        
+        if let hospitalId = hospitalId {
+            query = query.eq("hospitalid", value: hospitalId.uuidString)
+            print("Added hospital filter: \(hospitalId.uuidString)")
+        }
+        
+        print("Executing Supabase query...")
+        let result = try await query
             .order("testDate", ascending: false)
             .execute()
-            .value
         
-        return tests
+        print("Response received")
+        print("Raw response: \(result)")
+        
+        // Get the response data
+        guard let jsonArray = result.data as? [[String: Any]] else {
+            if let data = result.data as? Data,
+               let jsonString = String(data: data, encoding: .utf8),
+               let jsonData = jsonString.data(using: .utf8),
+               let parsedArray = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] {
+                print("✅ Successfully parsed JSON data")
+                return processLabTests(parsedArray)
+            }
+            print("❌ Could not parse response data as JSON array")
+            return []
+        }
+        
+        print("✅ Successfully got JSON array with \(jsonArray.count) items")
+        return processLabTests(jsonArray)
+    }
+    
+    private func processLabTests(_ jsonArray: [[String: Any]]) -> [(id: UUID, testName: String, testDate: Date, status: String, doctorName: String?)] {
+        return jsonArray.compactMap { json -> (id: UUID, testName: String, testDate: Date, status: String, doctorName: String?)? in
+            print("Processing test: \(json)")
+            
+            // Get booking ID
+            guard let bookingIdString = json["bookingId"] as? String,
+                  let bookingId = UUID(uuidString: bookingIdString) else {
+                print("❌ No valid booking ID found")
+                return nil
+            }
+            
+            // Get test name
+            guard let testName = json["testName"] as? String else {
+                print("❌ No test name found")
+                return nil
+            }
+            
+            // Get test date
+            guard let testDateString = json["testDate"] as? String else {
+                print("❌ No test date found")
+                return nil
+            }
+            
+            // Parse the date
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+            
+            guard let testDate = dateFormatter.date(from: testDateString) else {
+                print("❌ Could not parse date: \(testDateString)")
+                return nil
+            }
+            
+            // Get status
+            let status = json["status"] as? String ?? "Pending"
+            
+            // Try to get doctor name from prescription data
+            var doctorName: String? = nil
+            if let prescription = json["Prescription"] as? [String: Any],
+               let doctor = prescription["Doctor"] as? [String: Any],
+               let name = doctor["full_name"] as? String {
+                doctorName = name
+                print("✅ Found doctor name: \(name)")
+            }
+            
+            return (id: bookingId, testName: testName, testDate: testDate, status: status, doctorName: doctorName)
+        }
+    }
+    
+    func updateLabTestStatus(testId: UUID, status: LabTest.TestStatus) async throws {
+        try await client
+            .from("LabTest")
+            .update(["status": status.rawValue])
+            .eq("id", value: testId.uuidString)
+            .execute()
     }
 }
 
@@ -2267,10 +2288,23 @@ public struct LabTestResult: Codable {
     }
 }
 
+
+
+// MARK: - Appointment Management
+extension SupabaseController {
+    func updateAppointmentStatus(appointmentId: UUID, status: AppointmentStatus) async throws {
+        try await client
+            .from("Appointment")
+            .update(["status": status.rawValue])
+            .eq("id", value: appointmentId.uuidString)
+            .execute()
+    }
+}
 // Helper extension for formatter configuration
 extension DateFormatter {
     func apply(_ config: (DateFormatter) -> Void) -> DateFormatter {
         config(self)
         return self
+
     }
 }

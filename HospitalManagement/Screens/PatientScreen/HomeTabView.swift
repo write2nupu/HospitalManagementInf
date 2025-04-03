@@ -1,9 +1,244 @@
 import SwiftUI
 
+// Add this helper view before the HomeTabView struct
+struct HospitalSelectionCard: View {
+    let hospital: Hospital?
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            if let hospital = hospital {
+                // Selected Hospital Card View
+                HStack(alignment: .center, spacing: 15) {
+                    Image(systemName: "building.fill")
+                        .font(.system(size: 36))
+                        .foregroundColor(AppConfig.buttonColor)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(hospital.name)
+                            .font(.headline)
+                            .foregroundColor(AppConfig.fontColor)
+                            .fontWeight(.semibold)
+                        
+                        Text("\(hospital.city), \(hospital.state)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer()
+                    
+                    Text("Change")
+                        .font(.caption)
+                        .foregroundColor(AppConfig.buttonColor)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .strokeBorder(AppConfig.buttonColor, lineWidth: 1)
+                        )
+                }
+            } else {
+                // No Hospital Selected View
+                HStack {
+                    Image(systemName: "building.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(AppConfig.buttonColor)
+                    
+                    Text("Select Hospital")
+                        .font(.title3)
+                        .foregroundColor(AppConfig.fontColor)
+                        .fontWeight(.regular)
+                    
+                    Spacer()
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+        )
+        .padding(.horizontal)
+    }
+}
+
+struct LatestAppointmentCard: View {
+    let appointment: Appointment
+    
+    var body: some View {
+        NavigationLink(destination: LatestAppointmentView(appointment: appointment)) {
+            HStack(spacing: 15) {
+                Image(systemName: appointment.type == .Emergency ? "cross.case.fill" : "calendar.badge.plus")
+                    .font(.system(size: 30))
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(
+                        appointment.type == .Emergency ? Color.red : Color.mint
+                    )
+                    .clipShape(Circle())
+                
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(appointment.type.rawValue)
+                        .font(.headline)
+                        .foregroundColor(
+                            appointment.type == .Emergency ? .red : .mint
+                        )
+                    
+                    Text(formattedDate(appointment.date))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(
+                        appointment.type == .Emergency ? .red : .mint
+                    )
+            }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 15)
+                    .fill(
+                        appointment.type == .Emergency ?
+                        Color.red.opacity(0.1) : Color.mint.opacity(0.1)
+                    )
+                    .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+            )
+            .padding(.horizontal)
+        }
+    }
+    
+    private func formattedDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+}
+
+struct EmergencyCard: View {
+    var body: some View {
+        NavigationLink(destination: EmergencyAssistanceView()) {
+            HStack(spacing: 15) {
+                Image(systemName: "cross.case.fill")
+                    .font(.system(size: 30))
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(Color.red)
+                    .clipShape(Circle())
+                
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Emergency Assistance")
+                        .font(.headline)
+                        .foregroundColor(.red)
+                    
+                    Text("Immediate medical help")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.red)
+            }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 15)
+                    .fill(Color.red.opacity(0.1))
+                    .shadow(color: Color.red.opacity(0.1), radius: 5, x: 0, y: 2)
+            )
+            .padding(.horizontal)
+        }
+    }
+}
+
+struct ServicesGridView: View {
+    var body: some View {
+        LazyVGrid(columns: [
+            GridItem(.flexible()),
+            GridItem(.flexible()),
+            GridItem(.flexible())
+        ], spacing: 15) {
+            NavigationLink(destination: DepartmentListView()) {
+                ServiceCard(
+                    icon: "calendar.badge.plus",
+                    title: "Book\nAppointment"
+                )
+            }
+            
+            NavigationLink(destination: PrescriptionLabTestView()) {
+                ServiceCard(
+                    icon: "cross.vial.fill",
+                    title: "Book\nLab Test"
+                )
+            }
+            
+            NavigationLink(destination: CurrentBedBookingView()) {
+                ServiceCard(
+                    icon: "bed.double.fill",
+                    title: "Book\nBed"
+                )
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
+struct PatientDepartmentsSection: View {
+    let departments: [Department]
+    let departmentDoctors: [UUID: [Doctor]]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            HStack {
+                Text("Departments")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(AppConfig.fontColor)
+                
+                Spacer()
+                
+                NavigationLink(destination: DepartmentListView()) {
+                    HStack(spacing: 4) {
+                        Text("View All")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                    }
+                    .foregroundColor(AppConfig.buttonColor)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 15)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(departments.prefix(5)) { department in
+                        NavigationLink(destination: DoctorListView(doctors: departmentDoctors[department.id] ?? [])) {
+                            DepartmentCard(
+                                department: department,
+                                doctorCount: departmentDoctors[department.id]?.count ?? 0
+                            )
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 6)
+            }
+        }
+    }
+}
+
 struct HomeTabView: View {
     @Binding var selectedHospital: Hospital?
     @Binding var departments: [Department]
     @State private var latestAppointment: Appointment?
+    @State private var showPrescriptionLabTestView = false
     @State private var isLoadingAppointment = true
     @State private var departmentDoctors: [UUID: [Doctor]] = [:]
     @StateObject private var supabase = SupabaseController()
@@ -21,123 +256,28 @@ struct HomeTabView: View {
                         .padding(.top, 20)
                     
                     NavigationLink(destination: HospitalListView()) {
-                        VStack(spacing: 12) {
-                            if let hospital = selectedHospital {
-                                // Selected Hospital Card View
-                                HStack(alignment: .center, spacing: 15) {
-                                    Image(systemName: "building.fill")
-                                        .font(.system(size: 36))
-                                        .foregroundColor(AppConfig.buttonColor)
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(hospital.name)
-                                            .font(.headline)
-                                            .foregroundColor(AppConfig.fontColor)
-                                            .fontWeight(.semibold)
-                                        
-                                        Text("\(hospital.city), \(hospital.state)")
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                            .lineLimit(1)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Text("Change")
-                                        .font(.caption)
-                                        .foregroundColor(AppConfig.buttonColor)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 4)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .strokeBorder(AppConfig.buttonColor, lineWidth: 1)
-                                        )
-                                }
-                            } else {
-                                // No Hospital Selected View
-                                HStack {
-                                    Image(systemName: "building.fill")
-                                        .font(.system(size: 40))
-                                        .foregroundColor(AppConfig.buttonColor)
-                                    
-                                    Text("Select Hospital")
-                                        .font(.title3)
-                                        .foregroundColor(AppConfig.fontColor)
-                                        .fontWeight(.regular)
-                                    
-                                    Spacer()
-                                }
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 15)
-                                .fill(Color(.systemBackground))
-                                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
-                        )
-                        .padding(.horizontal)
+                        HospitalSelectionCard(hospital: selectedHospital)
                     }
                 }
                 
                 // Only show Services and Departments if a hospital is selected
                 if let hospital = selectedHospital {
                     // MARK: - Latest Appointment Section
-                    if isLoadingAppointment {
-                        ProgressView()
-                            .padding()
-                    } else if let appointment = latestAppointment {
-                        VStack(alignment: .leading, spacing: 15) {
-                            Text("Latest Appointment")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(AppConfig.fontColor)
-                                .padding(.horizontal)
-                            
-                            NavigationLink(destination: LatestAppointmentView(appointment: appointment)) {
-                                HStack(spacing: 15) {
-                                    Image(systemName: appointment.type == .Emergency ? "cross.case.fill" : "calendar.badge.plus")
-                                        .font(.system(size: 30))
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .background(
-                                            appointment.type == .Emergency ? Color.red : Color.mint
-                                        )
-                                        .clipShape(Circle())
-                                    
-                                    VStack(alignment: .leading, spacing: 5) {
-                                        Text(appointment.type.rawValue)
-                                            .font(.headline)
-                                            .foregroundColor(
-                                                appointment.type == .Emergency ? .red : .mint
-                                            )
-                                        
-                                        Text(formattedDate(appointment.date))
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(
-                                            appointment.type == .Emergency ? .red : .mint
-                                        )
-                                }
+                    VStack(alignment: .leading, spacing: 15) {
+                        Text("Latest Appointment")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(AppConfig.fontColor)
+                            .padding(.horizontal)
+                        
+                        if isLoadingAppointment {
+                            ProgressView()
                                 .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .fill(
-                                            appointment.type == .Emergency ?
-                                            Color.red.opacity(0.1) : Color.mint.opacity(0.1)
-                                        )
-                                        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-                                )
-                                .padding(.horizontal)
-                            }
+                        } else if let appointment = latestAppointment {
+                            LatestAppointmentCard(appointment: appointment)
                         }
-                        .padding(.top, 10)
                     }
+                    .padding(.top, 10)
                     
                     // MARK: - Emergency Section
                     VStack(alignment: .leading, spacing: 15) {
@@ -147,38 +287,7 @@ struct HomeTabView: View {
                             .foregroundColor(AppConfig.fontColor)
                             .padding(.horizontal)
                         
-                        NavigationLink(destination: EmergencyAssistanceView()) {
-                            HStack(spacing: 15) {
-                                Image(systemName: "cross.case.fill")
-                                    .font(.system(size: 30))
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.red)
-                                    .clipShape(Circle())
-                                
-                                VStack(alignment: .leading, spacing: 5) {
-                                    Text("Emergency Assistance")
-                                        .font(.headline)
-                                        .foregroundColor(.red)
-                                    
-                                    Text("Immediate medical help")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.red)
-                            }
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 15)
-                                    .fill(Color.red.opacity(0.1))
-                                    .shadow(color: Color.red.opacity(0.1), radius: 5, x: 0, y: 2)
-                            )
-                            .padding(.horizontal)
-                        }
+                        EmergencyCard()
                     }
                     .padding(.top, 10)
                     
@@ -190,77 +299,11 @@ struct HomeTabView: View {
                             .foregroundColor(AppConfig.fontColor)
                             .padding(.horizontal)
                         
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 15) {
-                            // Book Appointment Card
-                            NavigationLink(destination: DepartmentListView()) {
-                                ServiceCard(
-                                    icon: "calendar.badge.plus",
-                                    title: "Book\nAppointment"
-                                )
-                            }
-                            
-                            // Book Lab Test Card
-                            NavigationLink(destination: LabTestBookingView()) {
-                                ServiceCard(
-                                    icon: "cross.vial.fill",
-                                    title: "Book\nLab Test"
-                                )
-                            }
-                            
-                            // Book Bed Card
-                            NavigationLink(destination: CurrentBedBookingView()) {
-                                ServiceCard(
-                                    icon: "bed.double.fill",
-                                    title: "Book\nBed"
-                                )
-                            }
-                        }
-                        .padding(.horizontal)
+                        ServicesGridView()
                     }
                     
                     // MARK: - Departments Section
-                    VStack(alignment: .leading, spacing: 15) {
-                        HStack {
-                            Text("Departments")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(AppConfig.fontColor)
-                            
-                            Spacer()
-                            
-                            NavigationLink(destination: DepartmentListView()) {
-                                HStack(spacing: 4) {
-                                    Text("View All")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                }
-                                .foregroundColor(AppConfig.buttonColor)
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.top, 15)
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(departments.prefix(5)) { department in
-                                    NavigationLink(destination: DoctorListView(doctors: departmentDoctors[department.id] ?? [])) {
-                                        DepartmentCard(
-                                            department: department,
-                                            doctorCount: departmentDoctors[department.id]?.count ?? 0
-                                        )
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                            .padding(.vertical, 6)
-                        }
-                    }
+                    PatientDepartmentsSection(departments: departments, departmentDoctors: departmentDoctors)
                 }
             }
             .padding(.vertical)
@@ -561,3 +604,4 @@ struct DepartmentCard: View {
         )
     }
 }
+
