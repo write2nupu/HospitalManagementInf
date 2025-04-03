@@ -335,6 +335,7 @@ struct GenderPickerView: View {
 struct MedicalInfoView: View {
     @Binding var patientDetails: Patient?
     @State var showDashboard: Bool = false
+    @StateObject private var supabaseController = SupabaseController()
 
     @State private var bloodGroup = ""
     @State private var allergies = ""
@@ -342,6 +343,7 @@ struct MedicalInfoView: View {
 
     @State private var showAlert = false
     @State private var alertMessage = ""
+    @State private var isLoading = false
 
     var body: some View {
         NavigationView {
@@ -368,14 +370,30 @@ struct MedicalInfoView: View {
 
                 Spacer()
 
-                Button(action: { submitDetails() }) {
-                    Text("Submit")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.mint)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                Button(action: { 
+                    isLoading = true
+                    Task {
+                        await submitDetails()
+                    }
+                }) {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.mint)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    } else {
+                        Text("Submit")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.mint)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
                 }
+                .disabled(isLoading)
                 .navigationDestination(isPresented: $showDashboard) {
                     PatientLoginSignupView()
                 }
@@ -387,13 +405,73 @@ struct MedicalInfoView: View {
         }
     }
 
-    private func submitDetails() {
+    private func submitDetails() async {
         if bloodGroup.isEmpty || allergies.isEmpty || medicalConditions.isEmpty {
             alertMessage = "Please fill in all required fields."
             showAlert = true
-        } else {
-            patientDetails = Patient(id: UUID(), fullName: "Your name", gender: "Not Defined", dateOfBirth: Date(), contactNo: "", email: "")
-            showDashboard = true
+            isLoading = false
+            return
+        }
+        
+        guard let patient = patientDetails else {
+            alertMessage = "Patient information is missing."
+            showAlert = true
+            isLoading = false
+            return
+        }
+        
+        do {
+            // Create patient details record
+            let patientDetailsId = UUID()
+            let details = PatientDetails(
+                id: patientDetailsId,
+                blood_group: bloodGroup,
+                allergies: allergies,
+                existing_medical_record: medicalConditions,
+                current_medication: nil,
+                past_surgeries: nil,
+                emergency_contact: nil
+            )
+            
+            // Save patient details record
+            try await supabaseController.client
+                .from("Patientdetails")
+                .insert(details)
+                .execute()
+            
+            print("✅ Patient details saved with ID: \(patientDetailsId)")
+            
+            // Update patient record with detail_id
+            var updatedPatient = patient
+            updatedPatient.detail_id = patientDetailsId
+            
+            try await supabaseController.client
+                .from("Patient")
+                .update(["detail_id": patientDetailsId])
+                .eq("id", value: patient.id.uuidString)
+                .execute()
+            
+            print("✅ Patient record updated with detail_id: \(patientDetailsId)")
+            
+            // Set persistence values in UserDefaults
+            UserDefaults.standard.set(true, forKey: "isLoggedIn")
+            UserDefaults.standard.set(patient.id.uuidString, forKey: "currentUserId")
+            UserDefaults.standard.set("patient", forKey: "userRole")
+            UserDefaults.standard.set(patient.id.uuidString, forKey: "currentPatientId")
+            
+            print("✅ Patient login persisted in UserDefaults - ID: \(patient.id.uuidString)")
+            
+            await MainActor.run {
+                isLoading = false
+                showDashboard = true
+            }
+        } catch {
+            print("❌ Error saving patient details: \(error)")
+            await MainActor.run {
+                alertMessage = "Failed to save medical information: \(error.localizedDescription)"
+                showAlert = true
+                isLoading = false
+            }
         }
     }
 }

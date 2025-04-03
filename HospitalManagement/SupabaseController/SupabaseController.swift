@@ -954,7 +954,7 @@ private struct AnyCodingKey: CodingKey {
 //    }
 
     // MARK: - Patient Operations
-    func fetchPatientById(patientId: UUID) async throws -> Patient {
+    func fetchPatientById(patientId: UUID) async throws -> Patient? {
         let patients: [Patient] = try await client
             .from("Patient")
             .select()
@@ -962,11 +962,7 @@ private struct AnyCodingKey: CodingKey {
             .execute()
             .value
         
-        guard let patient = patients.first else {
-            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Patient not found"])
-        }
-        
-        return patient
+        return patients.first
     }
     
     // MARK: - Hospital Operations

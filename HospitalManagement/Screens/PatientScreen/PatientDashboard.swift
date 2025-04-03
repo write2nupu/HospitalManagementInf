@@ -202,6 +202,7 @@ struct PatientDashboard: View {
             }
             .tag(3)
         }
+        .accentColor(AppConfig.buttonColor)
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 0)
         }
