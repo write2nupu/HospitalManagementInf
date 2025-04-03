@@ -43,13 +43,16 @@ struct LabTestPaymentView: View {
             
             // Create invoice in Supabase
             print("💰 Creating invoice record...")
+            let invoiceId = UUID()
             try await supabase.client.from("Invoice")
                 .insert([
-                    "patientId": patientId.uuidString,
+                    "id": invoiceId.uuidString,
+                    "patientid": patientId.uuidString,
                     "hospitalId": hospitalId.uuidString,
-                    "amount": String(format: "%.2f", amount),
-                    "paymentType": selectedPaymentMethod.rawValue,
-                    "status": "Completed"
+                    "amount": String(Int(amount)),
+                    "paymentType": "labTest",
+                    "status": "paid",
+                    "createdAt": ISO8601DateFormatter().string(from: Date())
                 ])
                 .execute()
             print("✅ Invoice created successfully!")
