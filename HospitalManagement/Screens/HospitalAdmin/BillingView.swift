@@ -59,23 +59,23 @@ struct BillingView: View {
                     VStack {
                         Text("Total Revenue")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppConfig.fontColor.opacity(0.7))
                         Text("₹\(String(format: "%.2f", totalRevenue))")
                             .font(.system(size: 34, weight: .bold))
-                            .foregroundColor(.primary)
+                            .foregroundColor(AppConfig.fontColor)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
-                    .background(Color(.systemBackground))
+                    .background(AppConfig.cardColor)
                     .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.05), radius: 8)
+                    .shadow(color: AppConfig.shadowColor, radius: 8)
                     .padding(.horizontal)
                     
                     // Revenue Breakdown Cards - Single column vertical layout
                     VStack(spacing: 16) {
-                        RevenueCard(title: "Consultants", amount: consultantRevenue, color: .blue)
-                        RevenueCard(title: "Tests", amount: testRevenue, color: .green)
-                        RevenueCard(title: "Beds", amount: bedRevenue, color: .purple)
+                        RevenueCard(title: "Consultants", amount: consultantRevenue, color: AppConfig.buttonColor)
+                        RevenueCard(title: "Tests", amount: testRevenue, color: AppConfig.approvedColor)
+                        RevenueCard(title: "Beds", amount: bedRevenue, color: AppConfig.buttonColor)
                     }
                     .padding(.horizontal)
                     
@@ -84,6 +84,7 @@ struct BillingView: View {
                         Text("Recent Payments")
                             .font(.title3)
                             .fontWeight(.semibold)
+                            .foregroundColor(AppConfig.fontColor)
                         Spacer()
                         navigationLinkToAllPayments
                     }
@@ -97,12 +98,12 @@ struct BillingView: View {
                             .padding()
                     } else if let error = errorMessage {
                         Text(error)
-                            .foregroundColor(.red)
+                            .foregroundColor(AppConfig.redColor)
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding()
                     } else if invoices.isEmpty {
                         Text("No invoices found")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppConfig.fontColor.opacity(0.7))
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding()
                     } else {
@@ -113,9 +114,9 @@ struct BillingView: View {
                                 patientName: patientNames[invoice.patientid]
                             )
                             .padding(.horizontal)
-                            .background(Color(.systemBackground))
+                            .background(AppConfig.cardColor)
                             .cornerRadius(12)
-                            .shadow(color: Color.black.opacity(0.05), radius: 4)
+                            .shadow(color: AppConfig.shadowColor, radius: 4)
                             .padding(.horizontal)
                         }
                     }
@@ -133,7 +134,7 @@ struct BillingView: View {
         .navigationTitle("Billing")
         .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
-        .background(Color(.systemGray6).ignoresSafeArea())
+        .background(AppConfig.backgroundColor.ignoresSafeArea())
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
@@ -141,7 +142,7 @@ struct BillingView: View {
                 } label: {
                     Image(systemName: "person.circle.fill")
                         .font(.title2)
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                 }
             }
         }
@@ -160,7 +161,7 @@ struct BillingView: View {
         
         return NavigationLink(destination: AllPaymentsView(invoices: paidInvoices, patientNames: patientNames)) {
             Text("See All")
-                .foregroundColor(.blue)
+                .foregroundColor(AppConfig.buttonColor)
         }
     }
     
@@ -266,21 +267,44 @@ struct RevenueCard: View {
     let title: String
     let amount: Double
     let color: Color
-
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            Text("₹\(String(format: "%.2f", amount))")
-                .font(.headline)
-                .foregroundColor(color)
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(AppConfig.fontColor)
+                Text("₹\(String(format: "%.2f", amount))")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(AppConfig.fontColor)
+            }
+            Spacer()
+            Circle()
+                .fill(color.opacity(0.2))
+                .frame(width: 40, height: 40)
+                .overlay(
+                    Image(systemName: iconName)
+                        .foregroundColor(color)
+                )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(Color(.systemBackground))
+        .background(AppConfig.cardColor)
         .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 8)
+        .shadow(color: AppConfig.shadowColor, radius: 5)
+    }
+    
+    private var iconName: String {
+        switch title {
+        case "Consultants":
+            return "stethoscope"
+        case "Tests":
+            return "cross.case.fill"
+        case "Beds":
+            return "bed.double.fill"
+        default:
+            return "dollarsign.circle.fill"
+        }
     }
 }
 
@@ -291,14 +315,12 @@ struct RecentPaymentRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(patientName ?? "Loading...")
+                Text(patientName ?? "Unknown Patient")
                     .font(.headline)
-                Text(invoice.paymentType.rawValue.capitalized)
+                    .foregroundColor(AppConfig.fontColor)
+                Text(invoice.paymentType.rawValue)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
-                Text(invoice.createdAt, formatter: dateFormatter1)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
             }
             
             Spacer()
@@ -306,18 +328,22 @@ struct RecentPaymentRow: View {
             VStack(alignment: .trailing, spacing: 4) {
                 Text("₹\(String(format: "%.2f", Double(invoice.amount)))")
                     .font(.headline)
-                    .foregroundColor(.green)
-                Text("PAID")
-                    .font(.caption2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.green)
-                    .cornerRadius(4)
+                    .foregroundColor(AppConfig.fontColor)
+                Text(formatDate(invoice.createdAt))
+                    .font(.caption)
+                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
             }
         }
         .padding()
+        .background(AppConfig.cardColor)
+        .cornerRadius(12)
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 

@@ -41,13 +41,19 @@ struct AdminTabView: View {
             }
         }
         .tabViewStyle(DefaultTabViewStyle())
+        .tint(AppConfig.buttonColor)
         .onAppear {
             // Hide the back button appearance in tab views
             let appearance = UINavigationBarAppearance()
             appearance.configureWithDefaultBackground()
+            appearance.backgroundColor = UIColor(AppConfig.backgroundColor)
+            appearance.titleTextAttributes = [.foregroundColor: UIColor(AppConfig.fontColor)]
+            appearance.largeTitleTextAttributes = [.foregroundColor: UIColor(AppConfig.fontColor)]
+            
             UINavigationBar.appearance().standardAppearance = appearance
             UINavigationBar.appearance().compactAppearance = appearance
             UINavigationBar.appearance().scrollEdgeAppearance = appearance
+            UINavigationBar.appearance().tintColor = UIColor(AppConfig.buttonColor)
         }
     }
 }

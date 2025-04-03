@@ -18,14 +18,12 @@ struct LabReport: Identifiable {
 
 enum ReportStatus: String {
     case pending = "Pending"
-    case inProgress = "In Progress"
     case completed = "Completed"
     
     var color: Color {
         switch self {
-        case .pending: return .orange
-        case .inProgress: return .blue
-        case .completed: return .green
+        case .pending: return AppConfig.pendingColor
+        case .completed: return AppConfig.approvedColor
         }
     }
 }
@@ -66,11 +64,12 @@ struct LabReportRequestsView: View {
                 // Search Bar
                 HStack {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConfig.fontColor)
                     TextField("Search reports...", text: $searchText)
+                        .foregroundColor(AppConfig.fontColor)
                 }
                 .padding(8)
-                .background(Color(.systemGray6))
+                .background(AppConfig.searchBar)
                 .cornerRadius(10)
                 
                 // Filter Pills
@@ -86,12 +85,6 @@ struct LabReportRequestsView: View {
                             selectedFilter = .pending
                         }
                         
-                        FilterPill(title: ReportStatus.inProgress.rawValue,
-                                 isSelected: selectedFilter == .inProgress,
-                                 color: ReportStatus.inProgress.color) {
-                            selectedFilter = .inProgress
-                        }
-                        
                         FilterPill(title: ReportStatus.completed.rawValue,
                                  isSelected: selectedFilter == .completed,
                                  color: ReportStatus.completed.color) {
@@ -101,23 +94,25 @@ struct LabReportRequestsView: View {
                 }
             }
             .padding()
-            .background(Color(.systemBackground))
+            .background(AppConfig.backgroundColor)
             
             // Reports List
             Group {
                 if isLoading {
                     ProgressView("Loading lab reports...")
+                        .foregroundColor(AppConfig.fontColor)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error = errorMessage {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.system(size: 50))
-                            .foregroundColor(.orange)
+                            .foregroundColor(AppConfig.redColor)
                         Text("Error Loading Lab Tests")
                             .font(.headline)
+                            .foregroundColor(AppConfig.fontColor)
                         Text(error)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppConfig.fontColor.opacity(0.7))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                         Button(action: {
@@ -129,7 +124,7 @@ struct LabReportRequestsView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 10)
-                                .background(Color.blue)
+                                .background(AppConfig.buttonColor)
                                 .cornerRadius(8)
                         }
                     }
@@ -155,17 +150,6 @@ struct LabReportRequestsView: View {
                                 if report.status == .pending {
                                     Button {
                                         Task {
-                                            await updateStatus(for: report.id, to: .inProgress)
-                                        }
-                                    } label: {
-                                        Label("Start", systemImage: "play.fill")
-                                    }
-                                    .tint(.blue)
-                                }
-                                
-                                if report.status == .inProgress {
-                                    Button {
-                                        Task {
                                             await updateStatus(for: report.id, to: .completed)
                                         }
                                     } label: {
@@ -179,6 +163,7 @@ struct LabReportRequestsView: View {
                 }
             }
         }
+        .background(AppConfig.backgroundColor)
         .navigationTitle("Lab Reports")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -187,6 +172,7 @@ struct LabReportRequestsView: View {
         .refreshable {
             await loadLabReports()
         }
+        .clipped()
     }
     
     private func loadLabReports() async {
@@ -233,7 +219,7 @@ struct LabReportRequestsView: View {
             switch status {
             case .completed:
                 labTestStatus = .completed
-            case .inProgress, .pending:
+            case .pending:
                 labTestStatus = .pending
             }
             
@@ -350,20 +336,24 @@ struct LabReportRow: View {
             HStack {
                 Text(report.patientName)
                     .font(.headline)
+                    .foregroundColor(AppConfig.fontColor)
                 Spacer()
                 LabReportStatusBadge(status: report.status)
             }
             
             Text(report.testType)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConfig.fontColor.opacity(0.7))
             
             Text(report.requestDate.formatted(date: .abbreviated, time: .shortened))
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConfig.fontColor.opacity(0.7))
         }
         .padding(.vertical, 4)
-        .contentShape(Rectangle())  // Make entire row tappable
+        .background(AppConfig.cardColor)
+        .cornerRadius(10)
+        .shadow(color: AppConfig.shadowColor, radius: 5, x: 0, y: 2)
+        .contentShape(Rectangle())
         .onTapGesture {
             if report.status != .completed {
                 showingTestValueInput = true
@@ -372,7 +362,6 @@ struct LabReportRow: View {
         .sheet(isPresented: $showingTestValueInput) {
             AdminLabTestValueView(testId: report.id, testType: report.testType)
         }
-        // Visual feedback that completed tests are not interactive
         .opacity(report.status == .completed ? 0.8 : 1.0)
     }
 }
@@ -394,7 +383,7 @@ struct LabReportStatusBadge: View {
 struct FilterPill: View {
     let title: String
     let isSelected: Bool
-    var color: Color = .blue
+    var color: Color = AppConfig.buttonColor
     let action: () -> Void
     
     var body: some View {
@@ -417,24 +406,26 @@ struct EmptyReportsView: View {
         VStack(spacing: 16) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 50))
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
             
             if searchText.isEmpty {
                 Text("No Lab Reports")
                     .font(.headline)
+                    .foregroundColor(AppConfig.fontColor)
                 Text("Lab report requests will appear here")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
             } else {
                 Text("No Matching Reports")
                     .font(.headline)
+                    .foregroundColor(AppConfig.fontColor)
                 Text("Try adjusting your search")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGray6))
+        .background(AppConfig.backgroundColor)
     }
 }
 

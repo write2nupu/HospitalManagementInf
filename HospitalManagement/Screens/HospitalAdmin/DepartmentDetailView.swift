@@ -187,8 +187,8 @@ struct DepartmentDetailView: View {
             }
             .padding(.vertical)
         }
-        .navigationTitle(adminName)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle("Department Details")
+        .navigationBarTitleDisplayMode(.inline)
         .searchable(
             text: $searchText,
             placement: .navigationBarDrawer(displayMode: .always),

@@ -338,33 +338,29 @@ struct BedStatCard: View {
     let iconColor: Color
     
     var body: some View {
-        HStack(spacing: 15) {
-            Circle()
-                .fill(iconColor.opacity(0.1))
-                .frame(width: 50, height: 50)
-                .overlay(
-                    Image(systemName: iconName)
-                        .font(.system(size: 24))
-                        .foregroundColor(iconColor)
-                )
+        HStack(spacing: 16) {
+            Image(systemName: iconName)
+                .font(.title2)
+                .foregroundColor(iconColor)
+                .frame(width: 40, height: 40)
+                .background(iconColor.opacity(0.1))
+                .clipShape(Circle())
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
+                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
                 Text("\(count)")
-                    .font(.title)
+                    .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppConfig.fontColor)
             }
-            
-            Spacer()
         }
         .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(15)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .frame(maxWidth: .infinity)
+        .background(AppConfig.cardColor)
+        .cornerRadius(12)
+        .shadow(color: AppConfig.shadowColor, radius: 5)
     }
 }
 
@@ -376,28 +372,31 @@ struct BedCategoryCard: View {
     let iconColor: Color
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
+            // Icon and Title
             HStack {
                 Image(systemName: iconName)
-                    .font(.system(size: 20))
+                    .font(.title2)
                     .foregroundColor(iconColor)
-                Spacer()
+                    .frame(width: 40, height: 40)
+                    .background(iconColor.opacity(0.1))
+                    .clipShape(Circle())
+                
                 Text(title)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppConfig.fontColor)
             }
             
-            Spacer()
-            
+            // Stats
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Total")
                         .font(.caption)
-                        .foregroundColor(.secondary)
-                    
+                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
                     Text("\(total)")
                         .font(.title3)
                         .fontWeight(.bold)
+                        .foregroundColor(AppConfig.fontColor)
                 }
                 
                 Spacer()
@@ -405,22 +404,19 @@ struct BedCategoryCard: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Available")
                         .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-                    
+                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
                     Text("\(available)")
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConfig.approvedColor)
                 }
             }
         }
         .padding()
-        .frame(width: 200, height: 140)
-        .background(Color(.systemBackground))
-        .cornerRadius(15)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .frame(width: 200)
+        .background(AppConfig.cardColor)
+        .cornerRadius(12)
+        .shadow(color: AppConfig.shadowColor, radius: 5)
     }
 }
 

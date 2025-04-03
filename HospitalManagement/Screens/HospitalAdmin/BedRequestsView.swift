@@ -57,6 +57,7 @@ struct BedRequestsView: View {
         }
         .listStyle(.plain)
         .navigationTitle("Bed Requests")
+        .navigationBarTitleDisplayMode(.inline)
     }
 } 
 

@@ -70,7 +70,7 @@ struct AddBedView: View {
 //                    Toggle("Available for Booking", isOn: $isAvailable)
 //                }
             }
-            .navigationTitle("Add New Bed")
+            .navigationTitle("Add Bed")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

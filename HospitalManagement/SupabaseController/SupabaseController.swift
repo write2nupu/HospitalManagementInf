@@ -2586,8 +2586,6 @@ extension SupabaseController {
             switch statusString.lowercased() {
             case "completed":
                 reportStatus = .completed
-            case "in progress":
-                reportStatus = .inProgress
             default:
                 reportStatus = .pending
             }

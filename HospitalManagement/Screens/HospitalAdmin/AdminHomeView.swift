@@ -60,7 +60,7 @@ struct AdminHomeView: View {
                 }
             }
         }
-        .background(Color(.systemGray6).ignoresSafeArea())
+        .background(AppConfig.backgroundColor.ignoresSafeArea())
         .navigationTitle(hospitalName)
         .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
@@ -71,7 +71,7 @@ struct AdminHomeView: View {
                 } label: {
                     Image(systemName: "person.circle.fill")
                         .font(.title2)
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                 }
             }
         }
@@ -242,8 +242,8 @@ struct QuickActionButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.mint.opacity(0.1))
-            .foregroundColor(.mint)
+            .background(AppConfig.primaryColor)
+            .foregroundColor(AppConfig.buttonColor)
             .cornerRadius(10)
         }
     }
@@ -256,10 +256,11 @@ struct DepartmentsSection: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Departments")
                 .font(.headline)
+                .foregroundColor(AppConfig.fontColor)
             
             if departments.isEmpty {
                 Text("No departments added yet")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding()
             } else {
@@ -278,10 +279,11 @@ struct DoctorsSection: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Doctors")
                 .font(.headline)
+                .foregroundColor(AppConfig.fontColor)
             
             if doctors.isEmpty {
                 Text("No doctors added yet")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding()
             } else {
@@ -289,7 +291,6 @@ struct DoctorsSection: View {
                     DoctorRow(doctor: doctor)
                 }
             }
-               
         }
         .navigationBarBackButtonHidden(true)
     }
@@ -303,20 +304,21 @@ struct DepartmentRow: View {
             VStack(alignment: .leading) {
                 Text(department.name)
                     .font(.headline)
+                    .foregroundColor(AppConfig.fontColor)
                 if let description = department.description {
                     Text(description)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
                 }
             }
             Spacer()
             Text("₹\(String(format: "%.2f", department.fees))")
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(AppConfig.cardColor)
         .cornerRadius(10)
-        .shadow(color: Color.gray.opacity(0.2), radius: 5)
+        .shadow(color: AppConfig.shadowColor, radius: 5)
     }
 }
 
@@ -328,24 +330,24 @@ struct DoctorRow: View {
             VStack(alignment: .leading) {
                 Text(doctor.full_name)
                     .font(.headline)
+                    .foregroundColor(AppConfig.fontColor)
                 Text(doctor.qualifications)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
             }
             Spacer()
             if doctor.is_active {
                 Text("Active")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppConfig.approvedColor)
             } else {
                 Text("Inactive")
-                    .foregroundColor(.red)
+                    .foregroundColor(AppConfig.redColor)
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(AppConfig.cardColor)
         .cornerRadius(10)
-        .shadow(color: Color.gray.opacity(0.2), radius: 5)
-        
+        .shadow(color: AppConfig.shadowColor, radius: 5)
     }
 }
 
@@ -378,19 +380,17 @@ struct RequestCard: View {
             
             Text("\(title)")
                 .font(.title)
-                .foregroundColor(.primary)
-            
-//            Spacer()
+                .foregroundColor(AppConfig.fontColor)
             
             Text("Tap to view all requests")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConfig.fontColor.opacity(0.7))
         }
         .padding()
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(AppConfig.cardColor)
         .cornerRadius(15)
-        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+        .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)
     }
 }
 
@@ -400,24 +400,25 @@ struct SearchBar: View {
     var body: some View {
         HStack {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConfig.fontColor.opacity(0.7))
             
             TextField("Search departments...", text: $text)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
+                .foregroundColor(AppConfig.fontColor)
             
             if !text.isEmpty {
                 Button(action: {
                     text = ""
                 }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
                 }
             }
         }
         .padding(.vertical, 8)
-        .background(Color(.systemBackground))
+        .background(AppConfig.searchBar)
     }
 }
 
@@ -438,22 +439,22 @@ struct AddDepartmentButton: View {
         } label: {
             VStack(spacing: 12) {
                 Circle()
-                    .fill(Color.mint.opacity(0.1))
+                    .fill(AppConfig.primaryColor)
                     .frame(width: 60, height: 60)
                     .overlay(
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 30))
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                     )
                 Text("Add Department")
                     .font(.headline)
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 20)
-            .background(Color(.systemBackground))
+            .background(AppConfig.cardColor)
             .cornerRadius(15)
-            .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 0)
+            .shadow(color: AppConfig.shadowColor, radius: 8)
             .padding(.horizontal)
         }
         .padding(.top)
@@ -470,6 +471,7 @@ struct RequestsSection: View {
             Text("Active Requests")
                 .font(.title2)
                 .fontWeight(.semibold)
+                .foregroundColor(AppConfig.fontColor)
                 .padding(.horizontal)
             
             // Emergency Requests Card
@@ -479,7 +481,7 @@ struct RequestsSection: View {
                 RequestCard(
                     title: "Emergency",
                     iconName: "cross.case.fill",
-                    iconColor: .red,
+                    iconColor: AppConfig.redColor,
                     count: emergencyRequestsCount
                 )
                 .frame(maxWidth: .infinity)
@@ -493,7 +495,7 @@ struct RequestsSection: View {
                 RequestCard(
                     title: "Leave Requests",
                     iconName: "calendar.badge.clock",
-                    iconColor: .orange,
+                    iconColor: AppConfig.pendingColor,
                     count: leaveRequestsCount
                 )
                 .frame(maxWidth: .infinity)
@@ -507,7 +509,7 @@ struct RequestsSection: View {
                 RequestCard(
                     title: "Lab Reports",
                     iconName: "flask.fill",
-                    iconColor: .blue,
+                    iconColor: AppConfig.buttonColor,
                     count: labReportRequestsCount
                 )
                 .frame(maxWidth: .infinity)
@@ -531,6 +533,7 @@ struct DepartmentsListSection: View {
                 Text("Departments")
                     .font(.title2)
                     .fontWeight(.semibold)
+                    .foregroundColor(AppConfig.fontColor)
                 
                 Spacer()
                 
@@ -540,7 +543,7 @@ struct DepartmentsListSection: View {
                     } label: {
                         Text("View All")
                             .font(.subheadline)
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                     }
                 }
             }
@@ -571,7 +574,7 @@ struct LoadingDepartmentsView: View {
             ProgressView()
             Text("Loading departments...")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConfig.fontColor.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -585,10 +588,10 @@ struct ErrorDepartmentsView: View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 40))
-                .foregroundColor(.red.opacity(0.3))
+                .foregroundColor(AppConfig.redColor.opacity(0.3))
             Text(message)
                 .font(.headline)
-                .foregroundColor(.primary)
+                .foregroundColor(AppConfig.fontColor)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -601,13 +604,13 @@ struct EmptyDepartmentsView: View {
         VStack(spacing: 12) {
             Image(systemName: "building.2")
                 .font(.system(size: 40))
-                .foregroundColor(.mint.opacity(0.3))
+                .foregroundColor(AppConfig.buttonColor.opacity(0.3))
             Text("No departments to display")
                 .font(.headline)
-                .foregroundColor(.primary)
+                .foregroundColor(AppConfig.fontColor)
             Text("Add a department to get started")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConfig.fontColor.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -619,13 +622,13 @@ struct NoMatchingDepartmentsView: View {
         VStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 40))
-                .foregroundColor(.mint.opacity(0.3))
+                .foregroundColor(AppConfig.buttonColor.opacity(0.3))
             Text("No departments found")
                 .font(.headline)
-                .foregroundColor(.primary)
+                .foregroundColor(AppConfig.fontColor)
             Text("Try a different search term")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConfig.fontColor.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -666,48 +669,48 @@ struct DepartmentCardView: View {
                 Text(department.name)
                     .font(.title3)
                     .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppConfig.fontColor)
                 Spacer()
                 Text("\(doctorCount.total) doctors")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
             }
             
             // Department Icon and Info
             HStack(spacing: 8) {
                 Image(systemName: "stethoscope")
                     .font(.system(size: 20))
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Department ID")
                         .font(.subheadline)
-                        .foregroundColor(.primary)
+                        .foregroundColor(AppConfig.fontColor)
                     Text("#\(department.id.uuidString.prefix(8))")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
                 }
             }
             
             // Active/Inactive Doctors
             HStack(spacing: 8) {
                 Image(systemName: "person.2.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppConfig.approvedColor)
                 Text("\(doctorCount.active) active")
                     .font(.subheadline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppConfig.fontColor)
                 Text("•")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
                 Text("\(doctorCount.total - doctorCount.active) inactive")
                     .font(.subheadline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppConfig.fontColor)
             }
         }
         .padding()
         .frame(width: 300, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 15)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)
         )
     }
 }

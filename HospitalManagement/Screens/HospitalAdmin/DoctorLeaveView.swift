@@ -32,7 +32,7 @@ struct DoctorLeaveView: View {
                     .listRowSeparator(.hidden)
             } else if let error = errorMessage {
                 Text(error)
-                    .foregroundColor(.red)
+                    .foregroundColor(AppConfig.redColor)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -40,15 +40,15 @@ struct DoctorLeaveView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "doc.text.magnifyingglass")
                         .font(.system(size: 50))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
                     Text("No leave requests found")
                         .font(.headline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConfig.fontColor)
                     Text(selectedFilter == nil ? 
                         "When doctors request leave, they will appear here" :
                         "No \(selectedFilter?.rawValue.lowercased() ?? "") leave requests found")
                         .font(.subheadline)
-                        .foregroundColor(.secondary.opacity(0.8))
+                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -77,9 +77,9 @@ struct DoctorLeaveView: View {
             }
         }
         .listStyle(.plain)
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("Leave Requests")
-        .navigationBarTitleDisplayMode(.large)
+        .background(AppConfig.backgroundColor)
+        .navigationTitle("Doctor Leave")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
@@ -153,21 +153,21 @@ struct LeaveRequestCard: View {
                     // Doctor Profile Image
                     ZStack {
                         Circle()
-                            .fill(Color.mint.opacity(0.1))
+                            .fill(AppConfig.primaryColor)
                             .frame(width: 50, height: 50)
                         
                         Image(systemName: "person.circle.fill")
                             .font(.system(size: 30))
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Dr. \(leaveDetail.doctor.full_name)")
                             .font(.headline)
-                            .foregroundColor(.primary)
+                            .foregroundColor(AppConfig.fontColor)
                         Text(leaveDetail.department?.name ?? "No Department")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppConfig.fontColor.opacity(0.7))
                     }
                     
                     Spacer()
@@ -182,38 +182,40 @@ struct LeaveRequestCard: View {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 12) {
                         Image(systemName: "calendar")
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                             .frame(width: 24)
                         
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Leave Period")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppConfig.fontColor.opacity(0.7))
                             Text("\(formatDate(leaveDetail.leave.startDate)) - \(formatDate(leaveDetail.leave.endDate))")
                                 .font(.body)
                                 .fontWeight(.medium)
+                                .foregroundColor(AppConfig.fontColor)
                         }
                     }
                     
                     HStack(spacing: 12) {
                         Image(systemName: "text.bubble")
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                             .frame(width: 24)
                         
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Reason")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppConfig.fontColor.opacity(0.7))
                             Text(leaveDetail.leave.reason)
                                 .font(.body)
                                 .fontWeight(.medium)
+                                .foregroundColor(AppConfig.fontColor)
                         }
                     }
                 }
             }
             
             Image(systemName: "chevron.right")
-                .foregroundColor(.gray)
+                .foregroundColor(AppConfig.fontColor.opacity(0.5))
                 .font(.system(size: 14, weight: .semibold))
                 .padding(.leading, 8)
         }
@@ -222,8 +224,8 @@ struct LeaveRequestCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)
         )
         .contentShape(Rectangle())
     }
@@ -239,6 +241,17 @@ struct LeaveRequestCard: View {
 struct StatusBadge3: View {
     let status: LeaveStatus
     
+    var statusColor: Color {
+        switch status {
+        case .pending:
+            return AppConfig.pendingColor
+        case .approved:
+            return AppConfig.approvedColor
+        case .rejected:
+            return AppConfig.rejectedColor
+        }
+    }
+    
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: statusIcon)
@@ -249,8 +262,8 @@ struct StatusBadge3: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(backgroundColor)
-        .foregroundColor(.white)
+        .background(statusColor.opacity(0.1))
+        .foregroundColor(statusColor)
         .cornerRadius(8)
     }
     
@@ -262,17 +275,6 @@ struct StatusBadge3: View {
             return "checkmark.circle.fill"
         case .rejected:
             return "xmark.circle.fill"
-        }
-    }
-    
-    private var backgroundColor: Color {
-        switch status {
-        case .pending:
-            return .orange
-        case .approved:
-            return .green
-        case .rejected:
-            return .red
         }
     }
 }
