@@ -169,12 +169,12 @@ struct LabTestPaymentView: View {
     }
 }
 
-#Preview {
-    LabTestPaymentView(
-        amount: 1500,
-        selectedTests: [.completeBloodCount, .bloodSugarTest],
-        preferredDate: Date(),
-        prescriptionId: UUID(),
-        onComplete: { _ in }
-    )
-}
+//#Preview {
+//    LabTestPaymentView(
+//        amount: 1500,
+//        selectedTests: [.completeBloodCount, .bloodSugarTest],
+//        preferredDate: Date(),
+//        prescriptionId: UUID(),
+//        onComplete: { _ in }
+//    )
+//}

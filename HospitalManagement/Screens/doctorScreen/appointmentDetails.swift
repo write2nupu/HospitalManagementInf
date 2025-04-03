@@ -1247,7 +1247,9 @@ struct AppointmentDetailView: View {
        Task {
            do {
                try await supabase.updateAppointmentStatus(appointmentId: appointment.id, status: newStatus)
-               onStatusUpdate?(newStatus) // Notify parent view of the status change
+               await MainActor.run {
+                   onStatusUpdate?(newStatus) // Notify parent view of the status change
+               }
            } catch {
                print("Error updating appointment status: \(error)")
            }

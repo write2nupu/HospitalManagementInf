@@ -617,23 +617,24 @@ enum LeaveStatus: String, Codable {
     case rejected = "Rejected"
 }
 
-struct labTest{
+struct LabTest: Codable {
     let bookingId: UUID
-    let testName: [labTestName]
+    let testName: [LabTestName]
     let status: TestStatus
     let testDate: Date
     let testValue: Float
-    let components : [String]?
+    let components: [String]?
     let labTestPrice: Double
     let hospitalid: UUID
-    let prescriptionId: UUID
+    let prescriptionId: UUID?
     let patientid: UUID
     
     enum TestStatus: String, Codable {
         case pending = "Pending"
         case completed = "Completed"
     }
-    enum labTestName: String, Codable, CaseIterable {
+    
+    enum LabTestName: String, Codable, CaseIterable {
         case completeBloodCount = "Complete Blood Count"
         case bloodSugarTest = "Blood Sugar Test"
         case lipidProfile = "Lipid Profile"
@@ -673,7 +674,55 @@ struct labTest{
             case .postprandialBloodSugar: return 300.0
             }
         }
-        
     }
     
+    enum CodingKeys: String, CodingKey {
+        case bookingId, testName, status, testDate, testValue, components
+        case labTestPrice, hospitalid, prescriptionId, patientid
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        bookingId = try container.decode(UUID.self, forKey: .bookingId)
+        
+        // Handle testName as either a single string or array
+        if let testNameString = try? container.decode(String.self, forKey: .testName),
+           let testName = LabTestName(rawValue: testNameString) {
+            self.testName = [testName]
+        } else {
+            let testNameStrings = try container.decode([String].self, forKey: .testName)
+            self.testName = testNameStrings.compactMap { LabTestName(rawValue: $0) }
+        }
+        
+        let statusString = try container.decode(String.self, forKey: .status)
+        status = TestStatus(rawValue: statusString) ?? .pending
+        
+        testValue = try container.decode(Float.self, forKey: .testValue)
+        components = try container.decodeIfPresent([String].self, forKey: .components)
+        labTestPrice = try container.decode(Double.self, forKey: .labTestPrice)
+        hospitalid = try container.decode(UUID.self, forKey: .hospitalid)
+        prescriptionId = try container.decodeIfPresent(UUID.self, forKey: .prescriptionId)
+        patientid = try container.decode(UUID.self, forKey: .patientid)
+        
+        // Handle date decoding
+        let dateString = try container.decode(String.self, forKey: .testDate)
+        let dateFormatter = ISO8601DateFormatter()
+        if let date = dateFormatter.date(from: dateString) {
+            testDate = date
+        } else {
+            let simpleFormatter = DateFormatter()
+            simpleFormatter.dateFormat = "yyyy-MM-dd"
+            simpleFormatter.locale = Locale(identifier: "en_US_POSIX")
+            if let date = simpleFormatter.date(from: dateString) {
+                testDate = date
+            } else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .testDate,
+                    in: container,
+                    debugDescription: "Cannot decode date string \(dateString)"
+                )
+            }
+        }
+    }
 }

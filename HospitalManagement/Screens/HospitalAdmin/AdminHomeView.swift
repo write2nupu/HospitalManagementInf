@@ -482,7 +482,7 @@ struct RequestsSection: View {
             
             // Lab Report Requests Card
             NavigationLink {
-                LabReportViewAdmin()
+               // LabReportViewAdmin()
             } label: {
                 RequestCard(
                     title: "Lab Reports",

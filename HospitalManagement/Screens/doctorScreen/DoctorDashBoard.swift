@@ -251,7 +251,7 @@ struct DoctorDashBoard: View {
             
             // Load leave info
             guard !Task.isCancelled else { return }
-            let latestLeave = try await supabase.fetchLatestLeave(doctorId: doctorId)
+            let latestLeave = try await supabase.fetchPendingLeave(doctorId: doctorId)
             
             guard !Task.isCancelled && isViewActive else { return }
             
