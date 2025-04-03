@@ -32,6 +32,8 @@ struct DoctorDashBoard: View {
 //    VARIABLE TO store Doctor Leave
     @State private var docLeave: Leave? = nil
     
+    @State private var showCancelledAlert = false
+    
     // Computed property for upcoming appointments
     private var upcomingAppointments: [Appointment] {
         let now = Date()
@@ -162,9 +164,6 @@ struct DoctorDashBoard: View {
                                 VStack(spacing: 12) {
                                     ForEach(upcomingAppointments) { appointment in
                                         upcomingAppointmentCard(appointment: appointment)
-                                            .onTapGesture {
-                                                selectedAppointment = appointment
-                                            }
                                     }
                                 }
                                 .padding(.horizontal)
@@ -178,21 +177,28 @@ struct DoctorDashBoard: View {
         .background(AppConfig.backgroundColor)
 //        .frame(maxHeight: screenHeight)
         .sheet(item: $selectedAppointment) { appointment in
-            AppointmentDetailView(
-                appointment: appointment,
-                onStatusUpdate: { newStatus in
-                    Task {
-                        // Update local state immediately
-                        await MainActor.run {
-                            if let index = appointments.firstIndex(where: { $0.id == appointment.id }) {
-                                appointments[index].status = newStatus
+            if appointment.status != .cancelled {
+                AppointmentDetailView(
+                    appointment: appointment,
+                    onStatusUpdate: { newStatus in
+                        Task {
+                            // Update local state immediately
+                            await MainActor.run {
+                                if let index = appointments.firstIndex(where: { $0.id == appointment.id }) {
+                                    appointments[index].status = newStatus
+                                }
                             }
+                            // Then refresh data from server
+                            await refreshAppointmentsAndStats()
                         }
-                        // Then refresh data from server
-                        await refreshAppointmentsAndStats()
                     }
-                }
-            )
+                )
+            }
+        }
+        .alert("Cancelled Appointment", isPresented: $showCancelledAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("This appointment has been cancelled and cannot be viewed or modified.")
         }
         .onAppear {
             isViewActive = true
@@ -441,7 +447,13 @@ struct DoctorDashBoard: View {
         .background(AppConfig.cardColor)
         .cornerRadius(15)
         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-        
+        .onTapGesture {
+            if appointment.status == .cancelled {
+                showCancelledAlert = true
+            } else {
+                selectedAppointment = appointment
+            }
+        }
     }
     
     // Helper function to format date with custom format
