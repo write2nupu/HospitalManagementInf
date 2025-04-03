@@ -24,6 +24,7 @@ struct AdminHomeView: View {
     // Emergency and bed request counts (to be implemented with real data later)
     @State private var emergencyRequestsCount = 0
     @State private var leaveRequestsCount = 0
+    @State private var labReportRequestsCount = 0
     
     var filteredDepartments: [Department] {
         if searchText.isEmpty {
@@ -37,14 +38,15 @@ struct AdminHomeView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
+            ScrollView(.vertical, showsIndicators: true) {
                 VStack(spacing: 24) {
                     // Add Department Card
                     AddDepartmentButton(showAddDepartment: $showAddDepartment)
+                        .padding(.top, 8)
                     
                     VStack(spacing: 24) {
                         // Requests Section
-                        RequestsSection(emergencyRequestsCount: emergencyRequestsCount, leaveRequestsCount: leaveRequestsCount)
+                        RequestsSection(emergencyRequestsCount: emergencyRequestsCount, leaveRequestsCount: leaveRequestsCount, labReportRequestsCount: labReportRequestsCount)
                         
                         // Departments Section
                         DepartmentsListSection(
@@ -56,6 +58,7 @@ struct AdminHomeView: View {
                         )
                     }
                 }
+                .padding(.bottom, 16)
             }
         }
         .background(Color(.systemGray6).ignoresSafeArea())
@@ -440,6 +443,7 @@ struct AddDepartmentButton: View {
 struct RequestsSection: View {
     let emergencyRequestsCount: Int
     let leaveRequestsCount: Int
+    let labReportRequestsCount: Int
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -471,6 +475,20 @@ struct RequestsSection: View {
                     iconName: "calendar.badge.clock",
                     iconColor: .orange,
                     count: leaveRequestsCount
+                )
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal)
+            
+            // Lab Report Requests Card
+            NavigationLink {
+                LabReportViewAdmin()
+            } label: {
+                RequestCard(
+                    title: "Lab Reports",
+                    iconName: "clipboard.text.fill",
+                    iconColor: .blue,
+                    count: labReportRequestsCount
                 )
                 .frame(maxWidth: .infinity)
             }
