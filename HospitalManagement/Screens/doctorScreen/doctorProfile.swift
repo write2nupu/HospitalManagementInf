@@ -90,6 +90,8 @@ struct DoctorProfileView: View {
                 }
             }
             .navigationTitle("Doctor Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            
             .tint(AppConfig.buttonColor)
             .fullScreenCover(isPresented: .constant(isLoggedOut)) {
                 UserRoleScreen()
@@ -138,7 +140,28 @@ struct DoctorProfileView: View {
     }
     
     private func handleLogout() {
-        isLoggedOut = true
+        Task {
+            do {
+                // Sign out the user from Supabase authentication
+                try await SupabaseController().client.auth.signOut()
+                
+                // Clear user data from UserDefaults
+                UserDefaults.standard.removeObject(forKey: "currentUserId")
+                UserDefaults.standard.removeObject(forKey: "isLoggedIn")
+                UserDefaults.standard.removeObject(forKey: "userRole")
+                
+                // Redirect to the user role screen
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let window = windowScene.windows.first {
+                    window.rootViewController = UIHostingController(rootView: UserRoleScreen())
+                    window.makeKeyAndVisible()
+                }
+                
+                isLoggedOut = true
+            } catch {
+                print("Error signing out: \(error.localizedDescription)")
+            }
+        }
     }
 }
 

@@ -952,7 +952,7 @@ private struct AnyCodingKey: CodingKey {
 //            .upsert(prescription)
 //            .execute()
 //    }
-    
+
     // MARK: - Patient Operations
     func fetchPatientById(patientId: UUID) async throws -> Patient {
         let patients: [Patient] = try await client
@@ -2002,6 +2002,13 @@ extension SupabaseController {
             status: LeaveStatus(rawValue: leaveResponse.status) ?? .pending
         )
     }
+    func updateAppointmentStatus(appointmentId: UUID, status: AppointmentStatus) async throws {
+        try await client
+            .from("Appointment")
+            .update(["status": status.rawValue])
+            .eq("id", value: appointmentId.uuidString)
+            .execute()
+    }
 }
 
 // MARK: - Leave Data Models
@@ -2048,3 +2055,5 @@ private struct LeaveResponse: Codable {
         case status
     }
 }
+
+

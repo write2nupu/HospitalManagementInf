@@ -192,8 +192,9 @@ struct BedBookingView: View {
         isLoading = true
         do {
             // First load the patient details using the stored patient ID
-            if let patientId = UUID(uuidString: currentUserId) {
-                if let patientDetails = try await supabaseController.fetchPatientDetails(patientId: patientId) {
+            if let patientId = UserDefaults.standard.string(forKey: "currentPatientId"),
+               let patientUUID = UUID(uuidString: patientId) {
+                if let patientDetails = try await supabaseController.fetchPatientDetails(patientId: patientUUID) {
                     self.patient = patientDetails
                 } else {
                     errorMessage = "No patient record found. Please ensure you are logged in as a patient."

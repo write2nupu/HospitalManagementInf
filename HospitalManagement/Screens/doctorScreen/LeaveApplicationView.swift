@@ -70,6 +70,7 @@ struct LeaveApplicationView: View {
                         }
                     }
                     .disabled(pendingLeave != nil || isLoading)
+                    .foregroundColor(AppConfig.buttonColor)
                 }
             }
             .alert("Error", isPresented: $showError) {
