@@ -24,7 +24,6 @@ struct AdminHomeView: View {
     // Emergency and bed request counts (to be implemented with real data later)
     @State private var emergencyRequestsCount = 0
     @State private var leaveRequestsCount = 0
-    @State private var labReportRequestsCount = 0
     
     var filteredDepartments: [Department] {
         if searchText.isEmpty {
@@ -38,15 +37,14 @@ struct AdminHomeView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView(.vertical, showsIndicators: true) {
+            ScrollView {
                 VStack(spacing: 24) {
                     // Add Department Card
                     AddDepartmentButton(showAddDepartment: $showAddDepartment)
-                        .padding(.top, 8)
                     
                     VStack(spacing: 24) {
                         // Requests Section
-                        RequestsSection(emergencyRequestsCount: emergencyRequestsCount, leaveRequestsCount: leaveRequestsCount, labReportRequestsCount: labReportRequestsCount)
+                        RequestsSection(emergencyRequestsCount: emergencyRequestsCount, leaveRequestsCount: leaveRequestsCount)
                         
                         // Departments Section
                         DepartmentsListSection(
@@ -58,7 +56,6 @@ struct AdminHomeView: View {
                         )
                     }
                 }
-                .padding(.bottom, 16)
             }
         }
         .background(Color(.systemGray6).ignoresSafeArea())
@@ -207,27 +204,27 @@ struct AdminHomeView: View {
     }
 }
 
-//struct QuickActionButton: View {
-//    let title: String
-//    let systemImage: String
-//    let action: () -> Void
-//    
-//    var body: some View {
-//        Button(action: action) {
-//            VStack {
-//                Image(systemName: systemImage)
-//                    .font(.title2)
-//                Text(title)
-//                    .font(.caption)
-//            }
-//            .frame(maxWidth: .infinity)
-//            .padding()
-//            .background(Color.mint.opacity(0.1))
-//            .foregroundColor(.mint)
-//            .cornerRadius(10)
-//        }
-//    }
-//}
+struct QuickActionButton: View {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack {
+                Image(systemName: systemImage)
+                    .font(.title2)
+                Text(title)
+                    .font(.caption)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.mint.opacity(0.1))
+            .foregroundColor(.mint)
+            .cornerRadius(10)
+        }
+    }
+}
 
 struct DepartmentsSection: View {
     let departments: [Department]
@@ -443,7 +440,6 @@ struct AddDepartmentButton: View {
 struct RequestsSection: View {
     let emergencyRequestsCount: Int
     let leaveRequestsCount: Int
-    let labReportRequestsCount: Int
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -475,20 +471,6 @@ struct RequestsSection: View {
                     iconName: "calendar.badge.clock",
                     iconColor: .orange,
                     count: leaveRequestsCount
-                )
-                .frame(maxWidth: .infinity)
-            }
-            .padding(.horizontal)
-            
-            // Lab Report Requests Card
-            NavigationLink {
-               // LabReportViewAdmin()
-            } label: {
-                RequestCard(
-                    title: "Lab Reports",
-                    iconName: "clipboard.text.fill",
-                    iconColor: .blue,
-                    count: labReportRequestsCount
                 )
                 .frame(maxWidth: .infinity)
             }
