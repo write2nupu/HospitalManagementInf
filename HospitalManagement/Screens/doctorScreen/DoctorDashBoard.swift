@@ -5,6 +5,14 @@ struct DoctorDashBoard: View {
     let screenWidth = UIScreen.main.bounds.width
     let screenHeight = UIScreen.main.bounds.height
     
+    @State private var showProfile = false
+    
+    var doctor: Doctor?
+    
+    var dynamicTitle: String {
+        return "Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")"
+    }
+    
     @StateObject private var supabase = SupabaseController()
     @State private var selectedAppointment: Appointment?
     @State private var doctorProfile: Doctor?
@@ -40,6 +48,14 @@ struct DoctorDashBoard: View {
     
     var body: some View {
         ScrollView {
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: ScrollOffsetPreferenceKey.self,
+                    value: geometry.frame(in: .named("scroll")).minY
+                )
+            }
+            .frame(height: 0)
+            
             if isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -159,8 +175,8 @@ struct DoctorDashBoard: View {
                 .padding(.top, 10)
             }
         }
-        .background(AppConfig.backgroundColor.ignoresSafeArea())
-        .frame(maxHeight: screenHeight)
+        .background(AppConfig.backgroundColor)
+//        .frame(maxHeight: screenHeight)
         .sheet(item: $selectedAppointment) { appointment in
             AppointmentDetailView(
                 appointment: appointment,
@@ -187,7 +203,27 @@ struct DoctorDashBoard: View {
             cancelLoadingTask()
             stopRefreshTimer()
         }
+        .navigationTitle(dynamicTitle)
+        .toolbar {
+           ToolbarItem(placement: .navigationBarTrailing) {
+               Button(action: {
+                   showProfile = true
+               }) {
+                   Image(systemName: "person.crop.circle.fill")
+                       .resizable()
+                       .frame(width: 40, height: 40)
+                       .foregroundColor(AppConfig.buttonColor)
+                       .padding(.top, 10)
+               }
+           }
+        }
+        .sheet(isPresented: $showProfile) {
+           if let doctor = doctor {
+               DoctorProfileView(doctor: doctor)
+           }
+        }
     }
+    
     
     private func startLoadingData() {
         cancelLoadingTask()
@@ -328,8 +364,8 @@ struct DoctorDashBoard: View {
             }
             Spacer()
             Text(title)
-                .font(.footnote)
-                .foregroundColor(.black)
+                .font(.caption)
+//                .foregroundColor(.black)
                 .multilineTextAlignment(.leading)
         }
         .frame(maxWidth: (screenWidth - 40) / 2, minHeight: 70)
@@ -402,9 +438,10 @@ struct DoctorDashBoard: View {
             .foregroundColor(.gray)
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(AppConfig.cardColor)
         .cornerRadius(15)
         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        
     }
     
     // Helper function to format date with custom format

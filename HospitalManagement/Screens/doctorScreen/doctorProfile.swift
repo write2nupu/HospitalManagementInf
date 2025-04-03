@@ -90,6 +90,8 @@ struct DoctorProfileView: View {
                 }
             }
             .navigationTitle("Doctor Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            
             .tint(AppConfig.buttonColor)
             .fullScreenCover(isPresented: .constant(isLoggedOut)) {
                 UserRoleScreen()

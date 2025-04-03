@@ -49,6 +49,7 @@ struct HospitalManagementApp: App {
             }
         }
     }
+    
 }
 
 // Simple loading view
