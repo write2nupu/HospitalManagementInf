@@ -1,125 +1,240 @@
 import SwiftUI
+
 struct EmergencyAssistanceView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var patientName = ""
-    @State private var patientAge = ""
+    @StateObject private var supabase = SupabaseController()
+    
+    @State private var patient: Patient?
+    @State private var hospital: Hospital?
     @State private var emergencyDescription = ""
     @State private var isBookingEmergency = false
+    @State private var showAlert = false
+    @State private var alertMessage = ""
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Title and Subtitle
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Emergency Assistance")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.black)
-                    
-                    Text("Provide necessary details for immediate medical help")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal)
+            VStack(spacing: 20) {
+                // Emergency Header
+                emergencyHeader
                 
-                // Patient Information Section
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("Patient Details")
-                        .font(.headline)
-                        .foregroundColor(AppConfig.fontColor)
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        TextField("Full Name", text: $patientName)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .autocapitalization(.words)
-                        
-                        TextField("Age", text: $patientAge)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.numberPad)
+                // Main Content
+                VStack(spacing: 16) {
+                    // Patient Card
+                    if let patient = patient {
+                        patientCard(patient)
+                    } else {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
                     }
-                }
-                .padding(.horizontal)
-                
-                // Emergency Description Section
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("Emergency Description")
-                        .font(.headline)
-                        .foregroundColor(AppConfig.fontColor)
                     
-                    TextEditor(text: $emergencyDescription)
-                        .frame(height: 150)
-                        .padding(8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                        )
-                        .placeholder("Describe your medical emergency...", when: emergencyDescription.isEmpty)
+                    // Hospital Card
+                    if let hospital = hospital {
+                        hospitalCard(hospital)
+                    }
+                    
+                    // Emergency Description
+                    emergencyDescriptionSection
+                    
+                    // Request Button
+                    requestButton
                 }
                 .padding(.horizontal)
-                
-                // Book Emergency Button
-                Button(action: {
-                    bookEmergencyAssistance()
-                }) {
-                    HStack {
-                        Image(systemName: "cross.case.fill")
-                            .foregroundColor(.white)
-                        
-                        Text(isBookingEmergency ? "Booking..." : "Book Emergency Assistance")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(canBookEmergency ? Color.red : Color.gray)
-                    )
-                    .foregroundColor(.white)
-                    .padding(.horizontal)
-                }
-                .disabled(!canBookEmergency || isBookingEmergency)
             }
-            .padding(.vertical)
         }
-        .navigationBarBackButtonHidden(false)
+        .navigationBarTitleDisplayMode(.inline)
+        .alert("Emergency Assistance", isPresented: $showAlert) {
+            Button("OK") { dismiss() }
+        } message: {
+            Text(alertMessage)
+        }
+        .task {
+            await fetchUserAndHospitalDetails()
+        }
     }
     
-    // Computed property to check if emergency can be booked
+    private var emergencyHeader: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "cross.case.fill")
+                .font(.system(size: 40))
+                .foregroundColor(.red)
+                .padding(.bottom, 4)
+            
+            Text("Emergency Assistance")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            Text("Request immediate medical attention")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+        .background(Color(.systemBackground))
+    }
+    
+    private func patientCard(_ patient: Patient) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "person.fill")
+                    .foregroundColor(.mint)
+                Text("Patient Information")
+                    .font(.headline)
+            }
+            
+            VStack(spacing: 12) {
+                infoRow(title: "Name", value: patient.fullname)
+                infoRow(title: "Gender", value: patient.gender)
+                infoRow(title: "Age", value: calculateAge(from: patient.dateofbirth))
+                infoRow(title: "Contact", value: patient.contactno)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        )
+    }
+    
+    private func hospitalCard(_ hospital: Hospital) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "building.2.fill")
+                    .foregroundColor(.mint)
+                Text("Hospital Information")
+                    .font(.headline)
+            }
+            
+            VStack(spacing: 12) {
+                infoRow(title: "Name", value: hospital.name)
+                infoRow(title: "Address", value: hospital.address)
+                infoRow(title: "Contact", value: hospital.mobile_number)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        )
+    }
+    
+    private var emergencyDescriptionSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "text.alignleft")
+                    .foregroundColor(.mint)
+                Text("Emergency Description")
+                    .font(.headline)
+            }
+            
+            TextEditor(text: $emergencyDescription)
+                .frame(minHeight: 120)
+                .padding(8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
+                .overlay(
+                    Text("Describe your emergency condition...")
+                        .foregroundColor(.gray.opacity(0.8))
+                        .padding(.leading, 4)
+                        .opacity(emergencyDescription.isEmpty ? 1 : 0),
+                    alignment: .topLeading
+                )
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        )
+    }
+    
+    private var requestButton: some View {
+        Button(action: bookEmergencyAppointment) {
+            HStack {
+                if isBookingEmergency {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Image(systemName: "cross.case.fill")
+                    Text("Request Emergency Assistance")
+                        .fontWeight(.semibold)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(canBookEmergency ? Color.red : Color.gray.opacity(0.3))
+            )
+            .foregroundColor(.white)
+        }
+        .disabled(!canBookEmergency || isBookingEmergency)
+        .padding(.vertical, 8)
+    }
+    
+    private func infoRow(title: String, value: String) -> some View {
+        HStack(alignment: .top) {
+            Text(title)
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .leading)
+            
+            Text(value)
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .font(.subheadline)
+    }
+    
     private var canBookEmergency: Bool {
-        !patientName.isEmpty &&
-        !patientAge.isEmpty &&
-        !emergencyDescription.isEmpty
+        patient != nil && hospital != nil && !emergencyDescription.isEmpty
     }
     
-    private func bookEmergencyAssistance() {
-        guard canBookEmergency else { return }
+    private func calculateAge(from date: Date) -> String {
+        let calendar = Calendar.current
+        let ageComponents = calendar.dateComponents([.year], from: date, to: Date())
+        return "\(ageComponents.year ?? 0) years"
+    }
+    
+    private func fetchUserAndHospitalDetails() async {
+        if let patientId = UUID(uuidString: UserDefaults.standard.string(forKey: "currentPatientId") ?? "") {
+            do {
+                patient = try await supabase.fetchPatientDetails(patientId: patientId)
+                let hospitals = try await supabase.fetchHospitals()
+                hospital = hospitals.first
+            } catch {
+                print("Error fetching details: \(error)")
+            }
+        }
+    }
+    
+    private func bookEmergencyAppointment() {
+        guard let patient = patient, let hospital = hospital else { return }
         
         isBookingEmergency = true
         
-        // Simulate async booking process
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            // Prepare emergency appointment details
-            let emergencyAppointmentDetails: [String: Any] = [
-                "id": UUID().uuidString,
-                "doctorName": "Emergency Assistance",
-                "appointmentType": "Emergency",
-                "patientName": patientName,
-                "patientAge": patientAge,
-                "emergencyDescription": emergencyDescription,
-                "date": Date(),
-                "timeSlot": "Immediate",
-                "status": "Booked",
-                "timestamp": Date()
-            ]
-            
-            // Save emergency appointment details to UserDefaults
-            var savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]] ?? []
-            savedAppointments.append(emergencyAppointmentDetails)
-            UserDefaults.standard.set(savedAppointments, forKey: "savedAppointments")
-            
-            // Reset and dismiss
-            isBookingEmergency = false
-            dismiss()
+        Task {
+            do {
+                let emergencyAppointment = EmergencyAppointment(
+                    id: UUID(),
+                    hospitalId: hospital.id,
+                    patientId: patient.id,
+                    status: .scheduled,
+                    description: emergencyDescription
+                )
+                
+                try await supabase.createEmergencyAppointment(emergencyAppointment)
+                alertMessage = "Emergency assistance request has been sent. The hospital will contact you shortly."
+                showAlert = true
+                isBookingEmergency = false
+            } catch {
+                print("Error booking emergency: \(error)")
+                alertMessage = "Failed to book emergency appointment: \(error.localizedDescription)"
+                showAlert = true
+                isBookingEmergency = false
+            }
         }
     }
 }

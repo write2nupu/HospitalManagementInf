@@ -360,7 +360,7 @@ struct AppointmentDetailView: View {
                                                    showingMedicineSelection = true
                                                }) {
                                                    Label("Add Medicine", systemImage: "plus.circle.fill")
-                                                       .foregroundColor(.blue)
+                                                       .foregroundColor(AppConfig.buttonColor)
                                                }
                                            }
                                        }
@@ -395,10 +395,10 @@ struct AppointmentDetailView: View {
                            Image(systemName: "doc.text.fill")
                            Text("View Prescription")
                        }
-                       .foregroundColor(.white)
+                       .foregroundColor(.black)
                        .frame(maxWidth: .infinity)
                        .padding()
-                       .background(Color.blue)
+                       .background(AppConfig.buttonColor)
                        .cornerRadius(10)
                    }
                    .padding()
@@ -406,6 +406,7 @@ struct AppointmentDetailView: View {
                }
            }
            .navigationTitle("Appointment Details")
+           .navigationBarTitleDisplayMode(.inline)
            .navigationBarItems(trailing: Group {
                if isEditable && existingPrescription == nil {
                    Button("Save") {
@@ -869,7 +870,7 @@ struct AppointmentDetailView: View {
                        showingLabTestPicker = true
                    }) {
                        Label("Add Tests", systemImage: "plus.circle.fill")
-                           .foregroundColor(.blue)
+                           .foregroundColor(AppConfig.buttonColor)
                    }
                }
                

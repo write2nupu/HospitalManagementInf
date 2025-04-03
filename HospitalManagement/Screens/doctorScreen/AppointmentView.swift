@@ -25,7 +25,8 @@ struct AppointmentView: View {
                 DatePicker("Select Date", selection: $selectedDate, displayedComponents: .date)
                     .datePickerStyle(.compact)
                     .padding(.horizontal)
-                    .onChange(of: selectedDate) { 
+                    .padding(.top)
+                    .onChange(of: selectedDate) {
                         startLoadingData()
                     }
                 
@@ -46,6 +47,14 @@ struct AppointmentView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView(.vertical, showsIndicators: false) {
+                        GeometryReader { geometry in
+                            Color.clear.preference(
+                                key: ScrollOffsetPreferenceKey.self,
+                                value: geometry.frame(in: .named("scroll")).minY
+                            )
+                        }
+                        .frame(height: 0)
+                        
                         VStack(spacing: 2) {
                             if filteredAppointments.isEmpty {
                                 Text("No appointments on this date.")
@@ -65,16 +74,26 @@ struct AppointmentView: View {
                     }
                 }
             }
-            .background(Color(UIColor.systemGray6))
+            .background(AppConfig.backgroundColor)
+            .navigationTitle("Appointments")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        print("Profile button tapped")
+                    }) {
+                        Image(systemName: "person.circle.fill")
+                            .font(.title)
+                    }
+                }
+            }
             .sheet(item: $selectedAppointment) { appointment in
                 AppointmentDetailView(
                     appointment: appointment,
                     onStatusUpdate: { newStatus in
-                        // Update the appointment status in the local array
                         if let index = appointments.firstIndex(where: { $0.id == appointment.id }) {
                             appointments[index].status = newStatus
                         }
-                        // Refresh the view
                         startLoadingData()
                     }
                 )
@@ -95,8 +114,6 @@ struct AppointmentView: View {
         cancelLoadingTask()
         loadDataTask = Task {
             await loadAppointments()
-            
-            // Start refresh timer after initial load
             if isViewActive {
                 startRefreshTimer()
             }
@@ -140,12 +157,10 @@ struct AppointmentView: View {
             
             guard !Task.isCancelled && isViewActive else { return }
             
-            // Update appointments on main thread
             await MainActor.run {
                 appointments = fetchedAppointments
             }
             
-            // Fetch patient names
             var updatedNames: [UUID: String] = [:]
             for appointment in fetchedAppointments {
                 guard !Task.isCancelled else { return }
@@ -181,11 +196,9 @@ struct AppointmentView: View {
         }
     }
     
-    // Updated appointment card with better UI
     func upcomingAppointmentCard(appointment: Appointment) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center, spacing: 12) {
-                // Patient Icon with Background
                 Circle()
                     .fill(AppConfig.buttonColor.opacity(0.1))
                     .frame(width: 45, height: 45)
@@ -198,15 +211,11 @@ struct AppointmentView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(patientNames[appointment.patientId] ?? "Loading...")
                         .font(.headline)
-                    
                     Text(appointment.type.rawValue)
                         .font(.subheadline)
                         .foregroundColor(.gray)
                 }
-                
                 Spacer()
-                
-                // Status Badge
                 Text(appointment.status.rawValue)
                     .font(.caption)
                     .fontWeight(.medium)
@@ -218,62 +227,21 @@ struct AppointmentView: View {
                     )
                     .foregroundColor(statusColor(for: appointment.status))
             }
-            
-            Divider()
-            
-            // Date and Time with Icons
-            HStack(spacing: 16) {
-                // Date
-                HStack(spacing: 8) {
-                    Image(systemName: "calendar")
-                        .foregroundColor(AppConfig.buttonColor)
-                    Text(formatDate(appointment.date, format: "MMM d, yyyy"))
-                        .font(.subheadline)
-                }
-                
-                Spacer()
-                
-                // Time
-                HStack(spacing: 8) {
-                    Image(systemName: "clock.fill")
-                        .foregroundColor(AppConfig.buttonColor)
-                    Text(formatDate(appointment.date, format: "h:mm a"))
-                        .font(.subheadline)
-                }
-            }
-            .foregroundColor(.gray)
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(AppConfig.cardColor)
         .cornerRadius(15)
         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
     
     func statusColor(for status: AppointmentStatus) -> Color {
-        switch status {
-        case .scheduled:
-            return .blue
-        case .completed:
-            return .green
-        case .cancelled:
-            return .red
-        }
-    }
-    
-    func formatDate(_ date: Date, format: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = format
-        return formatter.string(from: date)
-    }
-    
-    // Function to format Time
-    func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-}
-
-#Preview {
-    AppointmentView()
+           switch status {
+           case .scheduled:
+               return .blue
+           case .completed:
+               return .green
+           case .cancelled:
+               return .red
+           }
+       }
 }
