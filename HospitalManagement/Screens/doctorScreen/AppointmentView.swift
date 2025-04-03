@@ -12,6 +12,7 @@ struct AppointmentView: View {
     @State private var refreshTimer: Timer?
     @State private var isViewActive = true
     @State private var loadDataTask: Task<Void, Never>?
+    @State private var showCancelledAlert = false
     
     let screenWidth = UIScreen.main.bounds.width
     
@@ -63,9 +64,6 @@ struct AppointmentView: View {
                             } else {
                                 ForEach(filteredAppointments) { appointment in
                                     upcomingAppointmentCard(appointment: appointment)
-                                        .onTapGesture {
-                                            selectedAppointment = appointment
-                                        }
                                 }
                             }
                         }
@@ -88,15 +86,22 @@ struct AppointmentView: View {
                 }
             }
             .sheet(item: $selectedAppointment) { appointment in
-                AppointmentDetailView(
-                    appointment: appointment,
-                    onStatusUpdate: { newStatus in
-                        if let index = appointments.firstIndex(where: { $0.id == appointment.id }) {
-                            appointments[index].status = newStatus
+                if appointment.status != .cancelled {
+                    AppointmentDetailView(
+                        appointment: appointment,
+                        onStatusUpdate: { newStatus in
+                            if let index = appointments.firstIndex(where: { $0.id == appointment.id }) {
+                                appointments[index].status = newStatus
+                            }
+                            startLoadingData()
                         }
-                        startLoadingData()
-                    }
-                )
+                    )
+                }
+            }
+            .alert("Cancelled Appointment", isPresented: $showCancelledAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("This appointment has been cancelled and cannot be viewed or modified.")
             }
             .onAppear {
                 isViewActive = true
@@ -232,6 +237,13 @@ struct AppointmentView: View {
         .background(AppConfig.cardColor)
         .cornerRadius(15)
         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .onTapGesture {
+            if appointment.status == .cancelled {
+                showCancelledAlert = true
+            } else {
+                selectedAppointment = appointment
+            }
+        }
     }
     
     func statusColor(for status: AppointmentStatus) -> Color {
