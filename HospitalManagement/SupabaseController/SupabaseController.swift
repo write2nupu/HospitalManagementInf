@@ -1060,8 +1060,6 @@ private struct AnyCodingKey: CodingKey {
         let adminId = authResponse.user.id.uuidString
         print("Storing admin ID in UserDefaults:", adminId)
         UserDefaults.standard.set(adminId, forKey: "currentAdminId")
-        // Verify it was stored
-        print("Verifying stored admin ID:", UserDefaults.standard.string(forKey: "currentAdminId") ?? "Not found")
         
         // Fetch admin details
         let admins: [Admin] = try await client
@@ -1073,6 +1071,12 @@ private struct AnyCodingKey: CodingKey {
         
         guard let admin = admins.first else {
             throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Admin account not found."])
+        }
+        
+        // Store hospital ID in UserDefaults if available
+        if let hospitalId = admin.hospital_id {
+            print("Storing hospital ID in UserDefaults:", hospitalId.uuidString)
+            UserDefaults.standard.set(hospitalId.uuidString, forKey: "currentHospitalId")
         }
         
         return admin
@@ -2368,6 +2372,64 @@ extension SupabaseController {
             .eq("id", value: testId.uuidString)
             .execute()
     }
+
+    func updateLabTestValue(testId: UUID, testValue: Double, testComponents: [String]? = nil) async throws {
+        print("📝 Updating lab test value for test ID: \(testId)")
+        
+        var updateData: [String: AnyJSON] = [
+            "testValue": .double(testValue),
+            "status": .string(LabTest.TestStatus.completed.rawValue)  // Update status to completed when value is added
+        ]
+        
+        // Add test components if provided
+        if let components = testComponents {
+            updateData["testComponents"] = .array(components.map { .string($0) })
+        }
+        
+        try await client
+            .from("LabTest")
+            .update(updateData)
+            .eq("bookingId", value: testId.uuidString)  // Use bookingId as that's our primary key
+            .execute()
+        
+        print("✅ Lab test value updated successfully!")
+    }
+
+    // Add a function to fetch a single lab test with its values
+    func fetchLabTestWithValue(testId: UUID) async throws -> (testName: [String], testValue: Double, testComponents: [String]?, status: String) {
+        print("🔍 Fetching lab test details for ID: \(testId)")
+        
+        let response = try await client
+            .from("LabTest")
+            .select("""
+                testName,
+                testValue,
+                testComponents,
+                status
+            """)
+            .eq("bookingId", value: testId.uuidString)
+            .execute()
+        
+        guard let json = (response.data as? [[String: Any]])?.first else {
+            throw NSError(domain: "LabTest", code: 404, userInfo: [NSLocalizedDescriptionKey: "Lab test not found"])
+        }
+        
+        // Parse test names
+        var testNames: [String] = []
+        if let testNameArray = json["testName"] as? [String] {
+            testNames = testNameArray
+        } else if let testNameString = json["testName"] as? String,
+                  let data = testNameString.data(using: .utf8),
+                  let decodedArray = try? JSONDecoder().decode([String].self, from: data) {
+            testNames = decodedArray
+        }
+        
+        let testValue = (json["testValue"] as? Double) ?? 0.0
+        let testComponents = json["testComponents"] as? [String]
+        let status = (json["status"] as? String) ?? LabTest.TestStatus.pending.rawValue
+        
+        return (testNames, testValue, testComponents, status)
+    }
 }
 
 // Update LabTestResult to match your schema with array of test names
@@ -2438,5 +2500,106 @@ extension DateFormatter {
         config(self)
         return self
 
+    }
+}
+
+extension SupabaseController {
+    func fetchHospitalLabTests(hospitalId: UUID) async throws -> [LabReport] {
+        print("🔍 Fetching lab tests for hospital: \(hospitalId)")
+        
+        let response = try await client
+            .from("LabTest")
+            .select("""
+                bookingId,
+                testName,
+                testDate,
+                status,
+                Patient!inner (
+                    fullname
+                )
+            """)
+            .eq("hospitalid", value: hospitalId.uuidString)
+            .order("testDate", ascending: false)
+            .execute()
+        
+        print("Response received: \(String(describing: response.data))")
+        
+        var jsonArray: [[String: Any]] = []
+        if let dataAsArray = response.data as? [[String: Any]] {
+            print("Data is array of dictionaries")
+            jsonArray = dataAsArray
+        } else if let dataAsData = response.data as? Data {
+            print("Data is raw Data type")
+            jsonArray = try JSONSerialization.jsonObject(with: dataAsData) as? [[String: Any]] ?? []
+        } else {
+            print("Unexpected data type: \(type(of: response.data))")
+            throw NSError(domain: "SupabaseError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])
+        }
+        
+        if jsonArray.isEmpty {
+            print("No lab tests found")
+            return []
+        }
+        
+        print("Processing \(jsonArray.count) lab tests")
+        
+        return try jsonArray.compactMap { json -> LabReport? in
+            guard let bookingId = UUID(uuidString: json["bookingId"] as? String ?? ""),
+                  let patient = json["Patient"] as? [String: Any],
+                  let patientName = patient["fullname"] as? String else {
+                print("Failed to parse essential data for a lab test")
+                return nil
+            }
+            
+            // Parse test names
+            var testNames: [String] = []
+            if let testNameArray = json["testName"] as? [String] {
+                testNames = testNameArray
+            } else if let testNameString = json["testName"] as? String,
+                      let data = testNameString.data(using: .utf8),
+                      let decodedArray = try? JSONDecoder().decode([String].self, from: data) {
+                testNames = decodedArray
+            }
+            
+            // Parse the test date
+            let testDateString = json["testDate"] as? String ?? ""
+            let dateFormatters = [
+                ISO8601DateFormatter(),
+                DateFormatter().apply { df in
+                    df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+                    df.timeZone = TimeZone(identifier: "UTC")
+                },
+                DateFormatter().apply { df in
+                    df.dateFormat = "yyyy-MM-dd"
+                    df.timeZone = TimeZone(identifier: "UTC")
+                }
+            ]
+            
+            let testDate = dateFormatters.compactMap { formatter in
+                (formatter as? ISO8601DateFormatter)?.date(from: testDateString) ??
+                (formatter as? DateFormatter)?.date(from: testDateString)
+            }.first ?? Date()
+            
+            // Convert status to ReportStatus
+            let statusString = json["status"] as? String ?? "pending"
+            let reportStatus: ReportStatus
+            switch statusString.lowercased() {
+            case "completed":
+                reportStatus = .completed
+            case "in progress":
+                reportStatus = .inProgress
+            default:
+                reportStatus = .pending
+            }
+            
+            return LabReport(
+                id: bookingId,
+                patientName: patientName,
+                testType: testNames.joined(separator: ", "),
+                requestDate: testDate,
+                status: reportStatus,
+                doctorName: "N/A" // Since we don't need doctor name, set it to N/A
+            )
+        }
     }
 }
