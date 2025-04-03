@@ -2299,6 +2299,28 @@ extension SupabaseController {
             .eq("id", value: appointmentId.uuidString)
             .execute()
     }
+    func cancelAppointmentsDuringLeave(doctorId: UUID, startDate: Date, endDate: Date) async throws {
+        // Fetch all scheduled appointments during the leave period
+        let appointments: [Appointment] = try await client
+            .from("Appointment")
+            .select()
+            .eq("doctorId", value: doctorId.uuidString)
+            .eq("status", value: AppointmentStatus.scheduled.rawValue)
+            .gte("date", value: startDate)
+            .lte("date", value: endDate)
+            .execute()
+            .value
+        
+        // Update status to cancelled for all affected appointments
+        for appointment in appointments {
+            try await client
+                .from("Appointment")
+                .update(["status": AppointmentStatus.cancelled.rawValue])
+                .eq("id", value: appointment.id.uuidString)
+                .execute()
+        }
+    }
+
 }
 // Helper extension for formatter configuration
 extension DateFormatter {
@@ -2308,3 +2330,5 @@ extension DateFormatter {
 
     }
 }
+
+    
