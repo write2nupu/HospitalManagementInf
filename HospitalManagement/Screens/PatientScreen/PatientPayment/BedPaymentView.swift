@@ -225,7 +225,12 @@ struct BedPaymentView: View {
     }
     
     private var paymentButton: some View {
-        Button(action: processPayment) {
+        Button(action:{
+                    let generator = UIImpactFeedbackGenerator(style: .rigid)
+                    generator.impactOccurred()
+                    
+                    processPayment()
+                }) {
             if isProcessingPayment {
                 ProgressView()
                     .tint(.white)

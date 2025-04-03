@@ -94,7 +94,13 @@ struct BedBookingView: View {
                                 .padding()
                             }
                             
-                            Button(action: proceedToPayment) {
+                            Button(action: {
+                                
+                                let generator = UIImpactFeedbackGenerator(style: .rigid)
+                                generator.impactOccurred()
+                                
+                                proceedToPayment()
+                            }) {
                                 Text("Proceed to Payment")
                                     .fontWeight(.semibold)
                                     .foregroundColor(.white)
