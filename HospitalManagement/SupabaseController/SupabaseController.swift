@@ -1961,6 +1961,30 @@ private struct AnyCodingKey: CodingKey {
             throw error
         }
     }
+    
+    func fetchEmergencyRequests(hospitalId: UUID) async throws -> [EmergencyAppointment] {
+        print("Fetching emergency requests for hospital: \(hospitalId)")
+        do {
+            let requests: [EmergencyAppointment] = try await client
+                .from("EmergencyAppointment")
+                .select("""
+                    id,
+                    patientId,
+                    hospitalId,
+                    status,
+                    description
+                """)
+                .eq("hospitalId", value: hospitalId.uuidString)
+                .execute()
+                .value
+            
+            print("Successfully fetched \(requests.count) emergency requests")
+            return requests
+        } catch {
+            print("Error fetching emergency requests: \(error)")
+            throw error
+        }
+    }
 }
 
 // MARK: - Leave Management
