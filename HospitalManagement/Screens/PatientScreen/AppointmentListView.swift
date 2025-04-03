@@ -83,10 +83,10 @@ struct AppointmentListView: View {
                 )
             }
         }
-        .onChange(of: appointmentToCancel) { newValue in
+        .onChange(of: appointmentToCancel) { oldValue, newValue in
             showCancelConfirmation = newValue != nil
         }
-        .onChange(of: appointmentToReschedule) { newValue in
+        .onChange(of: appointmentToReschedule) { oldValue, newValue in
             showRescheduleSheet = newValue != nil
         }
     }
@@ -102,7 +102,8 @@ struct AppointmentListView: View {
                 .filter { appointment in
                     let isInFuture = appointment.date > now
                     let isNotCancelled = appointment.status != .cancelled
-                    return isInFuture && isNotCancelled
+                    let isCompleted = appointment.status != .completed
+                    return isInFuture && isNotCancelled && isCompleted
                 }
                 .sorted { $0.date < $1.date }
         } else {
