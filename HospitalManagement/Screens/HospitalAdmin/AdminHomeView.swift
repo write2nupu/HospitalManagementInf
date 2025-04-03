@@ -24,6 +24,7 @@ struct AdminHomeView: View {
     // Emergency and bed request counts (to be implemented with real data later)
     @State private var emergencyRequestsCount = 0
     @State private var leaveRequestsCount = 0
+    @State private var labReportRequestsCount = 0
     
     var filteredDepartments: [Department] {
         if searchText.isEmpty {
@@ -44,7 +45,7 @@ struct AdminHomeView: View {
                     
                     VStack(spacing: 24) {
                         // Requests Section
-                        RequestsSection(emergencyRequestsCount: emergencyRequestsCount, leaveRequestsCount: leaveRequestsCount)
+                        RequestsSection(emergencyRequestsCount: emergencyRequestsCount, leaveRequestsCount: leaveRequestsCount, labReportRequestsCount: labReportRequestsCount)
                         
                         // Departments Section
                         DepartmentsListSection(
@@ -440,6 +441,7 @@ struct AddDepartmentButton: View {
 struct RequestsSection: View {
     let emergencyRequestsCount: Int
     let leaveRequestsCount: Int
+    let labReportRequestsCount: Int
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -471,6 +473,20 @@ struct RequestsSection: View {
                     iconName: "calendar.badge.clock",
                     iconColor: .orange,
                     count: leaveRequestsCount
+                )
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal)
+
+            // Lab Report Requests Card
+            NavigationLink {
+                LabReportRequestsView()
+            } label: {
+                RequestCard(
+                    title: "Lab Reports",
+                    iconName: "flask.fill",
+                    iconColor: .blue,
+                    count: labReportRequestsCount
                 )
                 .frame(maxWidth: .infinity)
             }
