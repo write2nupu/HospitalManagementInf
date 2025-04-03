@@ -26,6 +26,15 @@ struct AnalyticsView: View {
     // Monthly appointment data
     @State private var monthlyAppointments: [MonthlyData] = []
     
+    // Define appointment status data for bar chart
+    private var appointmentStatusData: [AppointmentStatusData] {
+        [
+            AppointmentStatusData(status: "Completed", count: completedAppointments, color: .green),
+            AppointmentStatusData(status: "Scheduled", count: pendingAppointments, color: .blue),
+            AppointmentStatusData(status: "Cancelled", count: cancelledAppointments, color: .red)
+        ]
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -55,26 +64,20 @@ struct AnalyticsView: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: 300)
                 } else if let error = errorMessage {
-                    VStack(spacing: 16) {
+                    VStack {
                         Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 50))
+                            .font(.largeTitle)
                             .foregroundColor(.orange)
-                        Text("Could not load analytics")
-                            .font(.title2)
-                            .fontWeight(.semibold)
+                            .padding()
+                        
+                        Text("Error Loading Data")
+                            .font(.headline)
+                            .padding(.bottom, 4)
+                        
                         Text(error)
+                            .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
-                        Button("Try Again") {
-                            Task {
-                                isLoading = true
-                                await loadData()
-                            }
-                        }
-                        .padding()
-                        .background(Color.mint)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
                     }
                     .padding()
                     .frame(maxWidth: .infinity, minHeight: 300)
@@ -114,7 +117,7 @@ struct AnalyticsView: View {
                     }
                     .padding(.horizontal)
                     
-                    // Appointments Distribution Chart
+                    // Appointments Distribution Chart - NOW USING BAR CHART
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Appointment Status")
                             .font(.title2)
@@ -127,14 +130,47 @@ struct AnalyticsView: View {
                                     .foregroundColor(.secondary)
                                     .frame(height: 240)
                             } else {
-                                PieChartView(
-                                    segments: [
-                                        PieSegment(value: Double(completedAppointments), color: .green, title: "Completed"),
-                                        PieSegment(value: Double(pendingAppointments), color: .blue, title: "Scheduled"),
-                                        PieSegment(value: Double(cancelledAppointments), color: .red, title: "Cancelled")
-                                    ]
-                                )
+                                // Bar Chart for appointment status
+                                Chart {
+                                    ForEach(appointmentStatusData) { item in
+                                        BarMark(
+                                            x: .value("Status", item.status),
+                                            y: .value("Count", item.count)
+                                        )
+                                        .foregroundStyle(item.color.gradient)
+                                        .annotation(position: .top) {
+                                            if item.count > 0 {
+                                                Text("\(Int((Double(item.count) / Double(totalAppointments)) * 100))%")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                                .chartYAxis {
+                                    AxisMarks(position: .leading)
+                                }
                                 .frame(height: 240)
+                                
+                                // Legend below the chart
+                                VStack {
+                                    Spacer()
+                                    HStack(spacing: 16) {
+                                        ForEach(appointmentStatusData) { item in
+                                            HStack(spacing: 4) {
+                                                Circle()
+                                                    .fill(item.color)
+                                                    .frame(width: 10, height: 10)
+                                                
+                                                Text(item.status)
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+                                    }
+                                    .padding(.bottom, 8)
+                                }
+                                .offset(y: 110)
                             }
                         }
                         .padding()
@@ -294,80 +330,14 @@ struct MonthlyData: Identifiable {
     let count: Int
 }
 
-struct PieSegment: Identifiable {
+struct AppointmentStatusData: Identifiable {
     let id = UUID()
-    let value: Double
+    let status: String
+    let count: Int
     let color: Color
-    let title: String
 }
 
-// Custom Pie Chart View
-struct PieChartView: View {
-    var segments: [PieSegment]
-    
-    private var total: Double {
-        segments.reduce(0) { $0 + $1.value }
-    }
-    
-    var body: some View {
-        ZStack {
-            GeometryReader { geometry in
-                let radius = min(geometry.size.width, geometry.size.height) / 2.5
-                let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
-                
-                // Draw pie segments
-                ForEach(segments.indices, id: \.self) { index in
-                    let startAngle = self.startAngle(at: index)
-                    let endAngle = self.endAngle(at: index)
-                    
-                    Path { path in
-                        path.move(to: center)
-                        path.addArc(center: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: false)
-                        path.closeSubpath()
-                    }
-                    .fill(segments[index].color)
-                }
-            }
-            
-            // Legend
-            VStack {
-                Spacer()
-                HStack(spacing: 16) {
-                    ForEach(segments) { segment in
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(segment.color)
-                                .frame(width: 10, height: 10)
-                            
-                            Text(segment.title)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            if total > 0 {
-                                Text("\(Int((segment.value / total) * 100))%")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                    }
-                }
-                .padding(.bottom, 8)
-            }
-        }
-    }
-    
-    private func startAngle(at index: Int) -> Angle {
-        let precedingTotal = segments.prefix(index).reduce(0) { $0 + $1.value }
-        return .degrees(precedingTotal / total * 360 - 90)
-    }
-    
-    private func endAngle(at index: Int) -> Angle {
-        let precedingTotal = segments.prefix(index + 1).reduce(0) { $0 + $1.value }
-        return .degrees(precedingTotal / total * 360 - 90)
-    }
-}
-
-// Analytics Card component
+// Analytics Card component - FIXED TEXT ALIGNMENT
 struct AnalyticCard: View {
     let title: String
     let value: Int
@@ -375,27 +345,27 @@ struct AnalyticCard: View {
     let color: Color
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    
-                    Text("\(value)")
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
-                }
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("\(value)")
+                    .font(.system(size: 21, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
                 
-                Spacer()
-                
-                Image(systemName: icon)
-                    .font(.system(size: 24))
-                    .foregroundColor(color)
-                    .padding(12)
-                    .background(color.opacity(0.2))
-                    .clipShape(Circle())
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
+            
+            Spacer()
+            
+            Image(systemName: icon)
+                .font(.system(size: 24))
+                .foregroundColor(color)
+                .padding(12)
+                .background(color.opacity(0.2))
+                .clipShape(Circle())
         }
         .padding()
         .background(Color(.systemBackground))

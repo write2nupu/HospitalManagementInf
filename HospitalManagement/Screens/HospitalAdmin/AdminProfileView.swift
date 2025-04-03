@@ -288,8 +288,6 @@ struct AdminProfileView: View {
                 }
             }
             .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.large)
-            .navigationBarBackButtonHidden(true)
             .navigationBarItems(
                 leading: Button("Done") { dismiss() },
                 trailing: Button(isEditing ? "Save" : "Edit") {
