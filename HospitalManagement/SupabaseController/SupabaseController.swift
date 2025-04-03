@@ -1961,6 +1961,104 @@ private struct AnyCodingKey: CodingKey {
             throw error
         }
     }
+    
+    func fetchEmergencyRequests(hospitalId: UUID) async throws -> [EmergencyAppointment] {
+        print("Fetching emergency requests for hospital: \(hospitalId)")
+        do {
+            let requests: [EmergencyAppointment] = try await client
+                .from("EmergencyAppointment")
+                .select("""
+                    id,
+                    patientId,
+                    hospitalId,
+                    status,
+                    description
+                """)
+                .eq("hospitalId", value: hospitalId.uuidString)
+                .execute()
+                .value
+            
+            print("Successfully fetched \(requests.count) emergency requests")
+            return requests
+        } catch {
+            print("Error fetching emergency requests: \(error)")
+            throw error
+        }
+    }
+
+    func getEmergencyDepartment(hospitalId: UUID) async throws -> Department {
+        print("Fetching emergency department for hospital: \(hospitalId)")
+        do {
+            let departments: [Department] = try await client
+                .from("Department")
+                .select()
+                .eq("hospital_id", value: hospitalId.uuidString)
+                .eq("name", value: "Emergency")
+                .execute()
+                .value
+            
+            guard let emergencyDepartment = departments.first else {
+                throw NSError(domain: "Hospital", code: 404, userInfo: [NSLocalizedDescriptionKey: "Emergency department not found"])
+            }
+            
+            return emergencyDepartment
+        } catch {
+            print("Error fetching emergency department: \(error)")
+            throw error
+        }
+    }
+
+    func getEmergencyDoctors(departmentId: UUID) async throws -> [Doctor] {
+        print("Fetching doctors for emergency department: \(departmentId)")
+        do {
+            let doctors: [Doctor] = try await client
+                .from("Doctor")
+                .select()
+                .eq("department_id", value: departmentId.uuidString)
+                .eq("is_active", value: true)
+                .execute()
+                .value
+            
+            return doctors
+        } catch {
+            print("Error fetching emergency doctors: \(error)")
+            throw error
+        }
+    }
+
+    func assignEmergencyDoctor(emergencyAppointment: EmergencyAppointment, doctorId: UUID) async throws {
+        print("Assigning doctor \(doctorId) to emergency appointment \(emergencyAppointment.id)")
+        
+        // First update the emergency appointment status
+        let updateData: [String: AnyJSON] = [
+            "status": .string("Completed")  // Update to completed when doctor is assigned
+        ]
+        
+        try await client
+            .from("EmergencyAppointment")
+            .update(updateData)
+            .eq("id", value: emergencyAppointment.id.uuidString)
+            .execute()
+        
+        // Create a regular appointment for tracking
+        let appointmentData: [String: AnyJSON] = [
+            "id": .string(UUID().uuidString),
+            "patientId": .string(emergencyAppointment.patientId.uuidString),
+            "doctorId": .string(doctorId.uuidString),
+            "date": .string(ISO8601DateFormatter().string(from: Date())),
+            "status": .string(AppointmentStatus.scheduled.rawValue),
+            "type": .string(AppointmentType.Emergency.rawValue),
+            "createdAt": .string(ISO8601DateFormatter().string(from: Date())),
+            "prescriptionId": .null  // Set prescriptionId as null initially
+        ]
+        
+        try await client
+            .from("Appointment")
+            .insert(appointmentData)
+            .execute()
+        
+        print("Successfully assigned doctor and created appointment")
+    }
 }
 
 // MARK: - Leave Management

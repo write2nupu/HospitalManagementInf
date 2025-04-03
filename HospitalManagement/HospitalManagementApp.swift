@@ -29,6 +29,7 @@ struct HospitalManagementApp: App {
                 switch userRole {
                 case "admin":
                     AdminTabView()
+                        .environmentObject(viewModel)
                 case "super_admin":
                     ContentView()
                 case "doctor":
