@@ -4,40 +4,37 @@
 //
 //  Created by Anubhav Dubey on 18/03/25.
 //
-
+import SwiftUI
 import SwiftUI
 
-// MARK: - App Configuration
 struct AppConfig {
-    static let backgroundColor = Color(.systemGroupedBackground) // BackGroundColor
-    static let primaryColor = Color(.mint.opacity(0.2)) // PrimaryColor
-    static let buttonColor = Color(.mint) // PrimaryColor
-    static let fontColor = Color(.black)
-    static let cardColor = Color(.white)
-    static let shadowColor = Color.black.opacity(0.1) // Shadow Color
-    
-    static let pendingColor = Color(hex: "#FFD700")  // Gold
-    static let approvedColor = Color(hex: "#CCFFCC") // Green
-    static let rejectedColor = Color(hex: "#e8a1a4") // Red
-    
-    
+    static let backgroundColor = Color(UIColor { $0.userInterfaceStyle == .dark ? .black : .systemGroupedBackground })
+    static let primaryColor = Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: "#98FF98")!.withAlphaComponent(0.4) : UIColor(hex: "#98FF98")!.withAlphaComponent(0.2) }) // Light Green (Mint)
+    static let buttonColor = Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: "#98FF98")! : UIColor(hex: "#3EB489")! }) // Mint Color
+    static let fontColor = Color(UIColor { $0.userInterfaceStyle == .dark ? .white : .black })
+    static let cardColor = Color(UIColor { $0.userInterfaceStyle == .dark ? .secondarySystemBackground : .white })
+    static let shadowColor = Color(UIColor { $0.userInterfaceStyle == .dark ? .clear : UIColor.black.withAlphaComponent(0.1) })
+    static let searchBar = Color(UIColor { $0.userInterfaceStyle == .dark ? .black : .systemBackground })
+
+    // Status Colors (Pending, Approved, Rejected)
+    static let pendingColor = Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: "#B8860B")! : UIColor(hex: "#FFD700")! }) // Darker Gold
+    static let approvedColor = Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: "#228B22")! : UIColor(hex: "#CCFFCC")! }) // Dark Green
+    static let rejectedColor = Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: "#8B0000")! : UIColor(hex: "#e8a1a4")! }) // Dark Red
 }
 
-// MARK: - Hex Color Extension 
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let r, g, b: Double
-        switch hex.count {
-        case 6:
-            r = Double((int >> 16) & 0xFF) / 255.0
-            g = Double((int >> 8) & 0xFF) / 255.0
-            b = Double(int & 0xFF) / 255.0
-        default:
-            r = 1.0; g = 1.0; b = 1.0
-        }
-        self.init(red: r, green: g, blue: b)
+// UIColor extension for Hex Support
+extension UIColor {
+    convenience init?(hex: String) {
+        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
+
+        var rgb: UInt64 = 0
+        Scanner(string: hexSanitized).scanHexInt64(&rgb)
+
+        let red = CGFloat((rgb >> 16) & 0xFF) / 255.0
+        let green = CGFloat((rgb >> 8) & 0xFF) / 255.0
+        let blue = CGFloat(rgb & 0xFF) / 255.0
+
+        self.init(red: red, green: green, blue: blue, alpha: 1.0)
     }
 }

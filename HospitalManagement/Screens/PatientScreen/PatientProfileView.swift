@@ -169,21 +169,28 @@ struct ProfileView: View {
     }
     
     private func handleLogout() {
-        NotificationCenter.default.post(
-            name: NSNotification.Name("LogoutNotification"),
-            object: nil
-        )
-        
-        UserDefaults.standard.removeObject(forKey: "currentUserId")
-        UserDefaults.standard.removeObject(forKey: "isLoggedIn")
-        UserDefaults.standard.removeObject(forKey: "userRole")
-        
-        dismiss()
-        
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            window.rootViewController = UIHostingController(rootView: UserRoleScreen())
-            window.makeKeyAndVisible()
+        Task {
+            do {
+                // Sign out the user from Supabase authentication
+                try await SupabaseController().client.auth.signOut()
+                
+                // Clear any stored user data
+                UserDefaults.standard.removeObject(forKey: "currentUserId")
+                UserDefaults.standard.removeObject(forKey: "isLoggedIn")
+                UserDefaults.standard.removeObject(forKey: "userRole")
+                
+                // Dismiss the profile sheet first
+                dismiss()
+                
+                // Use UIApplication to restart the app's navigation from the beginning
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let window = windowScene.windows.first {
+                    window.rootViewController = UIHostingController(rootView: UserRoleScreen())
+                    window.makeKeyAndVisible()
+                }
+            } catch {
+                print("Error signing out: \(error.localizedDescription)")
+            }
         }
     }
 }

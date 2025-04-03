@@ -13,6 +13,7 @@ struct forcePasswordUpdate: View {
     @State private var errorMessage: String? = nil
     @State private var isLoading = false
     @StateObject private var supabaseController = SupabaseController()
+    @StateObject private var viewModel = HospitalManagementViewModel()
     
     var body: some View {
         NavigationStack {
@@ -72,7 +73,7 @@ struct forcePasswordUpdate: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
-            .navigationDestination(isPresented: $isUpdated) {
+            .fullScreenCover(isPresented: $isUpdated) {
                 getDashboardView()
             }
         }
@@ -163,7 +164,8 @@ struct forcePasswordUpdate: View {
             ContentView()
                 .navigationBarBackButtonHidden(true)
         } else if user.role.lowercased().contains("admin") {
-            AdminHomeView()
+            AdminTabView()
+                .environmentObject(viewModel)
                 .navigationBarBackButtonHidden(true)
         } else if user.role.lowercased().contains("doctor") {
             mainBoard()
