@@ -27,26 +27,6 @@ struct InvoiceListView: View {
                 // Search Bar with Microphone
                 SearchBars(text: $searchText, speechRecognizer: speechRecognizer)
 
-                HStack {
-                    Text("Invoices")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-
-                    Spacer()
-
-                    Menu {
-                        Button("All", action: { selectedFilter = nil })
-                        ForEach(PaymentType.allCases, id: \.self) { type in
-                            Button(type.rawValue.capitalized, action: { selectedFilter = type })
-                        }
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                            .font(.title2)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-
                 if isLoading {
                     ProgressView("Loading invoices...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -114,6 +94,21 @@ struct InvoiceListView: View {
                 }
             }
             .padding(.top)
+        }
+        .navigationTitle("Invoices")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button("All", action: { selectedFilter = nil })
+                    ForEach(PaymentType.allCases, id: \.self) { type in
+                        Button(type.rawValue.capitalized, action: { selectedFilter = type })
+                    }
+                } label: {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .font(.title2)
+                }
+            }
         }
         .task {
             if invoices.isEmpty {
