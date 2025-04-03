@@ -8,32 +8,32 @@ struct InvoiceListView: View {
     @State private var searchText: String = ""
     @StateObject private var supabaseController = SupabaseController()
     @StateObject private var speechRecognizer = SpeechRecognizer()
-
+    
     // Optional: If you want to filter by a specific patient ID
     var patientId: UUID? = nil
-
+    
     var filteredInvoices: [Invoice] {
         invoices.filter { invoice in
             (selectedFilter == nil || invoice.paymentType == selectedFilter) &&
             (searchText.isEmpty || invoiceContainsSearchText(invoice, searchText: searchText))
         }
     }
-
+    
     var body: some View {
         ZStack {
             Color(.systemBackground).edgesIgnoringSafeArea(.all)
-
+            
             VStack(spacing: 0) {
                 // Search Bar with Microphone
                 SearchBars(text: $searchText, speechRecognizer: speechRecognizer)
-
+                
                 HStack {
                     Text("Invoices")
                         .font(.largeTitle)
                         .fontWeight(.bold)
-
+                    
                     Spacer()
-
+                    
                     Menu {
                         Button("All", action: { selectedFilter = nil })
                         ForEach(PaymentType.allCases, id: \.self) { type in
@@ -46,7 +46,7 @@ struct InvoiceListView: View {
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 8)
-
+                
                 if isLoading {
                     ProgressView("Loading invoices...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -56,11 +56,11 @@ struct InvoiceListView: View {
                             .font(.system(size: 50))
                             .foregroundColor(.orange)
                             .padding()
-
+                        
                         Text(error)
                             .multilineTextAlignment(.center)
                             .padding()
-
+                        
                         Button("Try Again") {
                             Task {
                                 await fetchInvoices()
@@ -78,10 +78,10 @@ struct InvoiceListView: View {
                             .font(.system(size: 50))
                             .foregroundColor(.gray)
                             .padding()
-
+                        
                         Text("No invoices found")
                             .font(.headline)
-
+                        
                         Text("Your invoice history will appear here")
                             .font(.subheadline)
                             .foregroundColor(.gray)
@@ -98,11 +98,11 @@ struct InvoiceListView: View {
                                         .background(Color(.systemBackground))
                                 }
                                 .buttonStyle(PlainButtonStyle())
-
+                                
                                 Divider()
                                     .padding(.horizontal)
                             }
-
+                            
                             // Add extra space at the bottom to ensure content doesn't go under tab bar
                             Color.clear.frame(height: 60)
                         }
@@ -128,11 +128,11 @@ struct InvoiceListView: View {
             )
         }
     }
-
+    
     func fetchInvoices() async {
         isLoading = true
         errorMessage = nil
-
+        
         if let patientId = patientId {
             let fetchedInvoices = await supabaseController.fetchInvoicesByPatientId(patientId: patientId)
             if !fetchedInvoices.isEmpty {
@@ -148,18 +148,31 @@ struct InvoiceListView: View {
                 errorMessage = "Unable to load invoices. Please try again later."
             }
         }
-
+        
         isLoading = false
     }
+}
+private func invoiceContainsSearchText(_ invoice: Invoice, searchText: String) -> Bool {
+    let searchTerms = searchText
+        .lowercased()
+        .split(separator: " ")
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+    
+    guard !searchTerms.isEmpty else { return false }
 
-    private func invoiceContainsSearchText(_ invoice: Invoice, searchText: String) -> Bool {
-        let searchTerm = searchText.lowercased()
-        return invoice.paymentType.rawValue.lowercased().contains(searchTerm) ||
-            formatDate(invoice.createdAt).lowercased().contains(searchTerm) ||
-            invoice.id.uuidString.lowercased().contains(searchTerm) ||
-            "\(invoice.amount)".contains(searchTerm)
+    let invoiceDetails = [
+        invoice.paymentType.rawValue.lowercased(),
+        formatDate(invoice.createdAt).lowercased(),
+        invoice.id.uuidString.lowercased(),
+        "\(invoice.amount)"
+    ]
+
+    // Return true only if ALL search terms match any invoice detail
+    return searchTerms.allSatisfy { term in
+        invoiceDetails.contains { $0.localizedCaseInsensitiveContains(term) }
     }
 }
+
 
 
 // MARK: - Preview

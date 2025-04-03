@@ -48,47 +48,74 @@ class SpeechRecognizer: NSObject, ObservableObject, @unchecked Sendable {
     }
     
     private func checkMicrophonePermission() {
-        switch AVAudioSession.sharedInstance().recordPermission {
-        case .granted:
-            microphonePermissionStatus = .authorized
-        case .denied:
-            microphonePermissionStatus = .denied
-        case .undetermined:
-            microphonePermissionStatus = .notDetermined
-        @unknown default:
-            microphonePermissionStatus = .error("Unknown permission status")
+        if #available(iOS 17.0, *) {
+            switch AVAudioApplication.shared.recordPermission {
+            case .granted:
+                microphonePermissionStatus = .authorized
+            case .denied:
+                microphonePermissionStatus = .denied
+            case .undetermined:
+                microphonePermissionStatus = .notDetermined
+            @unknown default:
+                microphonePermissionStatus = .error("Unknown permission status")
+            }
+        } else {
+            switch AVAudioSession.sharedInstance().recordPermission {
+            case .granted:
+                microphonePermissionStatus = .authorized
+            case .denied:
+                microphonePermissionStatus = .denied
+            case .undetermined:
+                microphonePermissionStatus = .notDetermined
+            @unknown default:
+                microphonePermissionStatus = .error("Unknown permission status")
+            }
         }
     }
     
     public func requestAuthorization() {
-        // First request microphone permission
-        AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
+        if #available(iOS 17.0, *) {
+            AVAudioApplication.requestRecordPermission { [weak self] granted in
+                Task { @MainActor [weak self] in
+                    self?.handlePermissionResponse(granted: granted)
+                }
+            }
+        } else {
+            AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
+                Task { @MainActor [weak self] in
+                    self?.handlePermissionResponse(granted: granted)
+                }
+            }
+        }
+    }
+    
+    private func handlePermissionResponse(granted: Bool) {
+        if granted {
+            microphonePermissionStatus = .authorized
+            requestSpeechRecognitionAuthorization()
+        } else {
+            microphonePermissionStatus = .denied
+            errorMessage = AlertMessage(message: "Microphone access was denied. Please enable it in Settings.")
+        }
+    }
+    
+    private func requestSpeechRecognitionAuthorization() {
+        SFSpeechRecognizer.requestAuthorization { [weak self] authStatus in
             Task { @MainActor [weak self] in
-                if granted {
+                switch authStatus {
+                case .authorized:
                     self?.microphonePermissionStatus = .authorized
-                    // Then request speech recognition permission
-                    SFSpeechRecognizer.requestAuthorization { [weak self] authStatus in
-                        Task { @MainActor [weak self] in
-                            switch authStatus {
-                            case .authorized:
-                                self?.microphonePermissionStatus = .authorized
-                            case .denied:
-                                self?.microphonePermissionStatus = .denied
-                                self?.errorMessage = AlertMessage(message: "Speech recognition authorization was denied. Please enable it in Settings.")
-                            case .restricted:
-                                self?.microphonePermissionStatus = .restricted
-                                self?.errorMessage = AlertMessage(message: "Speech recognition is restricted on this device.")
-                            case .notDetermined:
-                                self?.microphonePermissionStatus = .notDetermined
-                            @unknown default:
-                                self?.microphonePermissionStatus = .error("Unknown authorization status")
-                                self?.errorMessage = AlertMessage(message: "An unknown error occurred during authorization.")
-                            }
-                        }
-                    }
-                } else {
+                case .denied:
                     self?.microphonePermissionStatus = .denied
-                    self?.errorMessage = AlertMessage(message: "Microphone access was denied. Please enable it in Settings.")
+                    self?.errorMessage = AlertMessage(message: "Speech recognition authorization was denied. Please enable it in Settings.")
+                case .restricted:
+                    self?.microphonePermissionStatus = .restricted
+                    self?.errorMessage = AlertMessage(message: "Speech recognition is restricted on this device.")
+                case .notDetermined:
+                    self?.microphonePermissionStatus = .notDetermined
+                @unknown default:
+                    self?.microphonePermissionStatus = .error("Unknown authorization status")
+                    self?.errorMessage = AlertMessage(message: "An unknown error occurred during authorization.")
                 }
             }
         }
@@ -108,7 +135,6 @@ class SpeechRecognizer: NSObject, ObservableObject, @unchecked Sendable {
             return
         }
         
-        // Setup audio engine and recognition request
         audioEngine = AVAudioEngine()
         request = SFSpeechAudioBufferRecognitionRequest()
         
@@ -135,14 +161,13 @@ class SpeechRecognizer: NSObject, ObservableObject, @unchecked Sendable {
         
         recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) { [weak self] result, error in
             Task { @MainActor [weak self] in
+                if let result = result {
+                    self?.recognizedText = result.bestTranscription.formattedString
+                }
+
                 if let error = error {
                     self?.errorMessage = AlertMessage(message: "Recognition error: \(error.localizedDescription)")
                     self?.stopRecording()
-                    return
-                }
-                
-                if let result = result {
-                    self?.recognizedText = result.bestTranscription.formattedString
                 }
             }
         }
@@ -169,7 +194,6 @@ class SpeechRecognizer: NSObject, ObservableObject, @unchecked Sendable {
         
         isRecording = false
         
-        // Deactivate audio session when done
         do {
             try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         } catch {
