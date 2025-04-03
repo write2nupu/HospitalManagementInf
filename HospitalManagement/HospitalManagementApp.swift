@@ -15,10 +15,16 @@ struct HospitalManagementApp: App {
     @AppStorage("userRole") private var userRole: String = ""
     @State private var patient: Patient?
     @StateObject private var supabaseController = SupabaseController()
+    @State private var isLoading = false
     
     var body: some Scene {
         WindowGroup {
-            if isLoggedIn && !currentUserId.isEmpty {
+            if isLoading {
+                LoadingView()
+                    .onAppear {
+                        loadPatientData()
+                    }
+            } else if isLoggedIn && !currentUserId.isEmpty {
                 // User is logged in, show appropriate view based on role
                 switch userRole {
                 case "admin":
@@ -28,7 +34,14 @@ struct HospitalManagementApp: App {
                 case "doctor":
                     mainBoard()
                 case "patient":
-                    PatientDashboard(patient: self.patient!)
+                    if let patient = self.patient {
+                        PatientDashboard(patient: patient)
+                    } else {
+                        LoadingView()
+                            .onAppear {
+                                loadPatientData()
+                            }
+                    }
                 default:
                     UserRoleScreen()
                 }
@@ -50,6 +63,45 @@ struct HospitalManagementApp: App {
         }
     }
     
+    private func loadPatientData() {
+        if isLoggedIn && userRole == "patient" && !currentUserId.isEmpty {
+            isLoading = true
+            
+            Task {
+                do {
+                    if let patientId = UUID(uuidString: currentUserId) {
+                        print("🔄 Loading patient data for ID: \(patientId)")
+                        if let fetchedPatient = try await supabaseController.fetchPatientById(patientId: patientId) {
+                            await MainActor.run {
+                                self.patient = fetchedPatient
+                                self.isLoading = false
+                                print("✅ Successfully loaded patient data")
+                            }
+                        } else {
+                            print("❌ Could not find patient with ID: \(patientId)")
+                            await MainActor.run {
+                                // Reset login state if patient not found
+                                self.isLoggedIn = false
+                                self.currentUserId = ""
+                                self.userRole = ""
+                                self.isLoading = false
+                            }
+                        }
+                    } else {
+                        print("❌ Invalid UUID format for patient ID: \(currentUserId)")
+                        await MainActor.run {
+                            self.isLoading = false
+                        }
+                    }
+                } catch {
+                    print("❌ Error loading patient data: \(error)")
+                    await MainActor.run {
+                        self.isLoading = false
+                    }
+                }
+            }
+        }
+    }
 }
 
 // Simple loading view

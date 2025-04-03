@@ -119,7 +119,7 @@ struct DepartmentListView: View {
             }
         }
         .navigationTitle("Select Department")
-        .background(Color.mint.opacity(0.05)) // Soft mint background
+        .background(AppConfig.backgroundColor) // Soft mint background
         .task {
             await loadDepartmentsAndDoctors()
         }
@@ -168,14 +168,14 @@ struct DepartmentListView: View {
                     Text(department.name)
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundColor(.mint)
+                        .foregroundColor(.primary)
                         .lineLimit(1)
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.right")
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
                     .font(.caption)
             }
             
@@ -189,7 +189,7 @@ struct DepartmentListView: View {
                     
                     Text("\(doctorsByDepartment[department.id]?.count ?? 0)")
                         .font(.headline)
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
@@ -199,7 +199,7 @@ struct DepartmentListView: View {
                     
                     Text("₹\(String(format: "%.2f", department.fees))")
                         .font(.headline)
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                 }
                 
                 Spacer()
@@ -208,7 +208,7 @@ struct DepartmentListView: View {
             if let description = department.description, !description.isEmpty {
                 Text(description)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppConfig.buttonColor)
                     .lineLimit(2)
             }
         }
@@ -216,7 +216,7 @@ struct DepartmentListView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 15)
-                .fill(Color.white)
+                .fill(AppConfig.cardColor)
                 .shadow(color: .mint.opacity(0.2), radius: 5, x: 0, y: 2)
         )
     }

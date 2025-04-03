@@ -20,6 +20,7 @@ struct AppConfig {
     static let pendingColor = Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: "#B8860B")! : UIColor(hex: "#FFD700")! }) // Darker Gold
     static let approvedColor = Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: "#228B22")! : UIColor(hex: "#CCFFCC")! }) // Dark Green
     static let rejectedColor = Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: "#8B0000")! : UIColor(hex: "#e8a1a4")! }) // Dark Red
+    static let redColor = Color(UIColor { $0.userInterfaceStyle == .dark ? .red : .red }) // Dark Red
 }
 
 // UIColor extension for Hex Support

@@ -19,7 +19,8 @@ struct ProfileView: View {
     @State private var currentMedication: String = ""
     @State private var pastSurgeries: String = ""
     @State private var emergencyContact: String = ""
-    
+    @State private var showLogoutAlert = false
+
     @StateObject private var supabase = SupabaseController()
     @Environment(\.dismiss) var dismiss
     
@@ -85,11 +86,22 @@ struct ProfileView: View {
                     
                     Section {
                         Button(action: {
-                            handleLogout()
+                            showLogoutAlert = true
                         }) {
                             Text("Logout")
-                                .frame(maxWidth: .infinity, alignment: .center)
+                                .fontWeight(.bold)
                                 .foregroundColor(.red)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                        .alert(isPresented: $showLogoutAlert) {
+                            Alert(
+                                title: Text("Logout"),
+                                message: Text("Are you sure you want to logout?"),
+                                primaryButton: .destructive(Text("Logout")) {
+                                    handleLogout()
+                                },
+                                secondaryButton: .cancel()
+                            )
                         }
                     }
                 }

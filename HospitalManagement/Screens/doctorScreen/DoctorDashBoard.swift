@@ -328,7 +328,7 @@ struct DoctorDashBoard: View {
                             do {
                                 let patient = try await supabase.fetchPatientById(patientId: appointment.patientId)
                                 await MainActor.run {
-                                    patientNames[appointment.patientId] = patient.fullname
+                                    patientNames[appointment.patientId] = patient?.fullname
                                 }
                             } catch {
                                 print("Error fetching patient name for ID \(appointment.patientId): \(error)")

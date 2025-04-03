@@ -9,21 +9,16 @@ struct RecordsTabView: View {
     @State private var labTestCount: Int = 0
     
     var body: some View {
-        ZStack(alignment: .top) {
+        ZStack {
+            Color(.systemBackground).edgesIgnoringSafeArea(.all)
+            
             Group {
                 if selectedHospitalId.isEmpty {
                     NoHospitalSelectedView()
-                        .padding(.top, 50)
                 } else {
                     ScrollView {
                         VStack(spacing: 20) {
                             VStack(alignment: .leading, spacing: 15) {
-                                Text("")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(AppConfig.fontColor)
-                                    .padding(.horizontal)
-                                
                                 // Lab Reports Card
                                 RecordCategoryCard<LabReportsView>(
                                     title: "Lab Reports",
@@ -43,27 +38,13 @@ struct RecordsTabView: View {
                             .padding(.horizontal)
                         }
                         .padding(.vertical)
-                        .padding(.top, 50)
                     }
                     .background(AppConfig.backgroundColor)
                 }
             }
-            
-            // Sticky header
-            VStack(spacing: 0) {
-                Text("Medical Records")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal)
-                    .padding(.top, 10)
-                    .background(Color(.systemBackground))
-                
-                Divider()
-            }
-            .background(Color(.systemBackground))
-            .zIndex(1)
         }
+        .navigationTitle("Medical Records")
+        .navigationBarTitleDisplayMode(.large)
         .onAppear {
             fetchPrescriptions()
             fetchLabTestCount()
@@ -161,7 +142,7 @@ struct RecordCategoryCard<D: View>: View {
             HStack {
                 Image(systemName: iconName)
                     .font(.system(size: 24))
-                    .foregroundColor(.blue)
+                    .foregroundColor(AppConfig.buttonColor)
                     .frame(width: 50, height: 50)
                     .background(Color.blue.opacity(0.1))
                     .cornerRadius(10)
@@ -225,7 +206,7 @@ struct NoHospitalSelectedView: View {
         VStack(spacing: 20) {
             Image(systemName: "building.2.crop.circle")
                 .font(.system(size: 60))
-                .foregroundColor(.blue.opacity(0.5))
+                .foregroundColor(AppConfig.buttonColor)
             
             Text("No Hospital Selected")
                 .font(.title3)
@@ -240,7 +221,7 @@ struct NoHospitalSelectedView: View {
             }) {
                 Text("Go to Home")
                     .fontWeight(.medium)
-                    .foregroundColor(.white)
+                    .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(AppConfig.buttonColor)
