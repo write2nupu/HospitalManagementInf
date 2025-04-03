@@ -31,10 +31,10 @@ struct PatientView: View {
             VStack(spacing: 8) {
                 PatientSearchBar(text: $searchText)
                     .padding(.horizontal)
-                    .padding(.bottom, 3)
+                    .padding(.vertical)
+//                    .background(AppConfig.searchBar)
             }
-            .background(Color.white)
-            .shadow(color: AppConfig.shadowColor, radius: 2, x: 0, y: 2)
+            .background(AppConfig.backgroundColor)
             .zIndex(1)
             
             if isLoading {
@@ -57,7 +57,15 @@ struct PatientView: View {
             } else {
                 // Scrollable Content
                 ScrollView {
-                    LazyVStack(spacing: 15) {
+                    GeometryReader { geometry in
+                        Color.clear.preference(
+                            key: ScrollOffsetPreferenceKey.self,
+                            value: geometry.frame(in: .named("scroll")).minY
+                        )
+                    }
+                    .frame(height: 0)
+                    
+                    LazyVStack(spacing: 7) {
                         ForEach(filteredPatients) { patient in
                             NavigationLink(destination: PatientDetailView(patient: patient)) {
                                 PatientCard(patient: patient)
@@ -69,7 +77,7 @@ struct PatientView: View {
                 }
             }
         }
-        .background(Color(.systemGray6).opacity(0.2))
+        .background(AppConfig.backgroundColor)
         .ignoresSafeArea(.all, edges: .bottom)
         .onAppear {
             isViewActive = true
@@ -183,7 +191,7 @@ struct PatientSearchBar: View {
                 .padding(6) // 🔹 Decreased padding
         }
         .padding(8) // 🔹 Reduced overall height
-        .background(Color(.systemGray6))
+        .background(AppConfig.searchBar)
         .cornerRadius(8) // 🔹 Slightly reduced corner radius
     }
 }
@@ -213,7 +221,7 @@ struct PatientCard: View {
             }
         }
         .padding()
-        .background(.white)
+        .background(AppConfig.cardColor)
         .cornerRadius(12)
         .shadow(color: AppConfig.shadowColor, radius: 4, x: 0, y: 2)
     }

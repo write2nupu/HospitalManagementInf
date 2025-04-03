@@ -11,17 +11,12 @@ struct mainBoard: View {
     // Track selected tab
     @State private var selectedTab: Int = 0
     
-    // Titles for different screens
     var tabTitles = ["Dashboard", "Appointments", "Patients"]
     
-    // Dynamic Title based on Selected Tab
-    var dynamicTitle: String {
-        if selectedTab == 0 {
-            return "Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")"
-        } else {
-            return tabTitles[selectedTab]
-        }
-    }
+    // Track scroll position for dynamic title
+    @State private var scrollOffset: CGFloat = 0
+    @State private var lastScrollOffset: CGFloat = 0
+    
     
     var body: some View {
         NavigationStack {
@@ -40,49 +35,59 @@ struct mainBoard: View {
                             }
                         }
                     }
-                } else  {
+                } else {
                     TabView(selection: $selectedTab) {
-                        NavigationStack {
-                            DoctorDashBoard()
-                        }
-                        .tag(0)
-                        .tabItem {
-                            Label("Home", systemImage: "house.fill")
-                        }
+                        DoctorDashBoard(doctor: doctor)
+                            .coordinateSpace(name: "scroll")
+                            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
+                                scrollOffset = value
+                            }
+                            .tag(0)
+                            .tabItem {
+                                Label("Home", systemImage: "house.fill")
+                            }
 
-                        NavigationStack {
-                            AppointmentView()
-                        }
-                        .tag(1)
-                        .tabItem {
-                            Label("Appointments", systemImage: "calendar")
-                        }
+                        AppointmentView()
+                            .coordinateSpace(name: "scroll")
+                            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
+                                scrollOffset = value
+                            }
+                            .tag(1)
+                            .tabItem {
+                                Label("Appointments", systemImage: "calendar")
+                            }
 
-                        NavigationStack {
-                            PatientView()
-                        }
-                        .tag(2)
-                        .tabItem {
-                            Label("Patients", systemImage: "person.fill")
-                        }
+                        PatientView()
+                            .coordinateSpace(name: "scroll")
+                            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
+                                scrollOffset = value
+                            }
+                            .tag(2)
+                            .tabItem {
+                                Label("Patients", systemImage: "person.fill")
+                            }
                     }
                     .accentColor(AppConfig.buttonColor)
-                }
-            }
-            .navigationTitle(dynamicTitle)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showProfile = true
-                    }) {
-                        Image(systemName: "person.crop.circle.fill")
-                            .resizable()
-                            .frame(width: 40, height: 40)
-                            .foregroundColor(AppConfig.buttonColor)
-                            .padding(.top, 10)
+                    .navigationTitle(dynamicTitle)
+//                    .navigationBarTitleDisplayMode(.large)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button(action: {
+                                showProfile = true
+                            }) {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .resizable()
+                                    .frame(width: 30, height: 30)
+                                    .foregroundColor(AppConfig.buttonColor)
+                            }
+                        }
                     }
                 }
             }
+//            .background(AppConfig.backgroundColor)
+//            .navigationBarTitleDisplayMode(.automatic)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(AppConfig.backgroundColor, for: .navigationBar)
             .sheet(isPresented: $showProfile) {
                 if let doctor = doctor {
                     DoctorProfileView(doctor: doctor)
@@ -92,6 +97,27 @@ struct mainBoard: View {
             .task {
                 await fetchDoctorDetails()
             }
+        }
+    }
+    
+    private var dynamicTitle: String {
+        if selectedTab == 0 {
+            return "Hi, \(doctor?.full_name.components(separatedBy: " ").first ?? "Doctor")"
+        } else {
+            return tabTitles[selectedTab]
+        }
+    }
+    
+    private var selectedTabTitle: String {
+        switch selectedTab {
+        case 0:
+            return "Dashboard"
+        case 1:
+            return "Appointments"
+        case 2:
+            return "Patients"
+        default:
+            return ""
         }
     }
     
@@ -128,6 +154,14 @@ struct mainBoard: View {
         }
         
         isLoading = false
+    }
+}
+
+// Scroll offset preference key
+struct ScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 

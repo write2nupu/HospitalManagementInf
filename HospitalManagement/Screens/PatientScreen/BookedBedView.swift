@@ -156,8 +156,9 @@ struct CurrentBedBookingView: View {
             }
             
             // Load booked beds for the current patient
-            if let patientId = UUID(uuidString: currentUserId) {
-                bookedBeds = try await supabaseController.getBookingsByPatientId(patientId: patientId)
+            if let patientId = UserDefaults.standard.string(forKey: "currentPatientId"),
+               let patientUUID = UUID(uuidString: patientId) {
+                bookedBeds = try await supabaseController.getBookingsByPatientId(patientId: patientUUID)
             } else {
                 errorMessage = "Please log in to view your bookings."
             }
