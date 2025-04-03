@@ -3,6 +3,9 @@ import SwiftUI
 struct HomeTabView: View {
     @Binding var selectedHospital: Hospital?
     @Binding var departments: [Department]
+    @State private var latestAppointment: Appointment?
+    @State private var isLoadingAppointment = true
+    @StateObject private var supabase = SupabaseController()
     
     var body: some View {
         ScrollView {
@@ -79,7 +82,10 @@ struct HomeTabView: View {
                 // Only show Services and Departments if a hospital is selected
                 if let hospital = selectedHospital {
                     // MARK: - Latest Appointment Section
-                    if let savedAppointments = UserDefaults.standard.array(forKey: "savedAppointments") as? [[String: Any]], !savedAppointments.isEmpty {
+                    if isLoadingAppointment {
+                        ProgressView()
+                            .padding()
+                    } else if let appointment = latestAppointment {
                         VStack(alignment: .leading, spacing: 15) {
                             Text("Latest Appointment")
                                 .font(.title2)
@@ -87,56 +93,46 @@ struct HomeTabView: View {
                                 .foregroundColor(AppConfig.fontColor)
                                 .padding(.horizontal)
                             
-                            // Get the most recent appointment
-                            let latestAppointment = savedAppointments.max { 
-                                ($0["timestamp"] as? Date) ?? Date.distantPast < 
-                                    ($1["timestamp"] as? Date) ?? Date.distantPast 
-                            }
-                            
-                            if let appointment = latestAppointment {
-                                NavigationLink(destination: AppointmentDetailsView(appointmentDetails: appointment)) {
-                                    HStack(spacing: 15) {
-                                        Image(systemName: appointment["appointmentType"] as? String == "Emergency" ? "cross.case.fill" : "calendar.badge.plus")
-                                            .font(.system(size: 30))
-                                            .foregroundColor(.white)
-                                            .padding()
-                                            .background(
-                                                appointment["appointmentType"] as? String == "Emergency" ? Color.red : Color.mint
-                                            )
-                                            .clipShape(Circle())
-                                        
-                                        VStack(alignment: .leading, spacing: 5) {
-                                            Text(appointment["doctorName"] as? String ?? "Appointment")
-                                                .font(.headline)
-                                                .foregroundColor(
-                                                    (appointment["appointmentType"] as? String) == "Emergency" ? 
-                                                        .red : .mint
-                                                )
-                                            
-                                            Text("Immediate medical help")
-                                                .font(.subheadline)
-                                                .foregroundColor(.secondary)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        Image(systemName: "chevron.right")
+                            NavigationLink(destination: AppointmentDetailView(appointment: appointment)) {
+                                HStack(spacing: 15) {
+                                    Image(systemName: appointment.type == .Emergency ? "cross.case.fill" : "calendar.badge.plus")
+                                        .font(.system(size: 30))
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .background(
+                                            appointment.type == .Emergency ? Color.red : Color.mint
+                                        )
+                                        .clipShape(Circle())
+                                    
+                                    VStack(alignment: .leading, spacing: 5) {
+                                        Text(appointment.type.rawValue)
+                                            .font(.headline)
                                             .foregroundColor(
-                                                (appointment["appointmentType"] as? String) == "Emergency" ? 
-                                                    .red : .mint
+                                                appointment.type == .Emergency ? .red : .mint
                                             )
+                                        
+                                        Text(formattedDate(appointment.date))
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
                                     }
-                                    .padding()
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 15)
-                                            .fill(
-                                                (appointment["appointmentType"] as? String) == "Emergency" ? 
-                                                Color.red.opacity(0.1) : Color.mint.opacity(0.1)
-                                            )
-                                            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-                                    )
-                                    .padding(.horizontal)
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(
+                                            appointment.type == .Emergency ? .red : .mint
+                                        )
                                 }
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 15)
+                                        .fill(
+                                            appointment.type == .Emergency ?
+                                            Color.red.opacity(0.1) : Color.mint.opacity(0.1)
+                                        )
+                                        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                                )
+                                .padding(.horizontal)
                             }
                         }
                         .padding(.top, 10)
@@ -278,6 +274,45 @@ struct HomeTabView: View {
             .padding(.vertical)
         }
         .background(AppConfig.backgroundColor)
+        .task {
+            await fetchLatestAppointment()
+        }
+    }
+    
+    private func fetchLatestAppointment() async {
+        guard let patientIdString = UserDefaults.standard.string(forKey: "currentPatientId"),
+              let patientId = UUID(uuidString: patientIdString) else {
+            isLoadingAppointment = false
+            return
+        }
+        
+        do {
+            let appointments = try await supabase.fetchAppointmentsForPatient(patientId: patientId)
+            
+            // Get current date without time component for accurate comparison
+            let now = Calendar.current.startOfDay(for: Date())
+            
+            // Filter for:
+            // 1. Only scheduled appointments
+            // 2. Only future appointments
+            // 3. Get the nearest date
+            latestAppointment = appointments
+                .filter { $0.status == .scheduled } // Only scheduled appointments
+                .filter { $0.date >= now } // Only future appointments
+                .min { $0.date < $1.date } // Get the nearest date
+            
+        } catch {
+            print("Error fetching latest appointment:", error)
+        }
+        
+        isLoadingAppointment = false
+    }
+    
+    private func formattedDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 
@@ -305,5 +340,70 @@ struct ServiceCard: View {
                 .fill(Color(.systemBackground))
                 .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
         )
+    }
+}
+
+// First, add this new view for appointment details
+struct LatestAppointmentDetailView: View {
+    let appointment: Appointment
+    @State private var doctor: Doctor?
+    @StateObject private var supabase = SupabaseController()
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Appointment Info Card
+                VStack(alignment: .leading, spacing: 15) {
+                    Text("Appointment Details")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.mint)
+                    
+                    VStack(spacing: 15) {
+                        LatestAppointmentDetailRow(title: "Date", value: formattedDate(appointment.date))
+                        LatestAppointmentDetailRow(title: "Type", value: appointment.type.rawValue)
+                        LatestAppointmentDetailRow(title: "Status", value: appointment.status.rawValue)
+                        if let doctor = doctor {
+                            LatestAppointmentDetailRow(title: "Doctor", value: doctor.full_name)
+                        }
+                    }
+                    .padding()
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                }
+                .padding()
+            }
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Appointment Details")
+        .task {
+            // Fetch doctor details when view appears
+            if let fetchedDoctor = try? await supabase.fetchDoctorById(doctorId: appointment.doctorId) {
+                doctor = fetchedDoctor
+            }
+        }
+    }
+    
+    private func formattedDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+}
+
+struct LatestAppointmentDetailRow: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Text(title)
+                .foregroundColor(.gray)
+            Spacer()
+            Text(value)
+                .foregroundColor(.primary)
+        }
     }
 }
