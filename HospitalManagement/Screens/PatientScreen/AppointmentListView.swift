@@ -211,49 +211,58 @@ struct AppointmentCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Doctor info row
-            HStack(spacing: 12) {
-                Circle()
-                    .fill(Color.mint.opacity(0.2))
-                    .frame(width: 40, height: 40)
-                    .overlay(
-                        Image(systemName: "person.fill")
-                            .foregroundColor(.mint)
-                    )
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(doctorName)
-                        .font(.headline)
-                    
-                    Text(appointment.type.rawValue)
-                        .font(.subheadline)
-                .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                statusBadge
-            }
+            doctorSection
             
             Divider()
             
             // Updated date and time display
             HStack(spacing: 16) {
-                dateView
-                Spacer()
-                timeView
+                if appointment.type == .Emergency {
+                    Text("Emergency Request")
+                        .foregroundColor(.red)
+                        .font(.subheadline)
+                } else {
+                    dateView
+                    Spacer()
+                    timeView
+                }
             }
             
-            // Only show action buttons for upcoming appointments that aren't cancelled
-            if !isPast && appointment.status == .scheduled {
+            // Only show action buttons for upcoming regular appointments that aren't cancelled
+            if !isPast && appointment.status == .scheduled && appointment.type != .Emergency {
                 Divider()
                 actionButtons
-                    }
-                }
-                .padding()
+            }
+        }
+        .padding()
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 2)
+    }
+    
+    private var doctorSection: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color.mint.opacity(0.2))
+                .frame(width: 40, height: 40)
+                .overlay(
+                    Image(systemName: appointment.type == .Emergency ? "cross.case.fill" : "person.fill")
+                        .foregroundColor(.mint)
+                )
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(appointment.type == .Emergency ? "Emergency Appointment" : doctorName)
+                    .font(.headline)
+                
+                Text(appointment.type.rawValue)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            statusBadge
+        }
     }
     
     private var statusBadge: some View {
