@@ -53,6 +53,10 @@ struct PaymentView: View {
                 VStack {
                     Divider()
                     Button(action: {
+                        
+                        let generator = UIImpactFeedbackGenerator(style: .rigid)
+                        generator.impactOccurred()
+                        
                         processPayment()
                     }) {
                         HStack {
