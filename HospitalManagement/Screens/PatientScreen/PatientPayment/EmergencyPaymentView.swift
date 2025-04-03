@@ -151,6 +151,10 @@ struct EmergencyPaymentView: View {
     // MARK: - Pay Button
     private var payButton: some View {
         Button(action: {
+            
+            let generator = UIImpactFeedbackGenerator(style: .rigid)
+            generator.impactOccurred()
+            
             showingConfirmation = true
         }) {
             HStack {

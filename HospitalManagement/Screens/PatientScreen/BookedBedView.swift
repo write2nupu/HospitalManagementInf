@@ -16,48 +16,62 @@ struct CurrentBedBookingView: View {
     @State private var errorMessage: String?
     
     var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 16) {
+        ScrollView {
+            VStack(spacing: 20) {
                 bookingCardView
-                bookedSectionTitle
-                bookedBedsContent
+                
+                if isLoading {
+                    ProgressView("Loading booked beds...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    if bookedBeds.isEmpty {
+                        emptyBookingsView
+                    } else {
+                        bookedBedsListView
+                    }
+                }
             }
-            .navigationTitle("Bed Booking")
-            .navigationBarTitleDisplayMode(.inline)
-            .task {
-                await loadInitialData()
-            }
-            .refreshable {
-                await loadInitialData()
-            }
+            .padding(.top)
+        }
+        .navigationTitle("Bed Booking")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await loadInitialData()
+        }
+        .refreshable {
+            await loadInitialData()
         }
     }
     
     private var bookingCardView: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.gray.opacity(0.1))
-                .padding(.horizontal)
-                .frame(height: 190)
+            RoundedRectangle(cornerRadius: 15)
+                .fill(Color.mint.opacity(0.1))
+                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
             
             HStack {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 12) {
                     Text("Need a Bed?")
                         .font(.title3)
-                        .bold()
-                        .padding(.leading, 30)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
                     
                     bookNowButton
                 }
+                .padding(.leading, 25)
+                
                 Spacer()
+                
                 Image("BedBookingImage")
                     .resizable()
-                    .scaledToFill()
+                    .scaledToFit()
                     .frame(width: 130, height: 130)
-                    .padding(.trailing, 40)
+                    .padding(.trailing, 25)
             }
-            .padding()
+            .padding(.vertical)
         }
+        .frame(height: 180)
+        .padding(.horizontal)
     }
     
     private var bookNowButton: some View {
@@ -65,85 +79,84 @@ struct CurrentBedBookingView: View {
             if let hospital = selectedHospital {
                 NavigationLink(destination: BedBookingView(hospital: hospital)) {
                     Text("Book Now")
+                        .fontWeight(.semibold)
                         .foregroundColor(.white)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: 150)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
                         .background(Color.mint)
-                        .cornerRadius(8)
-                        .padding(.leading, 16)
+                        .cornerRadius(10)
                 }
             } else {
                 Text("Loading hospital...")
                     .foregroundColor(.gray)
-                    .padding(.leading, 16)
             }
         }
     }
     
-    private var bookedSectionTitle: some View {
-        Text("Booked")
-            .font(.title2)
-            .bold()
-            .padding(.horizontal, 20)
-    }
-    
-    private var bookedBedsContent: some View {
-        Group {
-            if isLoading {
-                ProgressView("Loading booked beds...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if bookedBeds.isEmpty {
-                emptyBookingsView
-            } else {
-                bookedBedsListView
+    private var bookedBedsListView: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Your Bookings")
+                .font(.title3)
+                .fontWeight(.bold)
+                .padding(.horizontal)
+            
+            ForEach(bookedBeds) { booking in
+                bookingCard(for: booking)
             }
         }
     }
     
     private var emptyBookingsView: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             Image(systemName: "bed.double")
-                .font(.system(size: 40))
-                .foregroundColor(.mint.opacity(0.3))
-            Text("No beds booked")
-                .font(.headline)
+                .font(.system(size: 50))
+                .foregroundColor(.mint.opacity(0.5))
+            
+            Text("No Active Bookings")
+                .font(.title3)
+                .fontWeight(.semibold)
+            
             Text("Your booked beds will appear here")
                 .font(.subheadline)
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: 200)
         .padding()
     }
     
-    private var bookedBedsListView: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(bookedBeds) { booking in
-                    bookingCard(for: booking)
-                }
+    private func bookingCard(for booking: BedBookingWithDetails) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "bed.double")
+                    .font(.title3)
+                    .foregroundColor(.mint)
+                
+                Text(booking.bedType.rawValue)
+                    .font(.headline)
             }
-            .padding(.top, 8)
+            
+            VStack(alignment: .leading, spacing: 8) {
+                bookingDateRow(title: "Check In", date: booking.startDate)
+                bookingDateRow(title: "Check Out", date: booking.endDate)
+            }
         }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(Color.mint.opacity(0.1))
+        )
+        .padding(.horizontal)
     }
     
-    private func bookingCard(for booking: BedBookingWithDetails) -> some View {
-        RoundedRectangle(cornerRadius: 10)
-            .fill(Color.mint.opacity(0.1))
-            .padding(.horizontal)
-            .frame(height: 100)
-            .overlay(
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Bed Type: \(booking.bedType.rawValue)")
-                        .font(.headline)
-                    Text("Check In: \(formatDate(booking.startDate))")
-                        .font(.body)
-                    Text("Check Out: \(formatDate(booking.endDate))")
-                        .font(.body)
-                }
-                .padding(.horizontal, 40)
-                .padding(.vertical, 10)
-                , alignment: .leading
-            )
+    private func bookingDateRow(title: String, date: Date) -> some View {
+        HStack {
+            Text(title)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(formatDate(date))
+                .foregroundColor(.primary)
+        }
+        .font(.subheadline)
     }
     
     private func loadInitialData() async {
