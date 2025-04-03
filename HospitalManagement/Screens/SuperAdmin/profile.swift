@@ -1,56 +1,3 @@
-////
-////  profile.swift
-////  HospitalManagement
-////
-////  Created by Nikhil Gupta on 21/03/25.
-////
-//import SwiftUI
-//
-//
-//struct SuperAdminProfileView: View {
-//    @Environment(\.dismiss) private var dismiss
-//    @State private var isLoggedOut = false
-//    var body: some View {
-//        NavigationView {
-//            Form {
-//                Section("Super Admin Information") {
-//                    HStack {
-//                        Text("Name:")
-//                        Spacer()
-//                        Text("Super Admin")
-//                            .foregroundColor(.secondary)
-//                    }
-//                    
-//                    HStack {
-//                        Text("Email:")
-//                        Spacer()
-//                        Text("admin@example.com")
-//                            .foregroundColor(.secondary)
-//                    }
-//                   
-//                    }
-//                Section {
-//                    Button(action: handleLogout) {
-//                        Text("Logout")
-//                            .fontWeight(.bold)
-//                            .foregroundColor(.red)
-//                            .frame(maxWidth: .infinity, alignment: .center)
-//                    }
-//                }
-//                .navigationTitle("Profile")
-//                .navigationBarItems(trailing: Button("Done") { dismiss() })
-//                .fullScreenCover(isPresented: .constant(isLoggedOut)) {
-//                    UserRoleScreen()
-//                }
-//            }
-//        }
-//    }
-//    private func handleLogout() {
-//        isLoggedOut = true
-//    }
-//}
-
-
 
 //
 //  profile.swift
@@ -152,10 +99,32 @@ struct SuperAdminProfileView: View {
     }
     
     private func handleLogout() {
-        userRole = nil
-        isLoggedIn = false
-        NotificationCenter.default.post(name: .init("LogoutNotification"), object: nil)
-        isLoggedOut = true
+        Task {
+            do {
+                // Sign out the user from Supabase authentication
+                try await supabaseController.client.auth.signOut()
+                
+                // Update local state
+                userRole = nil
+                isLoggedIn = false
+                
+                // Clear user data from UserDefaults
+                UserDefaults.standard.removeObject(forKey: "currentUserId")
+                UserDefaults.standard.removeObject(forKey: "isLoggedIn")
+                UserDefaults.standard.removeObject(forKey: "userRole")
+                
+                // Redirect to the user role screen
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let window = windowScene.windows.first {
+                    window.rootViewController = UIHostingController(rootView: UserRoleScreen())
+                    window.makeKeyAndVisible()
+                }
+                
+                isLoggedOut = true
+            } catch {
+                print("Error signing out: \(error.localizedDescription)")
+            }
+        }
     }
 }
 

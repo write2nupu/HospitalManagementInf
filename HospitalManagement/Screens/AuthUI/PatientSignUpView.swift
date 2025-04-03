@@ -37,6 +37,8 @@ struct PersonalInfoView: View {
     @State private var isLoading = false
     @State private var passwordErrorMessage = ""
     @State private var confirmPasswordErrorMessage = ""
+    @State private var showOTPVerification = false
+    @State private var tempPatient: Patient?
 
     let genders = ["Select Gender", "Male", "Female", "Other"]
     
@@ -209,6 +211,32 @@ struct PersonalInfoView: View {
             .disabled(isLoading)
         }
         .padding()
+        .sheet(isPresented: $showOTPVerification) {
+            if let patient = tempPatient {
+                OTPVerificationView(
+                    email: patient.email,
+                    onVerificationComplete: {
+                        patientDetails = patient
+                        showMedicalInfo = true
+                        isLoading = false
+                    },
+                    onCancel: {
+                        // Delete the created user since verification was cancelled
+                        Task {
+                            if let patientId = tempPatient?.id {
+                                try? await supabaseController.client
+                                    .from("Patient")
+                                    .delete()
+                                    .eq("id", value: patientId.uuidString)
+                                    .execute()
+                            }
+                        }
+                        tempPatient = nil
+                        isLoading = false
+                    }
+                )
+            }
+        }
         .alert(isPresented: $showAlert) {
             Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
         }
@@ -257,20 +285,25 @@ struct PersonalInfoView: View {
                 email: email
             )
 
+            // First create the patient record
             let registeredPatient = try await supabaseController.signUpPatient(
                 email: email,
                 password: password,
                 userData: newPatient
             )
-
-            patientDetails = registeredPatient
-            showMedicalInfo = true
+            
+            // Store temporarily and show OTP verification
+            tempPatient = registeredPatient
+            
+            // Send OTP
+            try await supabaseController.sendOTP(email: email)
+            showOTPVerification = true
+            
         } catch {
             alertMessage = error.localizedDescription
             showAlert = true
+            isLoading = false
         }
-
-        isLoading = false
     }
 }
 

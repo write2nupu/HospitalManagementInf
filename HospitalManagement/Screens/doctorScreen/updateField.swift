@@ -85,7 +85,7 @@ struct updateFields: View {
                     } else {
                         Text("Save Changes")
                             .fontWeight(.semibold)
-                            .foregroundColor(.white)
+                            .foregroundColor(.black)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -99,6 +99,7 @@ struct updateFields: View {
             }
             .padding()
             .navigationTitle("Update Info")
+            .tint(AppConfig.fontColor)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button(action: {
                 isEditing.toggle()
@@ -108,7 +109,7 @@ struct updateFields: View {
                 }
             }) {
                 Text(isEditing ? "Cancel" : "Edit")
-                    .foregroundColor(.blue)
+                    .foregroundColor(AppConfig.buttonColor)
             })
             .fullScreenCover(isPresented: $shouldRedirectToLogin) {
                 UserRoleScreen()

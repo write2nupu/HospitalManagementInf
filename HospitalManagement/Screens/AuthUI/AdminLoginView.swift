@@ -18,6 +18,9 @@ struct AdminLoginViewS: View {
     @AppStorage("isLoggedIn") private var isUserLoggedIn = false
     @State private var passwordErrorMessage = ""
     @State private var emailErrorMessage = ""
+    @State private var showOTPVerification = false
+    @State private var isEmailVerified = false
+    @StateObject private var viewModel = HospitalManagementViewModel()
 
     var body: some View {
         NavigationStack {
@@ -88,19 +91,35 @@ struct AdminLoginViewS: View {
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Login Failed"), message: Text(errorMessage), dismissButton: .default(Text("OK")))
             }
-            // ✅ Navigation only triggers when isLoggedIn becomes true
-            .navigationDestination(isPresented: $isLoggedIn) {
-                if let user = userAdminData {
-                    if user.is_first_login {
-                        forcePasswordUpdate(user: user)
-                    } else {
-                        AdminTabView()
-                    }
-                }
-            }
             .sheet(isPresented: $showForgotPassword) {
                             ForgotPasswordView()
                         }
+            .sheet(isPresented: $showOTPVerification) {
+                OTPVerificationView(
+                    email: emailOrPhone,
+                    onVerificationComplete: {
+                        isEmailVerified = true
+                        showOTPVerification = false
+                        Task {
+                            await completeLogin()
+                        }
+                    },
+                    onCancel: {
+                        showOTPVerification = false
+                        isLoading = false
+                    }
+                )
+            }
+        }
+        .fullScreenCover(isPresented: $isLoggedIn) {
+            if let user = userAdminData {
+                if user.is_first_login {
+                    forcePasswordUpdate(user: user)
+                } else {
+                    AdminTabView()
+                        .environmentObject(viewModel)
+                }
+            }
         }
     }
 
@@ -127,81 +146,92 @@ struct AdminLoginViewS: View {
             print("Found \(admins.count) admin(s) with email:", emailOrPhone)
             
             if let admin = admins.first {
-                print("Found admin in database, attempting authentication")
+                print("Found admin in database, sending OTP")
                 
-                // Then try to authenticate
-                do {
-                    let authResponse = try await supabaseController.client.auth.signIn(
-                        email: emailOrPhone,
-                        password: password
-                    )
-                    print("Authentication successful")
-                    
-                    // Store hospital ID in UserDefaults
-                    if let hospitalId = admin.hospital_id {
-                        UserDefaults.standard.set(hospitalId.uuidString, forKey: "hospitalId")
-                        print("Stored hospital ID in UserDefaults:", hospitalId.uuidString)
-                    } else {
-                        print("Warning: Admin has no associated hospital ID")
-                    }
-                    
-                    // Check users table for existing user
-                    let existingUsers: [users] = try await supabaseController.client
-                        .from("users")
-                        .select()
-                        .eq("id", value: authResponse.user.id.uuidString)
-                        .execute()
-                        .value
-                    
-                    if let existingUser = existingUsers.first {
-                        // Use existing user's data
-                        userAdminData = existingUser
-                        currentUserId = existingUser.id.uuidString
-                        isUserLoggedIn = true
-                        isLoggedIn = true
-                        print("Found existing user, is_first_login:", existingUser.is_first_login)
-                    } else {
-                        // Create new user object for admin
-                        let user = users(
-                            id: authResponse.user.id,
-                            email: admin.email,
-                            full_name: admin.full_name,
-                            phone_number: admin.phone_number,
-                            role: "admin",
-                            is_first_login: true,
-                            is_active: true,
-                            hospital_id: admin.hospital_id,
-                            created_at: ISO8601DateFormatter().string(from: Date()),
-                            updated_at: ISO8601DateFormatter().string(from: Date())
-                        )
-                        
-                        // Create new user in users table
-                        try await supabaseController.client
-                            .from("users")
-                            .insert(user)
-                            .execute()
-                        print("Created new user record in users table")
-                        
-                        // Store user info
-                        userAdminData = user
-                        currentUserId = user.id.uuidString
-                        isUserLoggedIn = true
-                        isLoggedIn = true
-                    }
-                    print("Successfully logged in as Admin")
-                } catch let authError {
-                    print("Authentication error:", authError.localizedDescription)
-                    errorMessage = "Invalid credentials. Please check your email and password."
-                    showAlert = true
-                }
+                // Send OTP first
+                try await supabaseController.sendOTP(email: emailOrPhone)
+                showOTPVerification = true
+                
             } else {
                 errorMessage = "Access denied. You must be an Admin to login."
                 showAlert = true
+                isLoading = false
                 print("Access denied. Email not found in Admin table")
             }
-        } catch let dbError {
-            print("Database error:", dbError.localizedDescription)
+        } catch {
+            print("Error:", error.localizedDescription)
             errorMessage = "An error occurred. Please try again."
+            showAlert = true
+            isLoading = false
+        }
+    }
+    
+    private func completeLogin() async {
+        do {
+            // Only authenticate with password after OTP verification is successful
+            let authResponse = try await supabaseController.client.auth.signIn(
+                email: emailOrPhone,
+                password: password
+            )
+            print("Authentication successful")
+            
+            // Get admin details
+            let admins: [Admin] = try await supabaseController.client
+                .from("Admin")
+                .select()
+                .eq("email", value: emailOrPhone)
+                .execute()
+                .value
+            
+            if let admin = admins.first {
+                // Store hospital ID in UserDefaults
+                if let hospitalId = admin.hospital_id {
+                    UserDefaults.standard.set(hospitalId.uuidString, forKey: "hospitalId")
+                }
+                
+                // Check users table for existing user
+                let existingUsers: [users] = try await supabaseController.client
+                    .from("users")
+                    .select()
+                    .eq("id", value: authResponse.user.id.uuidString)
+                    .execute()
+                    .value
+                
+                if let existingUser = existingUsers.first {
+                    userAdminData = existingUser
+                    currentUserId = existingUser.id.uuidString
+                    isUserLoggedIn = true
+                    isLoggedIn = true
+                    UserDefaults.standard.set("admin", forKey: "userRole")
+                } else {
+                    // Create new user object for admin
+                    let user = users(
+                        id: authResponse.user.id,
+                        email: admin.email,
+                        full_name: admin.full_name,
+                        phone_number: admin.phone_number,
+                        role: "admin",
+                        is_first_login: true,
+                        is_active: true,
+                        hospital_id: admin.hospital_id,
+                        created_at: ISO8601DateFormatter().string(from: Date()),
+                        updated_at: ISO8601DateFormatter().string(from: Date())
+                    )
+                    
+                    try await supabaseController.client
+                        .from("users")
+                        .insert(user)
+                        .execute()
+                    
+                    userAdminData = user
+                    currentUserId = user.id.uuidString
+                    isUserLoggedIn = true
+                    isLoggedIn = true
+                    UserDefaults.standard.set("admin", forKey: "userRole")
+                }
+            }
+        } catch {
+            errorMessage = "Authentication failed. Please try again."
             showAlert = true
         }
         isLoading = false
