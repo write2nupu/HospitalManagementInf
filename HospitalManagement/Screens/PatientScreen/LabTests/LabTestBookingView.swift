@@ -342,7 +342,7 @@ struct labTestPaymentView: View {
                     .cornerRadius(12)
                     .padding()
                 }
-                .disabled(isProcessing)
+                .disabled(isProcessing || selectedPaymentMethod == nil)
             }
             .navigationBarItems(leading: Button("Cancel") { dismiss() })
             .background(Color(.systemGroupedBackground))
@@ -351,13 +351,15 @@ struct labTestPaymentView: View {
             } message: {
                 Text(errorMessage)
             }
-            .alert("Success", isPresented: $showConfirmation) {
-                Button("OK") {
+            .sheet(isPresented: $showConfirmation) {
+                PaymentConfirmationView(
+                    amount: amount,
+                    selectedTests: selectedTests,
+                    testDate: preferredDate
+                ) {
                     onComplete(true)
                     dismiss()
                 }
-            } message: {
-                Text("Lab tests booked successfully!")
             }
         }
     }
@@ -379,6 +381,8 @@ struct labTestPaymentView: View {
 struct PaymentConfirmationView: View {
     @Environment(\.dismiss) private var dismiss
     let amount: Double
+    let selectedTests: [labTest.labTestName]
+    let testDate: Date
     let onDone: () -> Void
     
     var body: some View {
@@ -400,33 +404,40 @@ struct PaymentConfirmationView: View {
                     .font(.title2)
                     .foregroundColor(.mint)
                 
-                Text("Your appointment has been confirmed.")
+                Text("Your lab tests have been booked.")
                     .font(.body)
                     .foregroundColor(.gray)
             }
             
-            // Appointment Details Card
+            // Lab Test Details Card
             VStack(alignment: .leading, spacing: 16) {
-                Text("Appointment Details")
+                Text("Lab Test Details")
                     .font(.headline)
                     .foregroundColor(.mint)
                 
                 VStack(spacing: 16) {
                     detailRow(title: "Hospital:", value: "Apollo")
-                    detailRow(title: "Date & Time:", value: "Thursday, Apr 3, 2025 • 11:00 AM")
+                    detailRow(title: "Date:", value: formatDate(testDate))
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Selected Tests:")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        
+                        ForEach(selectedTests, id: \.self) { test in
+                            HStack {
+                                Text("• \(test.rawValue)")
+                                    .font(.subheadline)
+                                Spacer()
+                                Text("₹\(Int(test.price))")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                    
+                    detailRow(title: "Total Amount:", value: "₹\(String(format: "%.2f", amount))", isTotal: true)
                 }
-            }
-            .padding()
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            
-            // Payment Details Card
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Payment Details")
-                    .font(.headline)
-                    .foregroundColor(.mint)
-                
-                detailRow(title: "Appointment ID:", value: "5A780C26-AE60-4A19-AAC3-279A6BCFAD6D")
             }
             .padding()
             .background(Color(.systemBackground))
@@ -464,15 +475,21 @@ struct PaymentConfirmationView: View {
         .background(Color(.systemGroupedBackground))
     }
     
-    private func detailRow(title: String, value: String) -> some View {
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .full
+        return formatter.string(from: date)
+    }
+    
+    private func detailRow(title: String, value: String, isTotal: Bool = false) -> some View {
         HStack(alignment: .top) {
             Text(title)
                 .font(.body)
                 .foregroundColor(.primary)
             Spacer()
             Text(value)
-                .font(.body)
-                .foregroundColor(.gray)
+                .font(isTotal ? .headline : .body)
+                .foregroundColor(isTotal ? .mint : .gray)
                 .multilineTextAlignment(.trailing)
         }
     }

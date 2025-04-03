@@ -11,49 +11,50 @@ struct ProfileView: View {
     @Binding var patient: Patient
     @State private var patientDetails: PatientDetails?
     @State private var isLoading = true
-    @State private var isEditing = false  // Track edit mode
-
+    @State private var isEditing = false
+    
     @State private var bloodGroup: String = ""
     @State private var allergies: String = ""
     @State private var existingMedicalRecord: String = ""
     @State private var currentMedication: String = ""
     @State private var pastSurgeries: String = ""
     @State private var emergencyContact: String = ""
-
+    
     @StateObject private var supabase = SupabaseController()
     @Environment(\.dismiss) var dismiss
-
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Grey Background with Profile Image & Email
+                // Profile Header
                 ZStack {
                     Color(.systemGray6)
                         .edgesIgnoringSafeArea(.top)
                         .frame(height: 180)
-
+                    
                     VStack {
                         Image(systemName: "person.crop.circle.fill")
                             .resizable()
                             .frame(width: 100, height: 100)
                             .foregroundColor(.mint)
                             .clipShape(Circle())
-
+                        
                         Text(patient.email)
                             .foregroundColor(.primary)
                             .font(.system(size: 16, weight: .semibold))
                             .padding(.top, 5)
                     }
                 }
-
+                
                 // Profile Details Form
                 Form {
                     Section(header: Text("Patient Information")) {
                         ProfileRow(title: "Full Name", value: patient.fullname)
                         ProfileRow(title: "Date of Birth", value: formattedDate(patient.dateofbirth))
                         ProfileRow(title: "Phone", value: patient.contactno)
+                        ProfileRow(title: "Gender", value: patient.gender)
                     }
-
+                    
                     if isLoading {
                         Section {
                             HStack {
@@ -81,8 +82,7 @@ struct ProfileView: View {
                             }
                         }
                     }
-
-                    // Logout Button Section
+                    
                     Section {
                         Button(action: {
                             handleLogout()
@@ -109,44 +109,49 @@ struct ProfileView: View {
                 .foregroundColor(.blue)
             )
             .task {
-                await fetchPatientDetails()
+                await fetchPatientData()
             }
         }
     }
-
-    private func fetchPatientDetails() async {
-        guard let detailID = patient.detail_id else {
-            DispatchQueue.main.async { self.isLoading = false }
-            return
-        }
-
-        let allDetails = await supabase.fetchPatientDetails()
-        DispatchQueue.main.async {
-            self.patientDetails = allDetails.first(where: { $0.id == detailID })
-            self.isLoading = false
-
-            if let details = self.patientDetails {
-                self.bloodGroup = details.blood_group ?? ""
-                self.allergies = details.allergies ?? ""
-                self.existingMedicalRecord = details.existing_medical_record ?? ""
-                self.currentMedication = details.current_medication ?? ""
-                self.pastSurgeries = details.past_surgeries ?? ""
-                self.emergencyContact = details.emergency_contact ?? ""
+    
+    private func fetchPatientData() async {
+        do {
+            // First fetch patient details using the patient ID
+            if let fetchedPatient = try await supabase.fetchPatientDetails(patientId: patient.id) {
+                // Update patient binding with latest data
+                patient = fetchedPatient
+                
+                // Then fetch medical details using detail_id if available
+                if let detailId = fetchedPatient.detail_id {
+                    patientDetails = try await supabase.fetchPatientDetailsById(detailId: detailId)
+                    
+                    // Update local state with fetched details
+                    if let details = patientDetails {
+                        bloodGroup = details.blood_group ?? ""
+                        allergies = details.allergies ?? ""
+                        existingMedicalRecord = details.existing_medical_record ?? ""
+                        currentMedication = details.current_medication ?? ""
+                        pastSurgeries = details.past_surgeries ?? ""
+                        emergencyContact = details.emergency_contact ?? ""
+                    }
+                }
             }
+        } catch {
+            print("Error fetching patient data:", error)
         }
+        
+        isLoading = false
     }
-
+    
     private func enterEditMode() {
         isEditing = true
     }
-
+    
     private func saveUpdatedDetails() async {
-        guard let detailID = patient.detail_id else { return }
-
-        
+        guard let detailId = patient.detail_id else { return }
         
         let updatedDetails = PatientDetails(
-            id: detailID,
+            id: detailId,
             blood_group: bloodGroup,
             allergies: allergies,
             existing_medical_record: existingMedicalRecord,
@@ -154,33 +159,27 @@ struct ProfileView: View {
             past_surgeries: pastSurgeries,
             emergency_contact: emergencyContact
         )
-
-        await supabase.updatePatientDetails(detailID: detailID, updatedDetails: updatedDetails)
-
-        // Ensure UI updates with latest data
-        await fetchPatientDetails()
-
-        DispatchQueue.main.async {
-            self.isEditing = false
-        }
+        
+        await supabase.updatePatientDetails(detailID: detailId, updatedDetails: updatedDetails)
+        
+        // Refresh the data
+        await fetchPatientData()
+        
+        isEditing = false
     }
-
+    
     private func handleLogout() {
-        // Post a notification that will be observed by the app
         NotificationCenter.default.post(
             name: NSNotification.Name("LogoutNotification"),
             object: nil
         )
         
-        // Clear any stored user data
         UserDefaults.standard.removeObject(forKey: "currentUserId")
         UserDefaults.standard.removeObject(forKey: "isLoggedIn")
         UserDefaults.standard.removeObject(forKey: "userRole")
         
-        // Dismiss the profile sheet first
         dismiss()
         
-        // Use UIApplication to restart the app's navigation from the beginning
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let window = windowScene.windows.first {
             window.rootViewController = UIHostingController(rootView: UserRoleScreen())
