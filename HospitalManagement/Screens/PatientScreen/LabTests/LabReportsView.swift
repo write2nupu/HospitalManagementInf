@@ -7,6 +7,7 @@ struct SimplifiedLabTest: Identifiable {
     let testDate: Date
     let status: String
     let doctorName: String?
+    let diagnosis: String?
     
     var statusEnum: TestStatus {
         TestStatus(rawValue: status) ?? .pending
@@ -20,11 +21,11 @@ struct SimplifiedLabTest: Identifiable {
 
 struct LabReportsView: View {
     @StateObject private var supabase = SupabaseController()
-    @State private var labTests: [(id: UUID, testName: String, testDate: Date, status: String, doctorName: String?)] = []
+    @State private var labTests: [(id: UUID, testName: String, testDate: Date, status: String, doctorName: String?, diagnosis: String?)] = []
     @State private var isLoading = false
     @State private var error: Error?
     @State private var showError = false
-    @State private var selectedTest: (id: UUID, testName: String, testDate: Date, status: String, doctorName: String?)?
+    @State private var selectedTest: (id: UUID, testName: String, testDate: Date, status: String, doctorName: String?, diagnosis: String?)?
     @State private var showingTestDetail = false
     
     var body: some View {
@@ -49,7 +50,8 @@ struct LabReportsView: View {
                             testName: test.testName,
                             testDate: test.testDate,
                             status: test.status,
-                            doctorName: test.doctorName
+                            doctorName: test.doctorName,
+                            diagnosis: test.diagnosis
                         )
                         .onTapGesture {
                             selectedTest = test
@@ -67,7 +69,8 @@ struct LabReportsView: View {
                 LabTestDetailView(test: (testName: test.testName, 
                                       testDate: test.testDate, 
                                       status: test.status, 
-                                      doctorName: test.doctorName))
+                                      doctorName: test.doctorName,
+                                      diagnosis: test.diagnosis))
             }
         }
         .onAppear {
@@ -110,44 +113,82 @@ struct LabTestCard: View {
     let testDate: Date
     let status: String
     let doctorName: String?
+    let diagnosis: String?
+    
+    private var testArray: [String] {
+        testName.components(separatedBy: ", ")
+    }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(testName)
-                    .font(.headline)
-                Spacer()
-                LabTestStatusBadge(status: status)
-            }
-            
-            HStack {
-                Label {
-                    Text(testDate.formatted(.dateTime.day().month().year().hour().minute()))
-                } icon: {
-                    Image(systemName: "calendar")
-                }
-                .foregroundColor(.secondary)
-                
-                Spacer()
-                
+        VStack(alignment: .leading, spacing: 16) {
+            // Doctor and Status Header
+            HStack(alignment: .center) {
                 if let doctorName = doctorName {
                     Label {
                         Text(doctorName)
-                            .lineLimit(1)
+                            .font(.headline)
+                            .foregroundColor(.primary)
                     } icon: {
-                        Image(systemName: "person")
+                        Image(systemName: "person.circle.fill")
+                            .foregroundColor(.mint)
                     }
+                }
+                
+                Spacer()
+                
+                LabTestStatusBadge(status: status)
+            }
+            
+            // Date
+            Label {
+                Text(testDate.formatted(date: .abbreviated, time: .omitted))
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
+            } icon: {
+                Image(systemName: "calendar")
+                    .foregroundColor(.mint)
+            }
+            
+            // Tests List
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Tests")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                ForEach(testArray, id: \.self) { test in
+                    Label {
+                        Text(test)
+                            .font(.subheadline)
+                    } icon: {
+                        Image(systemName: "cross.case.fill")
+                            .foregroundColor(.mint)
+                    }
                 }
             }
-            .font(.subheadline)
+            
+            // Diagnosis if available
+            if let diagnosis = diagnosis {
+                Divider()
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Diagnosis")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    Text(diagnosis)
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                }
+            }
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.systemBackground))
                 .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
         )
+        .padding(.horizontal)
     }
 }
 
@@ -160,6 +201,8 @@ struct LabTestStatusBadge: View {
             return .green
         case "pending":
             return .orange
+        case "cancelled":
+            return .red
         default:
             return .gray
         }
@@ -169,8 +212,8 @@ struct LabTestStatusBadge: View {
         Text(status)
             .font(.caption)
             .fontWeight(.medium)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
             .background(statusColor.opacity(0.2))
             .foregroundColor(statusColor)
             .clipShape(Capsule())
@@ -178,55 +221,84 @@ struct LabTestStatusBadge: View {
 }
 
 struct LabTestDetailView: View {
-    let test: (testName: String, testDate: Date, status: String, doctorName: String?)
+    let test: (testName: String, testDate: Date, status: String, doctorName: String?, diagnosis: String?)
+    
+    private var testArray: [String] {
+        test.testName.components(separatedBy: ", ")
+    }
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Test Name
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // Status Badge
+                HStack {
+                    Spacer()
+                    LabTestStatusBadge(status: test.status)
+                }
+                
+                // Doctor Info
+                if let doctorName = test.doctorName {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Test Name")
+                        Text("Referred by")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        Text(test.testName)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                    }
-                    
-                    // Status
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Status")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        LabTestStatusBadge(status: test.status)
-                    }
-                    
-                    // Date
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Test Date")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Text(test.testDate.formatted(.dateTime.month().day().year().hour().minute()))
-                            .font(.body)
-                    }
-                    
-                    // Doctor
-                    if let doctorName = test.doctorName {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Referred by")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                        Label {
                             Text(doctorName)
-                                .font(.body)
+                                .font(.headline)
+                        } icon: {
+                            Image(systemName: "person.circle.fill")
+                                .foregroundColor(.mint)
                         }
                     }
                 }
-                .padding()
+                
+                // Date
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Test Date")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Label {
+                        Text(test.testDate.formatted(date: .long, time: .omitted))
+                            .font(.headline)
+                    } icon: {
+                        Image(systemName: "calendar")
+                            .foregroundColor(.mint)
+                    }
+                }
+                
+                // Tests
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Tests Included")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    ForEach(testArray, id: \.self) { test in
+                        Label {
+                            Text(test)
+                                .font(.body)
+                        } icon: {
+                            Image(systemName: "cross.case.fill")
+                                .foregroundColor(.mint)
+                        }
+                    }
+                }
+                
+                // Diagnosis
+                if let diagnosis = test.diagnosis {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Diagnosis")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Text(diagnosis)
+                            .font(.body)
+                    }
+                }
             }
-            .navigationTitle("Test Details")
-            .navigationBarTitleDisplayMode(.inline)
+            .padding()
         }
+        .navigationTitle("Test Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .background(Color(.systemGroupedBackground))
     }
 }
 
