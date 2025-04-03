@@ -27,8 +27,9 @@ struct AppointmentListView: View {
                     Text("Past").tag(1)
                 }
                 .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+//                .padding(.horizontal)
+//                .padding(.bottom, 8)
+                .padding()
             }
             .background(Color(.systemBackground))
             .shadow(color: Color.black.opacity(0.05), radius: 4, y: 2)
@@ -236,20 +237,20 @@ struct AppointmentCard: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color(AppConfig.cardColor))
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 2)
+        .shadow(color: AppConfig.shadowColor, radius: 8, x: 0, y: 2)
     }
     
     private var doctorSection: some View {
         HStack(spacing: 12) {
-            Circle()
-                .fill(Color.mint.opacity(0.2))
-                .frame(width: 40, height: 40)
-                .overlay(
-                    Image(systemName: appointment.type == .Emergency ? "cross.case.fill" : "person.fill")
-                        .foregroundColor(.mint)
-                )
+//            Circle()
+//                .fill(Color.mint.opacity(0.2))
+//                .frame(width: 40, height: 40)
+//                .overlay(
+//                    Image(systemName: appointment.type == .Emergency ? "cross.case.fill" : "person.fill")
+//                        .foregroundColor(.mint)
+//                )
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(appointment.type == .Emergency ? "Emergency Appointment" : doctorName)
@@ -259,7 +260,7 @@ struct AppointmentCard: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
-            
+        
             Spacer()
             
             statusBadge
@@ -297,7 +298,7 @@ struct AppointmentCard: View {
     private var dateView: some View {
         HStack(spacing: 8) {
             Image(systemName: "calendar")
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
             Text(formatDate(appointment.date))
                 .font(.subheadline)
         }
@@ -306,7 +307,7 @@ struct AppointmentCard: View {
     private var timeView: some View {
         HStack(spacing: 8) {
             Image(systemName: "clock")
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
             Text(formatTime(appointment.date))
                 .font(.subheadline)
         }
@@ -320,10 +321,10 @@ struct AppointmentCard: View {
                     Text("Reschedule")
                 }
                 .font(.subheadline)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.mint, lineWidth: 1))
+                .background(RoundedRectangle(cornerRadius: 8).stroke(AppConfig.buttonColor, lineWidth: 1))
             }
             
             Spacer()
@@ -334,10 +335,10 @@ struct AppointmentCard: View {
                     Text("Cancel")
                 }
                 .font(.subheadline)
-                .foregroundColor(.red)
+                .foregroundColor(AppConfig.redColor)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(RoundedRectangle(cornerRadius: 8).stroke(Color.red, lineWidth: 1))
+                .background(RoundedRectangle(cornerRadius: 8).stroke(AppConfig.redColor, lineWidth: 1))
             }
         }
     }
@@ -461,7 +462,7 @@ struct RescheduleView: View {
                                                  displayedComponents: .hourAndMinute)
                                             .datePickerStyle(.wheel)
                                             .labelsHidden()
-                                            .onChange(of: selectedTime) { newTime in
+                                            .onChange(of: selectedTime) { oldValue, newTime in
                                                 updateSelectedTimeSlot(time: newTime)
                                             }
                                         
@@ -484,7 +485,7 @@ struct RescheduleView: View {
                                         Button("Confirm Time") {
                                             showTimePicker = false
                                         }
-                                        .foregroundColor(.mint)
+                                        .foregroundColor(AppConfig.buttonColor)
                                         .padding(.top)
                                     }
                                     .padding(.vertical)
@@ -507,7 +508,7 @@ struct RescheduleView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.gray.opacity(0.2))
+                    .background(AppConfig.redColor)
                     .cornerRadius(10)
                     
                     Button("Confirm Changes") {

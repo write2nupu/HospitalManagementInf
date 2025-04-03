@@ -232,7 +232,7 @@ struct EmptyStateView: View {
                 Button("Clear Search", action: onClearSearch)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 10)
-                            .background(Color.mint)
+                            .background(AppConfig.buttonColor)
                             .foregroundColor(.white)
                             .cornerRadius(8)
                         }
@@ -252,17 +252,17 @@ struct DoctorCardView: View {
     var body: some View {
         HStack(spacing: 15) {
             // Doctor avatar
-            ZStack {
-                Circle()
-                    .fill(Color.mint.opacity(0.15))
-                    .frame(width: 60, height: 60)
+//            ZStack {
+//                Circle()
+//                    .fill(Color.mint.opacity(0.15))
+//                    .frame(width: 60, height: 60)
                 
-            Image(systemName: "person.fill")
-                .resizable()
-                    .scaledToFit()
-                    .frame(width: 28, height: 28)
-                .foregroundColor(.mint)
-            }
+//            Image(systemName: "person.fill")
+//                .resizable()
+//                    .scaledToFit()
+//                    .frame(width: 28, height: 28)
+//                .foregroundColor(.mint)
+//            }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(doctor.full_name)
@@ -281,14 +281,14 @@ struct DoctorCardView: View {
             Spacer()
             
             Image(systemName: "chevron.right")
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
                 .font(.caption)
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 15)
-                .fill(Color.white)
-                .shadow(color: .mint.opacity(0.2), radius: 5, x: 0, y: 2)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor, radius: 5, x: 0, y: 2)
         )
     }
 }
@@ -324,7 +324,7 @@ struct FeeInfoView: View {
             Text("\(Int(department.fees))")
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
         }
     }
 }
@@ -380,7 +380,7 @@ struct DoctorDetailsSectionView: View {
         Section(header: Text("Doctor Details")) {
             HStack {
                 Image(systemName: "person.fill")
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
                 VStack(alignment: .leading) {
                     Text(doctor.full_name)
                         .font(.headline)
@@ -414,11 +414,11 @@ struct AppointmentTypeSectionView: View {
                     }) {
                         HStack {
                             Image(systemName: "stethoscope")
-                                .foregroundColor(.white)
+                                .foregroundColor(.black)
                                 .frame(width: 30, height: 30)
                                 .background(
                                     Circle()
-                                        .fill(Color.mint)
+                                        .fill(AppConfig.buttonColor)
                                 )
                             
                             VStack(alignment: .leading, spacing: 5) {
@@ -506,8 +506,8 @@ struct TimeSlotSectionView: View {
                                 .padding(.vertical, 8)
                                 .padding(.horizontal, 12)
                                 .frame(maxWidth: .infinity)
-                                .background(isSelectedTimeString(timeString) ? Color.mint : Color.mint.opacity(0.1))
-                                .foregroundColor(isSelectedTimeString(timeString) ? .white : .primary)
+                                .background(isSelectedTimeString(timeString) ? AppConfig.buttonColor : Color.mint.opacity(0.1))
+                                .foregroundColor(isSelectedTimeString(timeString) ? .black : .primary)
                                 .cornerRadius(8)
                         }
                         .disabled(isTimeBooked(timeString))
@@ -539,7 +539,7 @@ struct TimeSlotSectionView: View {
                         Spacer()
                         Text(slot.formattedTimeRange)
                             .font(.subheadline)
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                             .fontWeight(.semibold)
                     }
                     .padding(.top, 8)
@@ -729,6 +729,7 @@ struct AppointmentBookingView: View {
                               in: Date()...,
                               displayedComponents: .date)
                         .datePickerStyle(GraphicalDatePickerStyle())
+                        .tint(AppConfig.buttonColor)
                         .environment(\.timeZone, TimeZone(identifier: "Asia/Kolkata")!)
                         .onChange(of: selectedDate) { _ in
                             selectedTimeSlot = nil

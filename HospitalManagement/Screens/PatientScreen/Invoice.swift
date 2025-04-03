@@ -25,7 +25,7 @@ struct InvoiceListView: View {
 
             VStack(spacing: 0) {
                 // Search Bar with Microphone
-                SearchBars(text: $searchText, speechRecognizer: speechRecognizer)
+//                SearchBars(text: $searchText, speechRecognizer: speechRecognizer)
 
                 if isLoading {
                     ProgressView("Loading invoices...")
@@ -183,7 +183,7 @@ struct InvoiceRow: View {
             HStack {
                 Text("₹ \(invoice.amount)")
                     .font(.headline)
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
 
                 Image(systemName: "chevron.right")
                     .foregroundColor(.gray)

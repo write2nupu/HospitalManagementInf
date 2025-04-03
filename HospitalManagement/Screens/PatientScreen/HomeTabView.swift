@@ -73,8 +73,8 @@ struct HomeTabView: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 15)
-                                .fill(Color(.systemBackground))
-                                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                                .fill(AppConfig.cardColor)
+                                .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)
                         )
                         .padding(.horizontal)
                     }
@@ -343,8 +343,8 @@ struct ServiceCard: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 15)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)
         )
     }
 }
@@ -509,11 +509,11 @@ struct DepartmentCard: View {
                 // Department Icon
                 Image(systemName: iconName(for: department.name))
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
                     .frame(width: 36, height: 36)
                     .background(
                         Circle()
-                            .fill(Color.mint.opacity(0.1))
+                            .fill(AppConfig.cardColor)
                     )
                 
                 // Department Name
@@ -545,13 +545,13 @@ struct DepartmentCard: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
             }
-            .foregroundColor(.mint)
+            .foregroundColor(AppConfig.buttonColor)
         }
         .frame(width: 200, height: 120) // Reduced size
         .padding(12) // Reduced padding
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color(.systemBackground))
+                .fill(AppConfig.cardColor)
                 .shadow(
                     color: Color.black.opacity(0.06),
                     radius: 6,

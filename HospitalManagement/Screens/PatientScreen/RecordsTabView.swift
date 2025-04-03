@@ -125,7 +125,7 @@ struct RecordCategoryCard<D: View>: View {
             HStack {
                 Image(systemName: iconName)
                     .font(.system(size: 24))
-                    .foregroundColor(.blue)
+                    .foregroundColor(AppConfig.buttonColor)
                     .frame(width: 50, height: 50)
                     .background(Color.blue.opacity(0.1))
                     .cornerRadius(10)
@@ -189,7 +189,7 @@ struct NoHospitalSelectedView: View {
         VStack(spacing: 20) {
             Image(systemName: "building.2.crop.circle")
                 .font(.system(size: 60))
-                .foregroundColor(.blue.opacity(0.5))
+                .foregroundColor(AppConfig.buttonColor)
             
             Text("No Hospital Selected")
                 .font(.title3)
@@ -204,7 +204,7 @@ struct NoHospitalSelectedView: View {
             }) {
                 Text("Go to Home")
                     .fontWeight(.medium)
-                    .foregroundColor(.white)
+                    .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(AppConfig.buttonColor)
