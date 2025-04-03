@@ -6,6 +6,7 @@ struct RecordsTabView: View {
     @State private var prescriptions: [PrescriptionData] = []
     @State private var isLoading = false
     @State private var doctorNames: [UUID: String] = [:] // To store doctor names
+    @State private var labTestCount: Int = 0
     
     var body: some View {
         ZStack {
@@ -19,11 +20,11 @@ struct RecordsTabView: View {
                         VStack(spacing: 20) {
                             VStack(alignment: .leading, spacing: 15) {
                                 // Lab Reports Card
-                                RecordCategoryCard<EmptyView>(
+                                RecordCategoryCard<LabReportsView>(
                                     title: "Lab Reports",
                                     iconName: "cross.case.fill",
-                                    count: 0,
-                                    destination: EmptyView()
+                                    count: labTestCount,
+                                    destination: LabReportsView()
                                 )
                                 
                                 // Prescriptions Card
@@ -46,6 +47,7 @@ struct RecordsTabView: View {
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
             fetchPrescriptions()
+            fetchLabTestCount()
         }
     }
     
@@ -108,6 +110,21 @@ struct RecordsTabView: View {
                 print("❌ No patient ID found in UserDefaults")
                 await MainActor.run {
                     self.isLoading = false
+                }
+            }
+        }
+    }
+    
+    private func fetchLabTestCount() {
+        Task {
+            if let patientId = UUID(uuidString: UserDefaults.standard.string(forKey: "currentPatientId") ?? "") {
+                do {
+                    let labTests = try await supabase.fetchLabTests(patientId: patientId)
+                    await MainActor.run {
+                        self.labTestCount = labTests.count
+                    }
+                } catch {
+                    print("Error fetching lab test count: \(error)")
                 }
             }
         }
