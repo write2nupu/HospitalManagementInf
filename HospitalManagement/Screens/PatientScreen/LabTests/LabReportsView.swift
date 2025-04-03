@@ -26,39 +26,83 @@ struct LabReportsView: View {
     @State private var showError = false
     @State private var selectedTest: (id: UUID, testName: String, testDate: Date, status: String, doctorName: String?)?
     @State private var showingTestDetail = false
+    @State private var searchText = ""
+    @State private var selectedFilters: Set<LabTest.LabTestName> = []  // Changed to Set for multiple selection
+    @State private var showingFilterSheet = false
+    
+    private var filteredTests: [(id: UUID, testName: String, testDate: Date, status: String, doctorName: String?)] {
+        var filtered = labTests
+        
+        // Apply test type filters if any are selected
+        if !selectedFilters.isEmpty {
+            filtered = filtered.filter { test in
+                // Check if any of the selected filters match the test name
+                selectedFilters.contains { filter in
+                    test.testName.contains(filter.rawValue)
+                }
+            }
+        }
+        
+        // Then apply search text
+        if !searchText.isEmpty {
+            let lowercasedSearch = searchText.lowercased()
+            filtered = filtered.filter { test in
+                let dateString = test.testDate.formatted(.dateTime.day().month().year())
+                
+                return test.testName.lowercased().contains(lowercasedSearch) ||
+                       (test.doctorName?.lowercased().contains(lowercasedSearch) ?? false) ||
+                       test.status.lowercased().contains(lowercasedSearch) ||
+                       dateString.lowercased().contains(lowercasedSearch)
+            }
+        }
+        
+        return filtered
+    }
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 16) {
-                if isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle())
-                        .scaleEffect(1.5)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error = error {
-                    Text(error.localizedDescription)
-                        .foregroundColor(.red)
-                        .padding()
-                } else if labTests.isEmpty {
-                    Text("No lab tests found")
-                        .foregroundColor(.gray)
-                        .padding()
-                } else {
-                    ForEach(labTests, id: \.id) { test in
-                        LabTestCard(
-                            testName: test.testName,
-                            testDate: test.testDate,
-                            status: test.status,
-                            doctorName: test.doctorName
-                        )
-                        .onTapGesture {
-                            selectedTest = test
-                            showingTestDetail = true
+        VStack(spacing: 0) {
+            searchBar
+                .padding(.horizontal)
+                .padding(.top)
+            
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(1.5)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if let error = error {
+                        Text(error.localizedDescription)
+                            .foregroundColor(.red)
+                            .padding()
+                    } else if filteredTests.isEmpty {
+                        if searchText.isEmpty {
+                            Text("No lab tests found")
+                                .foregroundColor(.gray)
+                                .padding()
+                        } else {
+                            Text("No matching lab tests found")
+                                .foregroundColor(.gray)
+                                .padding()
+                        }
+                    } else {
+                        ForEach(filteredTests, id: \.id) { test in
+                            LabTestCard(
+                                testName: test.testName,
+                                testDate: test.testDate,
+                                status: test.status,
+                                doctorName: test.doctorName
+                            )
+                            .onTapGesture {
+                                selectedTest = test
+                                showingTestDetail = true
+                            }
                         }
                     }
                 }
+                .padding()
             }
-            .padding()
         }
         .navigationTitle("Lab Reports")
         .navigationBarTitleDisplayMode(.inline)
@@ -70,6 +114,9 @@ struct LabReportsView: View {
                                       doctorName: test.doctorName))
             }
         }
+        .sheet(isPresented: $showingFilterSheet) {
+            filterSheet
+        }
         .onAppear {
             Task {
                 await fetchLabTests()
@@ -79,6 +126,56 @@ struct LabReportsView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(error?.localizedDescription ?? "Unknown error occurred")
+        }
+    }
+    
+    private var searchBar: some View {
+        HStack(spacing: 12) {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.gray)
+                TextField("Search lab tests...", text: $searchText)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                
+                if !searchText.isEmpty {
+                    Button(action: {
+                        searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            .padding(8)
+            .background(Color(.systemGray6))
+            .cornerRadius(10)
+            
+            // Filter Button
+            Button(action: {
+                showingFilterSheet = true
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                        .foregroundColor(selectedFilters.isEmpty ? .blue : .white)
+                    if !selectedFilters.isEmpty {
+                        Text("\(selectedFilters.count)")
+                            .font(.caption)
+                            .padding(4)
+                            .background(Color.white)
+                            .clipShape(Circle())
+                            .foregroundColor(.blue)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 8)
+                .background(selectedFilters.isEmpty ? Color.clear : Color.blue)
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.blue, lineWidth: selectedFilters.isEmpty ? 1 : 0)
+                )
+            }
         }
     }
     
@@ -100,6 +197,49 @@ struct LabReportsView: View {
                 self.error = error
                 self.isLoading = false
                 self.showError = true
+            }
+        }
+    }
+    
+    var filterSheet: some View {
+        NavigationView {
+            List(selection: $selectedFilters) {
+                ForEach(LabTest.LabTestName.allCases, id: \.self) { testType in
+                    HStack {
+                        Text(testType.rawValue)
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        if selectedFilters.contains(testType) {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if selectedFilters.contains(testType) {
+                            selectedFilters.remove(testType)
+                        } else {
+                            selectedFilters.insert(testType)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Filter by Test Type")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        showingFilterSheet = false
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Clear All") {
+                        selectedFilters.removeAll()
+                    }
+                    .disabled(selectedFilters.isEmpty)
+                }
             }
         }
     }
@@ -226,6 +366,28 @@ struct LabTestDetailView: View {
             }
             .navigationTitle("Test Details")
             .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+// Helper extension to get icon for lab test type
+extension LabTest.LabTestName {
+    var icon: String {
+        switch self {
+        case .completeBloodCount, .bloodSugarTest, .bloodCulture:
+            return "drop.fill"
+        case .urineAnalysis, .urineCulture:
+            return "flask.fill"
+        case .thyroidFunctionTest, .liverFunctionTest, .kidneyFunctionTest:
+            return "waveform.path.ecg"
+        case .vitaminDTest, .vitaminB12Test, .calciumTest:
+            return "pill.fill"
+        case .lipidProfile:
+            return "heart.fill"
+        case .cReactiveProtein, .erythrocyteSedimentationRate:
+            return "cross.case.fill"
+        case .hba1c, .fastingBloodSugar, .postprandialBloodSugar:
+            return "chart.line.uptrend.xyaxis"
         }
     }
 }
