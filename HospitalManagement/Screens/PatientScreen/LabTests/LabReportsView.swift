@@ -7,6 +7,7 @@ struct SimplifiedLabTest: Identifiable {
     let testDate: Date
     let status: String
     let doctorName: String?
+    let diagnosis: String?
     
     var statusEnum: TestStatus {
         TestStatus(rawValue: status) ?? .pending
@@ -20,17 +21,16 @@ struct SimplifiedLabTest: Identifiable {
 
 struct LabReportsView: View {
     @StateObject private var supabase = SupabaseController()
-    @State private var labTests: [(id: UUID, testName: String, testDate: Date, status: String, doctorName: String?)] = []
-    @State private var isLoading = false
-    @State private var error: Error?
-    @State private var showError = false
-    @State private var selectedTest: (id: UUID, testName: String, testDate: Date, status: String, doctorName: String?)?
-    @State private var showingTestDetail = false
+    @State private var labTests: [(id: UUID, testName: String, testDate: Date, status: String, doctorName: String?, diagnosis: String?)] = []
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    @State private var selectedTest: (id: UUID, testName: String, testDate: Date, status: String, doctorName: String?, diagnosis: String?)?
+    @State private var showingDetail = false
     @State private var searchText = ""
     @State private var selectedFilters: Set<LabTest.LabTestName> = []  // Changed to Set for multiple selection
     @State private var showingFilterSheet = false
     
-    private var filteredTests: [(id: UUID, testName: String, testDate: Date, status: String, doctorName: String?)] {
+    private var filteredTests: [(id: UUID, testName: String, testDate: Date, status: String, doctorName: String?, diagnosis: String?)] {
         var filtered = labTests
         
         // Apply test type filters if any are selected
@@ -60,58 +60,56 @@ struct LabReportsView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            searchBar
-                .padding(.horizontal)
-                .padding(.top)
-            
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    if isLoading {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .scaleEffect(1.5)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if let error = error {
-                        Text(error.localizedDescription)
-                            .foregroundColor(.red)
-                            .padding()
-                    } else if filteredTests.isEmpty {
-                        if searchText.isEmpty {
-                            Text("No lab tests found")
-                                .foregroundColor(.gray)
-                                .padding()
-                        } else {
-                            Text("No matching lab tests found")
-                                .foregroundColor(.gray)
-                                .padding()
-                        }
-                    } else {
+        Group {
+            if isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = errorMessage {
+                ContentUnavailableView(
+                    "Error Loading Lab Tests",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(error)
+                )
+            } else if labTests.isEmpty {
+                ContentUnavailableView(
+                    "No Lab Tests",
+                    systemImage: "cross.case.fill",
+                    description: Text("You don't have any lab tests yet")
+                )
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 16) {
                         ForEach(filteredTests, id: \.id) { test in
                             LabTestCard(
+                                id: test.id,
                                 testName: test.testName,
                                 testDate: test.testDate,
                                 status: test.status,
-                                doctorName: test.doctorName
+                                doctorName: test.doctorName,
+                                diagnosis: test.diagnosis
                             )
                             .onTapGesture {
                                 selectedTest = test
-                                showingTestDetail = true
+                                showingDetail = true
                             }
                         }
                     }
+                    .padding()
                 }
-                .padding()
             }
         }
         .navigationTitle("Lab Reports")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showingTestDetail) {
+        .sheet(isPresented: $showingDetail) {
             if let test = selectedTest {
-                LabTestDetailView(test: (testName: test.testName, 
-                                      testDate: test.testDate, 
-                                      status: test.status, 
-                                      doctorName: test.doctorName))
+                LabTestDetailView(
+                    id: test.id,
+                    testName: test.testName,
+                    testDate: test.testDate,
+                    status: test.status,
+                    doctorName: test.doctorName,
+                    diagnosis: test.diagnosis
+                )
             }
         }
         .sheet(isPresented: $showingFilterSheet) {
@@ -119,14 +117,27 @@ struct LabReportsView: View {
         }
         .onAppear {
             Task {
-                await fetchLabTests()
+                await loadLabTests()
             }
         }
-        .alert("Error", isPresented: $showError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(error?.localizedDescription ?? "Unknown error occurred")
+    }
+    
+    private func loadLabTests() async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            if let patientIdString = UserDefaults.standard.string(forKey: "currentPatientId"),
+               let patientId = UUID(uuidString: patientIdString) {
+                labTests = try await supabase.fetchLabTests(patientId: patientId)
+            } else {
+                errorMessage = "Patient ID not found"
+            }
+        } catch {
+            errorMessage = error.localizedDescription
         }
+        
+        isLoading = false
     }
     
     private var searchBar: some View {
@@ -179,28 +190,6 @@ struct LabReportsView: View {
         }
     }
     
-    private func fetchLabTests() async {
-        do {
-            if let patientId = UUID(uuidString: UserDefaults.standard.string(forKey: "currentPatientId") ?? "") {
-                print("Fetching lab tests for patient: \(patientId)")
-                let tests = try await supabase.fetchLabTests(patientId: patientId)
-                await MainActor.run {
-                    self.labTests = tests
-                    self.isLoading = false
-                }
-            } else {
-                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid patient ID"])
-            }
-        } catch {
-            print("Error loading lab tests: \(error)")
-            await MainActor.run {
-                self.error = error
-                self.isLoading = false
-                self.showError = true
-            }
-        }
-    }
-    
     var filterSheet: some View {
         NavigationView {
             List(selection: $selectedFilters) {
@@ -246,127 +235,202 @@ struct LabReportsView: View {
 }
 
 struct LabTestCard: View {
+    let id: UUID
     let testName: String
     let testDate: Date
     let status: String
     let doctorName: String?
+    let diagnosis: String?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(testName)
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: 0) {
+            // Header with Doctor Info
+            HStack(spacing: 12) {
+                Image(systemName: "person.circle.fill")
+                    .font(.system(size: 32))
+                    .foregroundColor(.mint)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    if let doctor = doctorName {
+                        Text("Dr. \(doctor)")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                    }
+                    
+                    Text(testDate.formatted(date: .abbreviated, time: .omitted))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                
                 Spacer()
+                
                 LabTestStatusBadge(status: status)
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             
-            HStack {
-                Label {
-                    Text(testDate.formatted(.dateTime.day().month().year().hour().minute()))
-                } icon: {
-                    Image(systemName: "calendar")
-                }
-                .foregroundColor(.secondary)
+            Divider()
+                .padding(.horizontal, 16)
+            
+            // Tests Section
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Tests")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
                 
-                Spacer()
-                
-                if let doctorName = doctorName {
-                    Label {
-                        Text(doctorName)
-                            .lineLimit(1)
-                    } icon: {
-                        Image(systemName: "person")
+                let tests = testName.split(separator: ",").map(String.init)
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(tests, id: \.self) { test in
+                        HStack(spacing: 12) {
+                            Image(systemName: "cross.case.fill")
+                                .foregroundColor(.mint)
+                                .font(.system(size: 14))
+                            
+                            Text(test.trimmingCharacters(in: .whitespaces))
+                                .font(.body)
+                                .foregroundColor(.primary)
+                        }
                     }
-                    .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 16)
+            }
+            .padding(.bottom, 16)
+            
+            // Diagnosis Section if available
+            if let diagnosis = diagnosis, !diagnosis.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Divider()
+                        .padding(.horizontal, 16)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Diagnosis")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        Text(diagnosis)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
             }
-            .font(.subheadline)
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-        )
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+    }
+}
+
+struct LabTestDetailView: View {
+    let id: UUID
+    let testName: String
+    let testDate: Date
+    let status: String
+    let doctorName: String?
+    let diagnosis: String?
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Doctor Info
+                    if let doctor = doctorName {
+                        HStack {
+                            Image(systemName: "person.circle.fill")
+                                .font(.title)
+                                .foregroundColor(.mint)
+                            Text("Dr. \(doctor)")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    
+                    // Status Badge
+                    LabTestStatusBadge(status: status)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                    
+                    // Date
+                    HStack {
+                        Image(systemName: "calendar")
+                            .foregroundColor(.mint)
+                        Text(testDate.formatted(date: .long, time: .omitted))
+                            .font(.headline)
+                    }
+                    
+                    // Tests
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Tests Included")
+                            .font(.headline)
+                            .padding(.bottom, 4)
+                        
+                        let tests = testName.split(separator: ",").map(String.init)
+                        ForEach(tests, id: \.self) { test in
+                            HStack {
+                                Image(systemName: "cross.case.fill")
+                                    .foregroundColor(.mint)
+                                Text(test.trimmingCharacters(in: .whitespaces))
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    
+                    // Diagnosis if available
+                    if let diagnosis = diagnosis, !diagnosis.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Diagnosis")
+                                .font(.headline)
+                                .padding(.bottom, 4)
+                            
+                            Text(diagnosis)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("Lab Test Details")
+            .navigationBarTitleDisplayMode(.inline)
+        }
     }
 }
 
 struct LabTestStatusBadge: View {
     let status: String
     
-    var statusColor: Color {
+    private var statusColor: Color {
         switch status.lowercased() {
         case "completed":
             return .green
         case "pending":
             return .orange
+        case "cancelled":
+            return .red
         default:
             return .gray
         }
     }
     
     var body: some View {
-        Text(status)
+        Text(status.capitalized)
             .font(.caption)
             .fontWeight(.medium)
+            .foregroundColor(statusColor)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(statusColor.opacity(0.2))
-            .foregroundColor(statusColor)
-            .clipShape(Capsule())
-    }
-}
-
-struct LabTestDetailView: View {
-    let test: (testName: String, testDate: Date, status: String, doctorName: String?)
-    
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Test Name
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Test Name")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Text(test.testName)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                    }
-                    
-                    // Status
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Status")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        LabTestStatusBadge(status: test.status)
-                    }
-                    
-                    // Date
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Test Date")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Text(test.testDate.formatted(.dateTime.month().day().year().hour().minute()))
-                            .font(.body)
-                    }
-                    
-                    // Doctor
-                    if let doctorName = test.doctorName {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Referred by")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Text(doctorName)
-                                .font(.body)
-                        }
-                    }
-                }
-                .padding()
-            }
-            .navigationTitle("Test Details")
-            .navigationBarTitleDisplayMode(.inline)
-        }
+            .background(statusColor.opacity(0.1))
+            .cornerRadius(6)
     }
 }
 
