@@ -1,57 +1,3 @@
-////
-////  profile.swift
-////  HospitalManagement
-////
-////  Created by Nikhil Gupta on 21/03/25.
-////
-//import SwiftUI
-//
-//
-//struct SuperAdminProfileView: View {
-//    @Environment(\.dismiss) private var dismiss
-//    @State private var isLoggedOut = false
-//    var body: some View {
-//        NavigationView {
-//            Form {
-//                Section("Super Admin Information") {
-//                    HStack {
-//                        Text("Name:")
-//                        Spacer()
-//                        Text("Super Admin")
-//                            .foregroundColor(.secondary)
-//                    }
-//                    
-//                    HStack {
-//                        Text("Email:")
-//                        Spacer()
-//                        Text("admin@example.com")
-//                            .foregroundColor(.secondary)
-//                    }
-//                   
-//                    }
-//                Section {
-//                    Button(action: handleLogout) {
-//                        Text("Logout")
-//                            .fontWeight(.bold)
-//                            .foregroundColor(.red)
-//                            .frame(maxWidth: .infinity, alignment: .center)
-//                    }
-//                }
-//                .navigationTitle("Profile")
-//                .navigationBarItems(trailing: Button("Done") { dismiss() })
-//                .fullScreenCover(isPresented: .constant(isLoggedOut)) {
-//                    UserRoleScreen()
-//                }
-//            }
-//        }
-//    }
-//    private func handleLogout() {
-//        isLoggedOut = true
-//    }
-//}
-
-
-
 //
 //  profile.swift
 //  HospitalManagement
@@ -77,6 +23,7 @@ struct SuperAdminProfileView: View {
             Group {
                 if isLoading {
                     ProgressView("Loading profile...")
+                        .foregroundColor(AppConfig.fontColor)
                 } else if let errorMessage = errorMessage {
                     Text(errorMessage)
                         .foregroundColor(.red)
@@ -85,10 +32,14 @@ struct SuperAdminProfileView: View {
                         Section("Super Admin Information") {
                             if let admin = superAdmin {
                                 ProfileDetailRow(title: "Name", value: admin.full_name)
+                                    .foregroundColor(AppConfig.fontColor)
                                 ProfileDetailRow(title: "Email", value: admin.email)
+                                    .foregroundColor(AppConfig.fontColor)
                                 ProfileDetailRow(title: "Role", value: "Super Administrator")
+                                    .foregroundColor(AppConfig.fontColor)
                             }
                         }
+                        .foregroundStyle(AppConfig.fontColor)
                         
                         Section {
                             Button(action: {
@@ -100,11 +51,16 @@ struct SuperAdminProfileView: View {
                                     .frame(maxWidth: .infinity, alignment: .center)
                             }
                         }
+                        .foregroundStyle(AppConfig.fontColor)
                     }
+                    .background(AppConfig.backgroundColor)
+                    .scrollContentBackground(.hidden)
                 }
             }
             .navigationTitle("Profile")
-            .navigationBarItems(leading: Button("Done") { dismiss() })
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(leading: Button("Done") { dismiss() }
+                .foregroundColor(AppConfig.buttonColor))
             .alert("Logout", isPresented: $showLogoutAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Logout", role: .destructive) {

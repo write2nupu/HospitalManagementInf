@@ -1,11 +1,3 @@
-
-
-
-
-
-
-
-
 import SwiftUI
 import PostgREST
 
@@ -47,7 +39,7 @@ struct HospitalCard: View {
                     Text(hospital.name)
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundColor(.black)
+                        .foregroundColor(AppConfig.fontColor)
                     Spacer()
                     StatusBadge(isActive: hospital.is_active)
                 }
@@ -55,41 +47,41 @@ struct HospitalCard: View {
                 // Location info
                 HStack(spacing: 8) {
                     Image(systemName: "location.fill")
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                     Text("\(hospital.city), \(hospital.state)")
                         .font(.subheadline)
-                        .foregroundColor(.black)
+                        .foregroundColor(AppConfig.fontColor)
                 }
                 
                 // Contact info
                 HStack(spacing: 8) {
                     Image(systemName: "phone.fill")
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                     Text(hospital.mobile_number)
                         .font(.subheadline)
-                        .foregroundColor(.black)
+                        .foregroundColor(AppConfig.fontColor)
                 }
                 
                 // Admin info
                 HStack(spacing: 8) {
                     Image(systemName: "person.fill")
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                     if let admin = adminDetails {
                         Text("Admin: \(admin.full_name)")
                             .font(.subheadline)
-                            .foregroundColor(.black)
+                            .foregroundColor(AppConfig.fontColor)
                     } else {
                         Text("Admin: Not Assigned")
                             .font(.subheadline)
-                            .foregroundColor(.black)
+                            .foregroundColor(AppConfig.fontColor)
                     }
                 }
             }
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 15)
-                    .fill(Color(.systemBackground))
-                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                    .fill(AppConfig.cardColor)
+                    .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)
             )
         }
         .buttonStyle(.plain)
@@ -131,7 +123,7 @@ struct SuperAdminProfileButton: View {
         Button(action: { isShowingProfile = true }) {
             Image(systemName: "person.circle.fill")
                 .font(.title2)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
         }
     }
 }
@@ -160,9 +152,15 @@ struct AddHospitalView: View {
     @State private var showingValidationAlert = false
     @State private var validationMessage = ""
     @State private var isSubmitting = false
+    @State private var showSuccessAlert = false
     
     @State private var isLoadingLocation = false
     @State private var locationError: String? = nil
+    
+    private func triggerHaptic(_ type: UINotificationFeedbackGenerator.FeedbackType = .success) {
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(type)
+    }
     
     var body: some View {
         NavigationView {
@@ -235,13 +233,17 @@ struct AddHospitalView: View {
                 
                 Section(header: Text("Status")) {
                     Toggle("Active", isOn: $isActive)
-                        .tint(.mint)
+                        .tint(AppConfig.buttonColor)
                 }
             }
             .navigationTitle("Add Hospital")
+            .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(
-                leading: Button("Cancel") { dismiss() }
-                    .foregroundColor(.mint),
+                leading: Button("Cancel") { 
+                    triggerHaptic(.warning)
+                    dismiss() 
+                }
+                .foregroundColor(AppConfig.buttonColor),
                 trailing: Button("Save") {
                     if isValidForm {
                         Task {
@@ -249,9 +251,10 @@ struct AddHospitalView: View {
                         }
                     } else {
                         showingValidationAlert = true
+                        triggerHaptic(.error)
                     }
                 }
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
                 .disabled(isSubmitting)
             )
             .overlay {
@@ -265,6 +268,13 @@ struct AddHospitalView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(validationMessage)
+            }
+            .alert("Success", isPresented: $showSuccessAlert) {
+                Button("OK") {
+                    dismiss()
+                }
+            } message: {
+                Text("Hospital has been successfully created")
             }
         }
     }
@@ -362,22 +372,35 @@ struct AddHospitalView: View {
                 // Note: We don't throw here since the hospital and admin were created successfully
             }
             
+            // After successful save
+            triggerHaptic()
+            showSuccessAlert = true
+            
             // Refresh the hospitals list
             if let parentViewModel = viewModel as? HospitalManagementViewModel {
                 parentViewModel.hospitals = await supabaseController.fetchHospitals()
             }
-            
-            dismiss()
         } catch {
             validationMessage = "Error saving hospital: \(error.localizedDescription)"
-            print("Error saving hospital: \(error)")
+            triggerHaptic(.error)
             showingValidationAlert = true
         }
     }
     
     private func generateRandomPassword() -> String {
-        let password = "9876543210abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        return String((0..<8).map { _ in password.randomElement()! })
+        let numbers = "9876543210"
+        let letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        let specialCharacters = "!@#$%^&*()-_=+[]{}|;:,.<>?/"
+
+        let randomNumber = numbers.randomElement()!
+        let randomLetter = letters.randomElement()!
+        let randomSpecialChar = specialCharacters.randomElement()!
+
+        let allCharacters = numbers + letters + specialCharacters
+        let remainingChars = (0..<5).map { _ in allCharacters.randomElement()! }
+
+        let passwordArray = [randomNumber, randomLetter, randomSpecialChar] + remainingChars
+        return String(passwordArray.shuffled())
     }
     
     private var isValidForm: Bool {
@@ -502,11 +525,12 @@ struct QuickActionCard: View {
             VStack(spacing: 12) {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 40))
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
                 
                 Text("Add Hospital")
                     .font(.title3)
                     .fontWeight(.bold)
+                    .foregroundColor(AppConfig.fontColor)
                 
                 Text("Create a new hospital profile")
                     .font(.subheadline)
@@ -516,8 +540,8 @@ struct QuickActionCard: View {
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 15)
-                    .fill(Color(.systemBackground))
-                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                    .fill(AppConfig.cardColor)
+                    .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)
             )
         }
         .buttonStyle(.plain)
@@ -560,7 +584,7 @@ struct ContentView: View {
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Quick Actions")
                                 .font(.headline)
-                                .foregroundColor(.black)
+                                .foregroundColor(AppConfig.fontColor)
                                 .padding(.horizontal)
                             
                             QuickActionCard {
@@ -574,10 +598,10 @@ struct ContentView: View {
                             HStack {
                                 Text("Hospitals")
                                     .font(.headline)
-                                    .foregroundColor(.black)
+                                    .foregroundColor(AppConfig.fontColor)
                                 Spacer()
                                 NavigationLink("See All", destination: HospitalList(hospitals: filteredHospitals, viewModel: viewModel))
-                                    .foregroundColor(.mint)
+                                    .foregroundColor(AppConfig.buttonColor)
                             }
                             .padding(.horizontal)
                             
@@ -585,10 +609,10 @@ struct ContentView: View {
                                 VStack(spacing: 12) {
                                     Image(systemName: "building.2")
                                         .font(.system(size: 50))
-                                        .foregroundColor(.mint)
+                                        .foregroundColor(AppConfig.buttonColor)
                                     Text("No hospitals yet")
                                         .font(.title3)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(AppConfig.fontColor)
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 40)
@@ -608,7 +632,7 @@ struct ContentView: View {
                     .padding(.vertical)
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(AppConfig.backgroundColor)
             .navigationTitle("Dashboard")
             .navigationBarBackButtonHidden(true)
             .searchable(text: $searchText, prompt: "Search hospitals...")
@@ -661,7 +685,7 @@ struct HospitalList: View {
             }
             .padding(.vertical)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(AppConfig.backgroundColor)
         .navigationTitle("All Hospitals")
         
     }

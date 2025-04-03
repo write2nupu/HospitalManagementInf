@@ -17,12 +17,20 @@ struct HospitalDetailView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var adminDetails: Admin?
+    @State private var showStatusChangeAlert = false
+    @State private var proposedActiveStatus = false
+    @State private var showStatusChangeSuccessAlert = false
     
     init(viewModel: HospitalManagementViewModel, hospital: Hospital) {
         self.viewModel = viewModel
         _hospital = State(initialValue: hospital)
         _isActive = State(initialValue: hospital.is_active)
         _editedHospital = State(initialValue: hospital)
+    }
+    
+    private func triggerHaptic(_ type: UINotificationFeedbackGenerator.FeedbackType = .success) {
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(type)
     }
     
     var body: some View {
@@ -37,23 +45,23 @@ struct HospitalDetailView: View {
                                     .font(.title2)
                                     .bold()
                                     .padding(.horizontal)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(AppConfig.fontColor)
                             } else {
                                 Text(hospital.name)
                                     .font(.title2)
                                     .bold()
-                                    .foregroundColor(.mint)
+                                    .foregroundColor(AppConfig.buttonColor)
                                     .padding(.horizontal)
                             }
                             if isEditing {
                                 TextField("License Number", text: $editedHospital.license_number)
                                     .font(.subheadline)
                                     .padding(.horizontal)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(AppConfig.fontColor)
                             } else {
                                 Text("License: \(hospital.license_number)")
                                     .font(.subheadline)
-                                    .foregroundColor(.mint)
+                                    .foregroundColor(AppConfig.buttonColor)
                                     .padding(.horizontal)
                             }
                         }
@@ -81,12 +89,12 @@ struct HospitalDetailView: View {
                         } else {
                             Text(hospital.address)
                                 .font(.body)
-                                .foregroundColor(.mint)
+                                .foregroundColor(AppConfig.buttonColor)
                                 .padding(.horizontal)
                             
                             Text("\(hospital.city), \(hospital.state) \(hospital.pincode)")
                                 .font(.subheadline)
-                                .foregroundColor(.mint)
+                                .foregroundColor(AppConfig.buttonColor)
                                 .padding(.horizontal)
                         }
                     }
@@ -120,8 +128,9 @@ struct HospitalDetailView: View {
                             guard let url = URL(string: "tel:\(hospital.mobile_number)") else { return }
                             UIApplication.shared.open(url)
                         }
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                     }
+                    .foregroundColor(AppConfig.fontColor)
                     
                     LabeledContent("Email") {
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -129,11 +138,12 @@ struct HospitalDetailView: View {
                                 guard let url = URL(string: "mailto:\(hospital.email)") else { return }
                                 UIApplication.shared.open(url)
                             }
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                             .lineLimit(1)
                         }
                         .padding(.leading, 8)
                     }
+                    .foregroundColor(AppConfig.fontColor)
                 }
             } header: {
                 Text("Contact Information")
@@ -145,16 +155,18 @@ struct HospitalDetailView: View {
                 if let admin = adminDetails {
                     LabeledContent("Name") {
                         Text(admin.full_name)
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                     }
+                    .foregroundColor(AppConfig.fontColor)
                     
                     LabeledContent("Phone") {
                         Button(admin.phone_number) {
                             guard let url = URL(string: "tel:\(admin.phone_number)") else { return }
                             UIApplication.shared.open(url)
                         }
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                     }
+                    .foregroundColor(AppConfig.fontColor)
                     
                     LabeledContent("Email") {
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -162,11 +174,12 @@ struct HospitalDetailView: View {
                                 guard let url = URL(string: "mailto:\(admin.email)") else { return }
                                 UIApplication.shared.open(url)
                             }
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                             .lineLimit(1)
                         }
                         .padding(.leading, 8)
                     }
+                    .foregroundColor(AppConfig.fontColor)
                 } else {
                     Text("Admin not assigned")
                         .foregroundColor(.mint)
@@ -181,15 +194,18 @@ struct HospitalDetailView: View {
                 Toggle("Active Status", isOn: Binding(
                     get: { hospital.is_active },
                     set: { newValue in
-                        Task {
-                            await updateHospitalActive(newValue)
+                        if isEditing {
+                            proposedActiveStatus = newValue
+                            showStatusChangeAlert = true
                         }
                     }
                 ))
-                .tint(.mint)
+                .tint(AppConfig.buttonColor)
+                .disabled(!isEditing)
             }
         }
         .navigationTitle("Hospital Details")
+        .navigationBarTitleDisplayMode(.inline)
         .navigationBarItems(trailing: Button(isEditing ? "Save" : "Edit") {
             if isEditing {
                 Task {
@@ -199,13 +215,41 @@ struct HospitalDetailView: View {
                 editedHospital = hospital
                 isEditing = true
             }
-        })
+        }
+        .foregroundColor(AppConfig.buttonColor))
+        .background(AppConfig.backgroundColor)
+        .scrollContentBackground(.hidden)
         .alert("Error", isPresented: $showError) {
             Button("OK") {
                 showError = false
             }
         } message: {
             Text(errorMessage)
+        }
+        .onAppear {
+            triggerHaptic(.error)
+        }
+        .alert("Confirm Status Change", isPresented: $showStatusChangeAlert) {
+            Button("Cancel", role: .cancel) {
+                // Reset the toggle to its original state
+                proposedActiveStatus = hospital.is_active
+                triggerHaptic(.warning)
+            }
+            Button(proposedActiveStatus ? "Activate" : "Deactivate") {
+                Task {
+                    await updateHospitalActive(proposedActiveStatus)
+                    triggerHaptic()
+                }
+            }
+        } message: {
+            Text("Are you sure you want to \(proposedActiveStatus ? "activate" : "deactivate") this hospital?")
+        }
+        .alert("Status Updated", isPresented: $showStatusChangeSuccessAlert) {
+            Button("OK") { 
+                triggerHaptic()
+            }
+        } message: {
+            Text("Hospital status has been successfully updated")
         }
         .task {
             if let adminId = hospital.assigned_admin_id {
@@ -218,6 +262,12 @@ struct HospitalDetailView: View {
         var updatedHospital = hospital
         updatedHospital.is_active = newValue
         await updateHospital(updatedHospital)
+        showStatusChangeSuccessAlert = true
+        
+        // Refresh the hospitals list in the parent view
+        if let parentViewModel = viewModel as? HospitalManagementViewModel {
+            parentViewModel.hospitals = await supabaseController.fetchHospitals()
+        }
     }
     
     private func updateHospital(_ updatedHospital: Hospital) async {
@@ -225,6 +275,11 @@ struct HospitalDetailView: View {
             try await supabaseController.updateHospital(updatedHospital)
             hospital = updatedHospital
             isEditing = false
+            
+            // Refresh the hospitals list in the parent view
+            if let parentViewModel = viewModel as? HospitalManagementViewModel {
+                parentViewModel.hospitals = await supabaseController.fetchHospitals()
+            }
         } catch {
             showError = true
             errorMessage = error.localizedDescription
@@ -288,14 +343,18 @@ struct EditHospitalView: View {
                 adminSection
                 statusSection
             }
+            .background(AppConfig.backgroundColor)
+            .scrollContentBackground(.hidden)
             .navigationTitle("Edit Hospital")
             .navigationBarItems(
-                leading: Button("Cancel") { isPresented = false },
+                leading: Button("Cancel") { isPresented = false }
+                    .foregroundColor(AppConfig.buttonColor),
                 trailing: Button("Save") {
                     hospital.assigned_admin_id = selectedAdmin?.id
                     onSave(hospital)
                     isPresented = false
                 }
+                .foregroundColor(AppConfig.buttonColor)
             )
             .task {
                 do {
