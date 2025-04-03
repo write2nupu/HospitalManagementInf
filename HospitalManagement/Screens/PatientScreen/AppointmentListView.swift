@@ -472,7 +472,7 @@ struct RescheduleView: View {
                         DatePicker(
                             "Select New Date",
                             selection: $selectedDate,
-                            in: Date()...,
+                            in: Date()...Calendar.current.date(byAdding: .day, value: 28, to: Date())!,
                             displayedComponents: .date
                         )
                         .onChange(of: selectedDate) { _ in
@@ -520,22 +520,6 @@ struct RescheduleView: View {
                                             .onChange(of: selectedTime) { oldValue, newTime in
                                                 updateSelectedTimeSlot(time: newTime)
                                             }
-                                        
-                                        if !bookedTimeRanges.isEmpty {
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text("Booked time slots:")
-                                                    .font(.caption)
-                                                    .foregroundColor(.gray)
-                                                
-                                                ForEach(bookedTimeRanges, id: \.self) { range in
-                                                    Text(range)
-                                                        .font(.caption)
-                                                        .foregroundColor(.red)
-                                                }
-                                            }
-                                            .padding(.top, 4)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                        }
                                         
                                         Button("Confirm Time") {
                                             showTimePicker = false

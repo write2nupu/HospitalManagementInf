@@ -76,7 +76,7 @@ struct EmergencyAssistanceView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "person.fill")
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
                 Text("Patient Information")
                     .font(.headline)
             }
@@ -91,8 +91,8 @@ struct EmergencyAssistanceView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor.opacity(0.05), radius: 8, x: 0, y: 2)
         )
     }
     
@@ -100,7 +100,7 @@ struct EmergencyAssistanceView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "building.2.fill")
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
                 Text("Hospital Information")
                     .font(.headline)
             }
@@ -114,8 +114,8 @@ struct EmergencyAssistanceView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor.opacity(0.05), radius: 8, x: 0, y: 2)
         )
     }
     
@@ -123,31 +123,33 @@ struct EmergencyAssistanceView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "text.alignleft")
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
                 Text("Emergency Description")
                     .font(.headline)
             }
             
-            TextEditor(text: $emergencyDescription)
-                .frame(minHeight: 120)
-                .padding(8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                )
-                .overlay(
+            ZStack(alignment: .topLeading) {
+                if emergencyDescription.isEmpty {
                     Text("Describe your emergency condition...")
                         .foregroundColor(.gray.opacity(0.8))
                         .padding(.leading, 4)
-                        .opacity(emergencyDescription.isEmpty ? 1 : 0),
-                    alignment: .topLeading
-                )
+                        .padding(.top, 8)
+                }
+                
+                TextEditor(text: $emergencyDescription)
+                    .frame(minHeight: 120)
+                    .scrollContentBackground(.hidden)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(AppConfig.shadowColor.opacity(0.2), lineWidth: 1)
+                    )
+            }
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor.opacity(0.05), radius: 8, x: 0, y: 2)
         )
     }
     

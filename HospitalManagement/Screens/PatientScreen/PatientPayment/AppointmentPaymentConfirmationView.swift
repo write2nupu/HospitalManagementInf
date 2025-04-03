@@ -28,14 +28,14 @@ struct AppointmentPaymentConfirmationView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .resizable()
                         .frame(width: 80, height: 80)
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                         .padding(.top)
 
                     // ✅ Success Message
                     Text("Payment Successful")
                         .font(.title)
                         .fontWeight(.bold)
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
 
                     Text("Your appointment has been confirmed.")
                         .font(.body)
@@ -122,20 +122,20 @@ struct AppointmentPaymentConfirmationView: View {
                     }) {
                         Text("Done")
                             .fontWeight(.semibold)
-                            .foregroundColor(.white)
+                            .foregroundColor(AppConfig.backgroundColor)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.mint)
+                            .background(AppConfig.buttonColor)
                             .cornerRadius(10)
                             .shadow(radius: 2)
                     }
                 }
                 .padding()
             }
-            .background(Color.white)
+            .background(AppConfig.cardColor)
             .shadow(radius: 3)
         }
-        .background(Color.white.edgesIgnoringSafeArea(.all))
+        .background(AppConfig.backgroundColor)
         .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showInvoice) {
             InvoiceView(invoice: invoice)
@@ -153,7 +153,7 @@ struct AppointmentPaymentConfirmationView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Appointment Details")
                 .font(.headline)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
 
             detailRow(label: "Doctor", value: doctor.full_name)
             detailRow(label: "Specialization", value: department.name)
@@ -164,9 +164,9 @@ struct AppointmentPaymentConfirmationView: View {
             Divider()
         }
         .padding()
-        .background(Color.white)
+        .background(AppConfig.cardColor)
         .cornerRadius(12)
-        .shadow(radius: 3)
+        .shadow(color:AppConfig.shadowColor,radius: 3)
     }
 
     // MARK: - Invoice Details Section
@@ -174,7 +174,7 @@ struct AppointmentPaymentConfirmationView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Payment Details")
                 .font(.headline)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
 
             detailRow(label: "Appointment ID", value: appointment.id.uuidString)
             detailRow(label: "Payment Method", value: formattedPaymentMethod)
@@ -183,9 +183,9 @@ struct AppointmentPaymentConfirmationView: View {
             Divider()
         }
         .padding()
-        .background(Color.white)
+        .background(AppConfig.cardColor)
         .cornerRadius(12)
-        .shadow(radius: 3)
+        .shadow(color:AppConfig.shadowColor,radius: 3)
     }
 
     // MARK: - Detail Row Helper Function

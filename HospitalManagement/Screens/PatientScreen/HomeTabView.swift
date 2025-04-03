@@ -57,8 +57,8 @@ struct HospitalSelectionCard: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 15)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)
         )
         .padding(.horizontal)
     }
@@ -75,7 +75,7 @@ struct LatestAppointmentCard: View {
                     .foregroundColor(.white)
                     .padding()
                     .background(
-                        appointment.type == .Emergency ? Color.red : Color.mint
+                        appointment.type == .Emergency ? AppConfig.redColor : AppConfig.buttonColor
                     )
                     .clipShape(Circle())
                 
@@ -83,7 +83,7 @@ struct LatestAppointmentCard: View {
                     Text(appointment.type.rawValue)
                         .font(.headline)
                         .foregroundColor(
-                            appointment.type == .Emergency ? .red : .mint
+                            appointment.type == .Emergency ? AppConfig.redColor : AppConfig.buttonColor
                         )
                     
                     Text(formattedDate(appointment.date))
@@ -95,7 +95,7 @@ struct LatestAppointmentCard: View {
                 
                 Image(systemName: "chevron.right")
                     .foregroundColor(
-                        appointment.type == .Emergency ? .red : .mint
+                        appointment.type == .Emergency ? AppConfig.redColor : AppConfig.buttonColor
                     )
             }
             .padding()
@@ -244,7 +244,7 @@ struct HomeTabView: View {
     @StateObject private var supabase = SupabaseController()
     
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 20) {
                 // MARK: - Quick Actions Section
                 VStack(alignment: .leading, spacing: 15) {

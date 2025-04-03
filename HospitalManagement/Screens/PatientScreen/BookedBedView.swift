@@ -46,7 +46,7 @@ struct CurrentBedBookingView: View {
     private var bookingCardView: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 15)
-                .fill(Color.mint.opacity(0.1))
+                .fill(AppConfig.buttonColor.opacity(0.1))
                 .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
             
             HStack {
@@ -80,10 +80,10 @@ struct CurrentBedBookingView: View {
                 NavigationLink(destination: BedBookingView(hospital: hospital)) {
                     Text("Book Now")
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(AppConfig.backgroundColor)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
-                        .background(Color.mint)
+                        .background(AppConfig.buttonColor)
                         .cornerRadius(10)
                 }
             } else {
@@ -110,7 +110,7 @@ struct CurrentBedBookingView: View {
         VStack(spacing: 16) {
             Image(systemName: "bed.double")
                 .font(.system(size: 50))
-                .foregroundColor(.mint.opacity(0.5))
+                .foregroundColor(AppConfig.buttonColor)
             
             Text("No Active Bookings")
                 .font(.title3)
@@ -129,7 +129,7 @@ struct CurrentBedBookingView: View {
             HStack {
                 Image(systemName: "bed.double")
                     .font(.title3)
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
                 
                 Text(booking.bedType.rawValue)
                     .font(.headline)
@@ -143,7 +143,7 @@ struct CurrentBedBookingView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 15)
-                .fill(Color.mint.opacity(0.1))
+                .fill(AppConfig.buttonColor.opacity(0.1))
         )
         .padding(.horizontal)
     }

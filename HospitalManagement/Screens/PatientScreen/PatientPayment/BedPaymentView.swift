@@ -18,7 +18,7 @@ struct BookingSummaryView: View {
             Text("Booking Summary")
                 .font(.title3)
                 .fontWeight(.bold)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
             
             VStack(spacing: 12) {
                 summaryRow(title: "Hospital", value: hospital.name)
@@ -31,18 +31,19 @@ struct BookingSummaryView: View {
                 HStack {
                     Text("Total Amount")
                         .fontWeight(.semibold)
+                        .foregroundColor(.primary)
                     Spacer()
                     Text("₹\(bed.price)")
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                 }
             }
         }
         .padding()
-        .background(Color.white)
+        .background(AppConfig.cardColor)
         .cornerRadius(12)
-        .shadow(radius: 2)
+        .shadow(color:AppConfig.shadowColor ,radius: 2)
     }
     
     private func summaryRow(title: String, value: String) -> some View {
@@ -52,6 +53,7 @@ struct BookingSummaryView: View {
             Spacer()
             Text(value)
                 .fontWeight(.medium)
+                .foregroundColor(.primary)
         }
     }
     
@@ -71,7 +73,7 @@ struct PaymentMethodsView: View {
             Text("Payment Method")
                 .font(.title3)
                 .fontWeight(.bold)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
             
             ForEach(PaymentOption.allCases, id: \.self) { method in
                 PaymentMethodRow(
@@ -82,9 +84,9 @@ struct PaymentMethodsView: View {
             }
         }
         .padding()
-        .background(Color.white)
+        .background(AppConfig.cardColor)
         .cornerRadius(12)
-        .shadow(radius: 2)
+        .shadow(color:AppConfig.shadowColor ,radius: 2)
     }
 }
 
@@ -101,7 +103,7 @@ struct PaymentDetailsView: View {
             Text("Payment Details")
                 .font(.title3)
                 .fontWeight(.bold)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
             
             if paymentMethod == .card {
                 CustomTextField(text: $cardNumber, placeholder: "Card Number", keyboardType: .numberPad)
@@ -114,9 +116,9 @@ struct PaymentDetailsView: View {
             }
         }
         .padding()
-        .background(Color.white)
+        .background(AppConfig.cardColor)
         .cornerRadius(12)
-        .shadow(radius: 2)
+        .shadow(color:AppConfig.shadowColor ,radius: 2)
     }
 }
 
@@ -174,7 +176,7 @@ struct BedPaymentView: View {
                 Divider()
                 paymentButton
             }
-            .background(Color.white)
+            .background(Color(UIColor.systemBackground))
         }
         .navigationTitle("Payment")
         .navigationBarTitleDisplayMode(.inline)
@@ -239,10 +241,10 @@ struct BedPaymentView: View {
                     .fontWeight(.semibold)
             }
         }
-        .foregroundColor(.white)
+                .foregroundColor(AppConfig.cardColor)
         .frame(maxWidth: .infinity)
         .padding()
-        .background(isProcessingPayment ? Color.gray : Color.mint)
+        .background(isProcessingPayment ? Color.gray : AppConfig.buttonColor)
         .cornerRadius(12)
         .padding()
         .disabled(isProcessingPayment || !isValidPaymentDetails())
@@ -299,16 +301,16 @@ struct PaymentMethodRow: View {
         Button(action: action) {
             HStack {
                 Image(systemName: method.icon)
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
                 Text(method.title)
                 Spacer()
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConfig.approvedColor)
                 }
             }
             .padding()
-            .background(Color.mint.opacity(0.1))
+            .background(AppConfig.buttonColor.opacity(0.1))
             .cornerRadius(8)
         }
     }
@@ -330,7 +332,7 @@ struct CustomTextField: View {
         }
         .textFieldStyle(.plain)
         .padding()
-        .background(Color.mint.opacity(0.1))
+        .background(AppConfig.buttonColor.opacity(0.1))
         .cornerRadius(8)
         .keyboardType(keyboardType)
     }

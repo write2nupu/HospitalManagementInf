@@ -20,7 +20,7 @@ struct BedPaymentConfirmationView: View {
                         Text("Payment Successful!")
                             .font(.title2)
                             .fontWeight(.bold)
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                         
                         Text("Your bed has been booked successfully")
                             .font(.body)
@@ -33,7 +33,7 @@ struct BedPaymentConfirmationView: View {
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Hospital Details")
                                 .font(.headline)
-                                .foregroundColor(.mint)
+                                .foregroundColor(AppConfig.buttonColor)
                             
                             VStack(spacing: 8) {
                                 detailRow(icon: "building.2", title: hospital.name)
@@ -42,14 +42,14 @@ struct BedPaymentConfirmationView: View {
                             }
                         }
                         .padding()
-                        .background(Color.mint.opacity(0.1))
+                        .background(AppConfig.buttonColor.opacity(0.1))
                         .cornerRadius(12)
                         
                         // Booking Info
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Booking Details")
                                 .font(.headline)
-                                .foregroundColor(.mint)
+                                .foregroundColor(AppConfig.buttonColor)
                             
                             VStack(spacing: 8) {
                                 detailRow(icon: "calendar", title: "Check In: \(formatDate(bedBooking.startDate))")
@@ -59,7 +59,7 @@ struct BedPaymentConfirmationView: View {
                             }
                         }
                         .padding()
-                        .background(Color.mint.opacity(0.1))
+                        .background(AppConfig.buttonColor.opacity(0.1))
                         .cornerRadius(12)
                     }
                     .padding(.horizontal)
@@ -77,10 +77,10 @@ struct BedPaymentConfirmationView: View {
             }) {
                 Text("Done")
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundColor(AppConfig.backgroundColor)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.mint)
+                    .background(AppConfig.buttonColor)
                     .cornerRadius(10)
             }
             .padding()
@@ -102,7 +102,7 @@ struct BedPaymentConfirmationView: View {
     private func detailRow(icon: String, title: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
                 .frame(width: 24)
             Text(title)
                 .font(.body)
@@ -125,7 +125,7 @@ struct LottieView: View {
             .overlay(
                 Image(systemName: "checkmark.circle.fill")
                     .resizable()
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
                     .aspectRatio(contentMode: .fit)
                     .padding(40)
             )

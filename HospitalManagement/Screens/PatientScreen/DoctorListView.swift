@@ -516,22 +516,6 @@ struct TimeSlotSectionView: View {
                 }
                 .padding(.vertical, 8)
                 
-                if !bookedTimeRanges.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Booked time slots:")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                        
-                        ForEach(bookedTimeRanges, id: \.self) { range in
-                            Text(range)
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        }
-                    }
-                    .padding(.top, 4)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                
                 if let slot = selectedTimeSlot {
                     HStack {
                         Text("Selected time:")
@@ -726,7 +710,7 @@ struct AppointmentBookingView: View {
                 Section(header: Text("Select Date")) {
                     DatePicker("Appointment Date",
                               selection: $selectedDate,
-                              in: Date()...,
+                              in: Date()...Calendar.current.date(byAdding: .day, value: 28, to: Date())!,
                               displayedComponents: .date)
                         .datePickerStyle(GraphicalDatePickerStyle())
                         .tint(AppConfig.buttonColor)
