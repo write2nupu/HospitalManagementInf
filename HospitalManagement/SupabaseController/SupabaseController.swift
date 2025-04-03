@@ -1907,6 +1907,36 @@ private struct AnyCodingKey: CodingKey {
             
         }
     
+    func createEmergencyAppointment(_ appointment: EmergencyAppointment) async throws {
+        // Get current patient ID from UserDefaults
+        guard let patientIdString = UserDefaults.standard.string(forKey: "currentPatientId"),
+              let patientId = UUID(uuidString: patientIdString) else {
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Patient ID not found"])
+        }
+        
+        let appointmentData: [String: AnyJSON] = [
+            "id": .string(appointment.id.uuidString),
+            "patientId": .string(patientId.uuidString),
+            "hospitalId": .string(appointment.hospitalId.uuidString),
+            "status": .string(appointment.status.rawValue),
+            "description": .string(appointment.description)
+        ]
+        
+        do {
+            try await client
+                .from("EmergencyAppointment")
+                .insert(appointmentData)
+                .execute()
+            
+            print("Emergency appointment created successfully")
+        } catch let error as PostgrestError {
+            print("Postgrest error: \(error)")
+            throw error
+        } catch {
+            print("Unexpected error: \(error)")
+            throw error
+        }
+    }
 }
 
 // MARK: - Leave Management

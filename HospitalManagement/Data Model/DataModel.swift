@@ -321,6 +321,22 @@ enum AppointmentStatus: String, Codable {
     case cancelled = "Cancelled"
 }
 
+struct EmergencyAppointment: Identifiable, Codable {
+    let id: UUID
+    let patientId: UUID
+    let hospitalId: UUID
+    let status: AppointmentStatus
+    let description: String
+    
+    init(id: UUID, hospitalId: UUID, patientId: UUID, status: AppointmentStatus, description: String) {
+        self.id = id
+        self.hospitalId = hospitalId
+        self.patientId = patientId
+        self.status = status
+        self.description = description
+    }
+}
+
 struct Invoice: Identifiable, Codable {
     let id: UUID
     let createdAt: Date
@@ -697,3 +713,5 @@ struct labTest{
     }
     
 }
+
+
