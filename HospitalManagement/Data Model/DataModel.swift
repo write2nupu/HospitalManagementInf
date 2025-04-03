@@ -319,6 +319,19 @@ enum AppointmentStatus: String, Codable {
     case scheduled = "Scheduled"
     case completed = "Completed"
     case cancelled = "Cancelled"
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let status = try container.decode(String.self).capitalized
+        
+        guard let value = AppointmentStatus(rawValue: status) else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Cannot initialize AppointmentStatus from invalid String value \(status)"
+            )
+        }
+        self = value
+    }
 }
 
 struct EmergencyAppointment: Identifiable, Codable {

@@ -28,7 +28,7 @@ struct HospitalListView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
                                     Image(systemName: "building.fill")
-                                        .foregroundColor(.mint)
+                                        .foregroundColor(AppConfig.buttonColor)
                                         .font(.system(size: 24))
                                     
                                     Text(hospital.name)
@@ -51,8 +51,8 @@ struct HospitalListView: View {
                             .padding()
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(.systemBackground))
-                                    .shadow(color: .mint.opacity(0.2), radius: 4, x: 0, y: 2)
+                                    .fill(AppConfig.cardColor)
+                                    .shadow(color: AppConfig.shadowColor, radius: 4, x: 0, y: 2)
                             )
                         }
                         .buttonStyle(PlainButtonStyle())

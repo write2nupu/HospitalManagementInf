@@ -172,7 +172,7 @@ struct AppointmentView: View {
                 if patientNames[appointment.patientId] == nil {
                     do {
                         let patient = try await supabase.fetchPatientById(patientId: appointment.patientId)
-                        updatedNames[appointment.patientId] = patient.fullname
+                        updatedNames[appointment.patientId] = patient?.fullname
                     } catch {
                         print("Error fetching patient name:", error)
                         updatedNames[appointment.patientId] = "Unknown Patient"

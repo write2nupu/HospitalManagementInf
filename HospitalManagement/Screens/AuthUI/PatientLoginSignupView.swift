@@ -204,7 +204,13 @@ struct PatientLoginSignupView: View {
         do {
             // After OTP verification, proceed with sign in
             currentPatient = try await supabaseController.signInPatient(email: email, password: password)
-            UserDefaults.standard.set("patient", forKey: "userRole")
+            
+            // Set all required UserDefaults for persistence
+            UserDefaults.standard.set(true, forKey: "isLoggedIn") // Set logged in flag
+            UserDefaults.standard.set(currentPatient?.id.uuidString, forKey: "currentUserId") // Set user ID
+            UserDefaults.standard.set("patient", forKey: "userRole") // Set role
+            
+            print("✅ Patient login successful - ID: \(currentPatient?.id.uuidString ?? "unknown"), storing in UserDefaults")
             showDashboard = true
         } catch {
             alertMessage = error.localizedDescription

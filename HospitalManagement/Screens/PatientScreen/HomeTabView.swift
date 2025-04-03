@@ -256,7 +256,66 @@ struct HomeTabView: View {
                         .padding(.top, 20)
                     
                     NavigationLink(destination: HospitalListView()) {
+
+//                        VStack(spacing: 12) {
+//                            if let hospital = selectedHospital {
+//                                // Selected Hospital Card View
+//                                HStack(alignment: .center, spacing: 15) {
+//                                    Image(systemName: "building.fill")
+//                                        .font(.system(size: 36))
+//                                        .foregroundColor(AppConfig.buttonColor)
+//                                    
+//                                    VStack(alignment: .leading, spacing: 4) {
+//                                        Text(hospital.name)
+//                                            .font(.headline)
+//                                            .foregroundColor(AppConfig.fontColor)
+//                                            .fontWeight(.semibold)
+//                                        
+//                                        Text("\(hospital.city), \(hospital.state)")
+//                                            .font(.subheadline)
+//                                            .foregroundColor(.secondary)
+//                                            .lineLimit(1)
+//                                    }
+//                                    
+//                                    Spacer()
+//                                    
+//                                    Text("Change")
+//                                        .font(.caption)
+//                                        .foregroundColor(AppConfig.buttonColor)
+//                                        .padding(.horizontal, 10)
+//                                        .padding(.vertical, 4)
+//                                        .background(
+//                                            RoundedRectangle(cornerRadius: 10)
+//                                                .strokeBorder(AppConfig.buttonColor, lineWidth: 1)
+//                                        )
+//                                }
+//                            } else {
+//                                // No Hospital Selected View
+//                                HStack {
+//                                    Image(systemName: "building.fill")
+//                                        .font(.system(size: 40))
+//                                        .foregroundColor(AppConfig.buttonColor)
+//                                    
+//                                    Text("Select Hospital")
+//                                        .font(.title3)
+//                                        .foregroundColor(AppConfig.fontColor)
+//                                        .fontWeight(.regular)
+//                                    
+//                                    Spacer()
+//                                }
+//                            }
+//                        }
+//                        .frame(maxWidth: .infinity)
+//                        .padding()
+//                        .background(
+//                            RoundedRectangle(cornerRadius: 15)
+//                                .fill(AppConfig.cardColor)
+//                                .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)
+//                        )
+//                        .padding(.horizontal)
+
                         HospitalSelectionCard(hospital: selectedHospital)
+
                     }
                 }
                 
@@ -386,8 +445,8 @@ struct ServiceCard: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 15)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)
         )
     }
 }
@@ -552,11 +611,11 @@ struct DepartmentCard: View {
                 // Department Icon
                 Image(systemName: iconName(for: department.name))
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
                     .frame(width: 36, height: 36)
                     .background(
                         Circle()
-                            .fill(Color.mint.opacity(0.1))
+                            .fill(AppConfig.cardColor)
                     )
                 
                 // Department Name
@@ -588,13 +647,13 @@ struct DepartmentCard: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
             }
-            .foregroundColor(.mint)
+            .foregroundColor(AppConfig.buttonColor)
         }
         .frame(width: 200, height: 120) // Reduced size
         .padding(12) // Reduced padding
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color(.systemBackground))
+                .fill(AppConfig.cardColor)
                 .shadow(
                     color: Color.black.opacity(0.06),
                     radius: 6,
