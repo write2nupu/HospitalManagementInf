@@ -298,16 +298,16 @@ struct DepartmentInfoView: View {
     let department: Department
     
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "building.2")
-                .font(.caption)
-                .foregroundColor(.gray)
-            
-            Text(department.name)
-                .font(.caption)
-                .foregroundColor(.gray)
-                .lineLimit(1)
-        }
+                        HStack(spacing: 4) {
+                            Image(systemName: "building.2")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            
+                    Text(department.name)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .lineLimit(1)
+                        }
     }
 }
 
@@ -316,14 +316,14 @@ struct FeeInfoView: View {
     let department: Department
     
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "indianrupeesign")
-                .font(.caption)
-                .foregroundColor(.gray)
-            
-            Text("\(Int(department.fees))")
-                .font(.subheadline)
-                .fontWeight(.semibold)
+                        HStack(spacing: 4) {
+                            Image(systemName: "indianrupeesign")
+                                .font(.caption)
+                        .foregroundColor(.gray)
+
+                            Text("\(Int(department.fees))")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
                 .foregroundColor(AppConfig.buttonColor)
         }
     }
@@ -780,8 +780,8 @@ struct AppointmentBookingView: View {
                         department: department,
                         hospital: hospital
                     )
-                }
             }
+        }
         .onChange(of: coordinator.shouldDismissToRoot) { shouldDismiss in
             if shouldDismiss {
                 dismiss()

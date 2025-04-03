@@ -2219,7 +2219,7 @@ extension SupabaseController {
         print("✅ Lab test booking created successfully!")
     }
     
-    func fetchLabTests(patientId: UUID? = nil, hospitalId: UUID? = nil) async throws -> [(id: UUID, testName: String, testDate: Date, status: String, doctorName: String?)] {
+    func fetchLabTests(patientId: UUID? = nil, hospitalId: UUID? = nil) async throws -> [(id: UUID, testName: String, testDate: Date, status: String, doctorName: String?, diagnosis: String?)] {
         print("🔍 Starting fetchLabTests function")
         print("Parameters - patientId: \(patientId?.uuidString ?? "nil"), hospitalId: \(hospitalId?.uuidString ?? "nil")")
         
@@ -2233,6 +2233,7 @@ extension SupabaseController {
                 prescriptionId,
                 Prescription:prescriptionId (
                     doctorId,
+                    diagnosis,
                     Doctor:doctorId (
                         full_name
                     )
@@ -2250,76 +2251,113 @@ extension SupabaseController {
         }
         
         print("Executing Supabase query...")
-        let result = try await query
+        let response = try await query
             .order("testDate", ascending: false)
             .execute()
         
         print("Response received")
-        print("Raw response: \(result)")
+        print("Raw response: \(String(describing: response.data))")
         
-        // Get the response data
-        guard let jsonArray = result.data as? [[String: Any]] else {
-            if let data = result.data as? Data,
-               let jsonString = String(data: data, encoding: .utf8),
-               let jsonData = jsonString.data(using: .utf8),
-               let parsedArray = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] {
-                print("✅ Successfully parsed JSON data")
-                return processLabTests(parsedArray)
-            }
-            print("❌ Could not parse response data as JSON array")
-            return []
+        // Try to handle different response formats
+        var jsonArray: [[String: Any]] = []
+        
+        if let data = response.data as? Data {
+            // If response is Data, try to decode it
+            print("Response is Data type, attempting to decode...")
+            jsonArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
+        } else if let array = response.data as? [[String: Any]] {
+            // If response is already an array of dictionaries
+            print("Response is already Array type")
+            jsonArray = array
+        } else {
+            print("Unexpected response type: \(type(of: response.data))")
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])
         }
         
-        print("✅ Successfully got JSON array with \(jsonArray.count) items")
-        return processLabTests(jsonArray)
-    }
-    
-    private func processLabTests(_ jsonArray: [[String: Any]]) -> [(id: UUID, testName: String, testDate: Date, status: String, doctorName: String?)] {
-        return jsonArray.compactMap { json -> (id: UUID, testName: String, testDate: Date, status: String, doctorName: String?)? in
-            print("Processing test: \(json)")
+        print("Processing \(jsonArray.count) lab tests")
+        
+        return try jsonArray.map { json -> (id: UUID, testName: String, testDate: Date, status: String, doctorName: String?, diagnosis: String?) in
+            print("Processing lab test JSON: \(json)")
             
-            // Get booking ID
+            // Extract booking ID
             guard let bookingIdString = json["bookingId"] as? String,
                   let bookingId = UUID(uuidString: bookingIdString) else {
-                print("❌ No valid booking ID found")
-                return nil
+                print("Invalid booking ID format")
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid booking ID"])
             }
             
-            // Get test name
-            guard let testName = json["testName"] as? String else {
-                print("❌ No test name found")
-                return nil
+            // Parse test names
+            var testName = ""
+            if let testNameArray = json["testName"] as? [String] {
+                // If it's already an array
+                testName = testNameArray.joined(separator: ", ")
+            } else if let testNameString = json["testName"] as? String {
+                // If it's a JSON string, try to parse it
+                do {
+                    if let testNameData = testNameString.data(using: .utf8),
+                       let testNames = try? JSONDecoder().decode([String].self, from: testNameData) {
+                        testName = testNames.joined(separator: ", ")
+                    } else {
+                        // If not valid JSON, use the string as is
+                        testName = testNameString
+                    }
+                }
             }
             
-            // Get test date
-            guard let testDateString = json["testDate"] as? String else {
-                print("❌ No test date found")
-                return nil
+            // Parse date with multiple format attempts
+            let dateFormatters = [
+                DateFormatter().apply { df in
+                    df.dateFormat = "yyyy-MM-dd"
+                    df.timeZone = TimeZone(identifier: "UTC")
+                },
+                DateFormatter().apply { df in
+                    df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+                    df.timeZone = TimeZone(identifier: "UTC")
+                },
+                ISO8601DateFormatter()
+            ]
+            
+            let testDateString = json["testDate"] as? String ?? ""
+            print("Attempting to parse date: \(testDateString)")
+            
+            var testDate: Date?
+            for formatter in dateFormatters {
+                if let date = (formatter as? DateFormatter)?.date(from: testDateString) ?? 
+                   (formatter as? ISO8601DateFormatter)?.date(from: testDateString) {
+                    testDate = date
+                    break
+                }
             }
             
-            // Parse the date
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-            
-            guard let testDate = dateFormatter.date(from: testDateString) else {
-                print("❌ Could not parse date: \(testDateString)")
-                return nil
+            guard let finalTestDate = testDate else {
+                print("Failed to parse date: \(testDateString)")
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid date format"])
             }
             
-            // Get status
+            // Extract status
             let status = json["status"] as? String ?? "Pending"
             
-            // Try to get doctor name from prescription data
+            // Extract prescription data
             var doctorName: String? = nil
-            if let prescription = json["Prescription"] as? [String: Any],
-               let doctor = prescription["Doctor"] as? [String: Any],
-               let name = doctor["full_name"] as? String {
-                doctorName = name
-                print("✅ Found doctor name: \(name)")
+            var diagnosis: String? = nil
+            
+            if let prescription = json["Prescription"] as? [String: Any] {
+                diagnosis = prescription["diagnosis"] as? String
+                if let doctor = prescription["Doctor"] as? [String: Any] {
+                    doctorName = doctor["full_name"] as? String
+                }
             }
             
-            return (id: bookingId, testName: testName, testDate: testDate, status: status, doctorName: doctorName)
+            print("Successfully parsed test - ID: \(bookingId), Doctor: \(doctorName ?? "nil"), Diagnosis: \(diagnosis ?? "nil")")
+            
+            return (
+                id: bookingId,
+                testName: testName,
+                testDate: finalTestDate,
+                status: status,
+                doctorName: doctorName,
+                diagnosis: diagnosis
+            )
         }
     }
     
