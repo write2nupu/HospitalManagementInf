@@ -13,102 +13,35 @@ struct EmergencyAssistanceView: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Title and Subtitle
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Emergency Assistance")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.red)
-                    
-                    Text("Request immediate medical attention")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal)
+            VStack(spacing: 20) {
+                // Emergency Header
+                emergencyHeader
                 
-                // Patient Information Card
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("Patient Details")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
+                // Main Content
+                VStack(spacing: 16) {
+                    // Patient Card
                     if let patient = patient {
-                        PatientInfoCard(patient: patient)
+                        patientCard(patient)
                     } else {
                         ProgressView()
                             .frame(maxWidth: .infinity)
                     }
-                }
-                .padding()
-                .background(Color(.systemBackground))
-                .cornerRadius(12)
-                .shadow(radius: 2)
-                .padding(.horizontal)
-                
-                // Hospital Information
-                if let hospital = hospital {
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("Hospital Details")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        
-                        HospitalInfoCard(hospital: hospital)
-                    }
-                    .padding()
-                    .background(Color(.systemBackground))
-                    .cornerRadius(12)
-                    .shadow(radius: 2)
-                    .padding(.horizontal)
-                }
-                
-                // Emergency Description Section
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("Emergency Description")
-                        .font(.headline)
-                        .foregroundColor(.primary)
                     
-                    TextEditor(text: $emergencyDescription)
-                        .frame(height: 150)
-                        .padding(8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                        )
-                        .overlay(
-                            Text("Describe your emergency condition...")
-                                .foregroundColor(.gray)
-                                .padding(.leading, 4)
-                                .opacity(emergencyDescription.isEmpty ? 1 : 0),
-                            alignment: .topLeading
-                        )
-                }
-                .padding()
-                .background(Color(.systemBackground))
-                .cornerRadius(12)
-                .shadow(radius: 2)
-                .padding(.horizontal)
-                
-                // Book Emergency Button
-                Button(action: bookEmergencyAppointment) {
-                    HStack {
-                        Image(systemName: "cross.case.fill")
-                        Text(isBookingEmergency ? "Booking..." : "Request Emergency Assistance")
-                            .fontWeight(.semibold)
+                    // Hospital Card
+                    if let hospital = hospital {
+                        hospitalCard(hospital)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(canBookEmergency ? Color.red : Color.gray)
-                    )
-                    .foregroundColor(.white)
+                    
+                    // Emergency Description
+                    emergencyDescriptionSection
+                    
+                    // Request Button
+                    requestButton
                 }
-                .disabled(!canBookEmergency || isBookingEmergency)
                 .padding(.horizontal)
             }
-            .padding(.vertical)
         }
+        .navigationBarTitleDisplayMode(.inline)
         .alert("Emergency Assistance", isPresented: $showAlert) {
             Button("OK") { dismiss() }
         } message: {
@@ -119,15 +52,156 @@ struct EmergencyAssistanceView: View {
         }
     }
     
+    private var emergencyHeader: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "cross.case.fill")
+                .font(.system(size: 40))
+                .foregroundColor(.red)
+                .padding(.bottom, 4)
+            
+            Text("Emergency Assistance")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            Text("Request immediate medical attention")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+        .background(Color(.systemBackground))
+    }
+    
+    private func patientCard(_ patient: Patient) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "person.fill")
+                    .foregroundColor(.mint)
+                Text("Patient Information")
+                    .font(.headline)
+            }
+            
+            VStack(spacing: 12) {
+                infoRow(title: "Name", value: patient.fullname)
+                infoRow(title: "Gender", value: patient.gender)
+                infoRow(title: "Age", value: calculateAge(from: patient.dateofbirth))
+                infoRow(title: "Contact", value: patient.contactno)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        )
+    }
+    
+    private func hospitalCard(_ hospital: Hospital) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "building.2.fill")
+                    .foregroundColor(.mint)
+                Text("Hospital Information")
+                    .font(.headline)
+            }
+            
+            VStack(spacing: 12) {
+                infoRow(title: "Name", value: hospital.name)
+                infoRow(title: "Address", value: hospital.address)
+                infoRow(title: "Contact", value: hospital.mobile_number)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        )
+    }
+    
+    private var emergencyDescriptionSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "text.alignleft")
+                    .foregroundColor(.mint)
+                Text("Emergency Description")
+                    .font(.headline)
+            }
+            
+            TextEditor(text: $emergencyDescription)
+                .frame(minHeight: 120)
+                .padding(8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
+                .overlay(
+                    Text("Describe your emergency condition...")
+                        .foregroundColor(.gray.opacity(0.8))
+                        .padding(.leading, 4)
+                        .opacity(emergencyDescription.isEmpty ? 1 : 0),
+                    alignment: .topLeading
+                )
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        )
+    }
+    
+    private var requestButton: some View {
+        Button(action: bookEmergencyAppointment) {
+            HStack {
+                if isBookingEmergency {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Image(systemName: "cross.case.fill")
+                    Text("Request Emergency Assistance")
+                        .fontWeight(.semibold)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(canBookEmergency ? Color.red : Color.gray.opacity(0.3))
+            )
+            .foregroundColor(.white)
+        }
+        .disabled(!canBookEmergency || isBookingEmergency)
+        .padding(.vertical, 8)
+    }
+    
+    private func infoRow(title: String, value: String) -> some View {
+        HStack(alignment: .top) {
+            Text(title)
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .leading)
+            
+            Text(value)
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .font(.subheadline)
+    }
+    
     private var canBookEmergency: Bool {
         patient != nil && hospital != nil && !emergencyDescription.isEmpty
+    }
+    
+    private func calculateAge(from date: Date) -> String {
+        let calendar = Calendar.current
+        let ageComponents = calendar.dateComponents([.year], from: date, to: Date())
+        return "\(ageComponents.year ?? 0) years"
     }
     
     private func fetchUserAndHospitalDetails() async {
         if let patientId = UUID(uuidString: UserDefaults.standard.string(forKey: "currentPatientId") ?? "") {
             do {
                 patient = try await supabase.fetchPatientDetails(patientId: patientId)
-                // Fetch nearest/default hospital - for now using the first hospital
                 let hospitals = try await supabase.fetchHospitals()
                 hospital = hospitals.first
             } catch {
@@ -161,53 +235,6 @@ struct EmergencyAssistanceView: View {
                 showAlert = true
                 isBookingEmergency = false
             }
-        }
-    }
-}
-
-// Helper Views
-struct PatientInfoCard: View {
-    let patient: Patient
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            EmergencyInfoRow(title: "Name", value: patient.fullname)
-            EmergencyInfoRow(title: "Gender", value: patient.gender)
-            EmergencyInfoRow(title: "Age", value: calculateAge(from: patient.dateofbirth))
-            EmergencyInfoRow(title: "Contact", value: patient.contactno)
-        }
-    }
-    
-    private func calculateAge(from date: Date) -> String {
-        let calendar = Calendar.current
-        let ageComponents = calendar.dateComponents([.year], from: date, to: Date())
-        return "\(ageComponents.year ?? 0) years"
-    }
-}
-
-struct HospitalInfoCard: View {
-    let hospital: Hospital
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            EmergencyInfoRow(title: "Name", value: hospital.name)
-            EmergencyInfoRow(title: "Address", value: hospital.address)
-            EmergencyInfoRow(title: "Contact", value: hospital.mobile_number)
-        }
-    }
-}
-
-struct EmergencyInfoRow: View {
-    let title: String
-    let value: String
-    
-    var body: some View {
-        HStack {
-            Text(title)
-                .foregroundColor(.gray)
-                .frame(width: 80, alignment: .leading)
-            Text(value)
-                .foregroundColor(.primary)
         }
     }
 }

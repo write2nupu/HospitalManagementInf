@@ -223,57 +223,43 @@ struct HomeTabView: View {
                     }
                     
                     // MARK: - Departments Section
-                    HStack {
-                        Text("Departments")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(AppConfig.fontColor)
-                        
-                        Spacer()
-                        
-                        NavigationLink(destination: DepartmentListView()) {
-                            Text("View All")
-                                .font(.subheadline)
-                                .foregroundColor(AppConfig.buttonColor)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 15)
-                    
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 15) {
-                            ForEach(departments.prefix(5)) { department in
-                                NavigationLink(destination: DoctorListView(doctors: departmentDoctors[department.id] ?? [])) {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text(department.name)
-                                            .font(.headline)
-                                            .foregroundColor(.mint)
-                                            .lineLimit(1)
-                                        
-                                        if let doctors = departmentDoctors[department.id] {
-                                            Text("\(doctors.count) Doctors")
-                                                .font(.subheadline)
-                                                .foregroundColor(.gray)
-                                        }
-                                        
-                                        if let description = department.description {
-                                            Text(description)
-                                                .font(.caption)
-                                                .foregroundColor(.gray)
-                                                .lineLimit(2)
-                                        }
-                                    }
-                                    .frame(width: 150, height: 100)
-                                    .padding()
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 15)
-                                            .fill(Color(.systemBackground))
-                                            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-                                    )
+                    VStack(alignment: .leading, spacing: 15) {
+                        HStack {
+                            Text("Departments")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(AppConfig.fontColor)
+                            
+                            Spacer()
+                            
+                            NavigationLink(destination: DepartmentListView()) {
+                                HStack(spacing: 4) {
+                                    Text("View All")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
                                 }
+                                .foregroundColor(AppConfig.buttonColor)
                             }
                         }
                         .padding(.horizontal)
+                        .padding(.top, 15)
+                        
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(departments.prefix(5)) { department in
+                                    NavigationLink(destination: DoctorListView(doctors: departmentDoctors[department.id] ?? [])) {
+                                        DepartmentCard(
+                                            department: department,
+                                            doctorCount: departmentDoctors[department.id]?.count ?? 0
+                                        )
+                                    }
+                                }
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 6)
+                        }
                     }
                 }
             }
@@ -479,5 +465,99 @@ struct LatestAppointmentView: View {
         case .cancelled:
             return .red
         }
+    }
+}
+
+// Add this new DepartmentCard view
+struct DepartmentCard: View {
+    let department: Department
+    let doctorCount: Int
+    
+    // Department-specific icons
+    private func iconName(for department: String) -> String {
+        let name = department.lowercased()
+        switch name {
+        case let n where n.contains("cardio"):
+            return "heart.fill"
+        case let n where n.contains("ortho"):
+            return "figure.walk"
+        case let n where n.contains("neuro"):
+            return "brain.head.profile"
+        case let n where n.contains("pediatric"):
+            return "figure.2.and.child.holdinghands"
+        case let n where n.contains("dental"):
+            return "tooth.fill"
+        case let n where n.contains("eye"):
+            return "eye.fill"
+        case let n where n.contains("surgery"):
+            return "cross.case.fill"
+        case let n where n.contains("gynec"):
+            return "figure.dress.line.vertical.figure"
+        case let n where n.contains("derma"):
+            return "hand.raised.fill"
+        case let n where n.contains("psych"):
+            return "brain.fill"
+        default:
+            return "stethoscope"
+        }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Top Section: Icon and Department Name
+            HStack(spacing: 10) {
+                // Department Icon
+                Image(systemName: iconName(for: department.name))
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.mint)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(Color.mint.opacity(0.1))
+                    )
+                
+                // Department Name
+                Text(department.name)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+            }
+            
+            // Description
+            if let description = department.description {
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            
+            // Bottom Section: Doctor Count
+            HStack(spacing: 4) {
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 12))
+                Text("\(doctorCount) Doctors")
+                    .font(.system(.caption, design: .rounded))
+                    .fontWeight(.medium)
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundColor(.mint)
+        }
+        .frame(width: 200, height: 120) // Reduced size
+        .padding(12) // Reduced padding
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(.systemBackground))
+                .shadow(
+                    color: Color.black.opacity(0.06),
+                    radius: 6,
+                    x: 0,
+                    y: 3
+                )
+        )
     }
 }

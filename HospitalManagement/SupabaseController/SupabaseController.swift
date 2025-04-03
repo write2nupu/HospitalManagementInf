@@ -1758,15 +1758,43 @@ private struct AnyCodingKey: CodingKey {
         return availableSlots
     }
     
+    func fetchEmergencyAppointments(patientId: UUID) async throws -> [Appointment] {
+        let emergencyAppointments: [EmergencyAppointment] = try await client
+            .from("EmergencyAppointment")
+            .select()
+            .eq("patientId", value: patientId.uuidString)
+            .execute()
+            .value
+        
+        // Convert EmergencyAppointment to Appointment
+        return emergencyAppointments.map { emergency in
+            Appointment(
+                id: emergency.id,
+                patientId: emergency.patientId,
+                doctorId: UUID(), // Placeholder doctor ID
+                date: Date(), // Current date since emergency is immediate
+                status: emergency.status,
+                createdAt: Date(),
+                type: .Emergency,
+                prescriptionId: nil
+            )
+        }
+    }
+    
+    // Update the existing fetchAppointmentsForPatient function
     func fetchAppointmentsForPatient(patientId: UUID) async throws -> [Appointment] {
-        let appointments: [Appointment] = try await client
+        async let regularAppointments: [Appointment] = client
             .from("Appointment")
             .select()
             .eq("patientId", value: patientId.uuidString)
             .execute()
             .value
         
-        return appointments
+        async let emergencyAppointments = fetchEmergencyAppointments(patientId: patientId)
+        
+        // Combine both types of appointments
+        let (regular, emergency) = try await (regularAppointments, emergencyAppointments)
+        return regular + emergency
     }
     
     func fetchDoctorById(doctorId: UUID) async throws -> Doctor? {
