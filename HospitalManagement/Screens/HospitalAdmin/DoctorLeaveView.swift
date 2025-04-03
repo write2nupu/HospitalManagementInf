@@ -57,12 +57,17 @@ struct DoctorLeaveView: View {
                 .listRowSeparator(.hidden)
             } else {
                 ForEach(filteredLeaves, id: \.leave.id) { leaveDetail in
-                    NavigationLink(destination: LeaveRequestDetailView(leaveDetail: leaveDetail) { updatedLeave in
-                        // Update the leave request in the list
-                        if let index = leaveDetails.firstIndex(where: { $0.leave.id == updatedLeave.id }) {
-                            leaveDetails[index].leave = updatedLeave
+                    ZStack {
+                        NavigationLink(destination: LeaveRequestDetailView(leaveDetail: leaveDetail) { updatedLeave in
+                            // Update the leave request in the list
+                            if let index = leaveDetails.firstIndex(where: { $0.leave.id == updatedLeave.id }) {
+                                leaveDetails[index].leave = updatedLeave
+                            }
+                        }) {
+                            EmptyView()
                         }
-                    }) {
+                        .opacity(0)
+                        
                         LeaveRequestCard(leaveDetail: leaveDetail)
                     }
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -141,69 +146,76 @@ struct LeaveRequestCard: View {
     @State private var isPressed = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Doctor Info
-            HStack(alignment: .center, spacing: 12) {
-                // Doctor Profile Image
-                ZStack {
-                    Circle()
-                        .fill(Color.mint.opacity(0.1))
-                        .frame(width: 50, height: 50)
+        HStack {
+            VStack(alignment: .leading, spacing: 16) {
+                // Doctor Info
+                HStack(alignment: .center, spacing: 12) {
+                    // Doctor Profile Image
+                    ZStack {
+                        Circle()
+                            .fill(Color.mint.opacity(0.1))
+                            .frame(width: 50, height: 50)
+                        
+                        Image(systemName: "person.circle.fill")
+                            .font(.system(size: 30))
+                            .foregroundColor(.mint)
+                    }
                     
-                    Image(systemName: "person.circle.fill")
-                        .font(.system(size: 30))
-                        .foregroundColor(.mint)
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Dr. \(leaveDetail.doctor.full_name)")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    Text(leaveDetail.department?.name ?? "No Department")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                StatusBadge3(status: leaveDetail.leave.status)
-            }
-            
-            Divider()
-                .padding(.vertical, 4)
-            
-            // Leave Details
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
-                    Image(systemName: "calendar")
-                        .foregroundColor(.mint)
-                        .frame(width: 24)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Leave Period")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Dr. \(leaveDetail.doctor.full_name)")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Text(leaveDetail.department?.name ?? "No Department")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        Text("\(formatDate(leaveDetail.leave.startDate)) - \(formatDate(leaveDetail.leave.endDate))")
-                            .font(.body)
-                            .fontWeight(.medium)
                     }
+                    
+                    Spacer()
+                    
+                    StatusBadge3(status: leaveDetail.leave.status)
                 }
                 
-                HStack(spacing: 12) {
-                    Image(systemName: "text.bubble")
-                        .foregroundColor(.mint)
-                        .frame(width: 24)
+                Divider()
+                    .padding(.vertical, 4)
+                
+                // Leave Details
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "calendar")
+                            .foregroundColor(.mint)
+                            .frame(width: 24)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Leave Period")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Text("\(formatDate(leaveDetail.leave.startDate)) - \(formatDate(leaveDetail.leave.endDate))")
+                                .font(.body)
+                                .fontWeight(.medium)
+                        }
+                    }
                     
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Reason")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Text(leaveDetail.leave.reason)
-                            .font(.body)
-                            .fontWeight(.medium)
+                    HStack(spacing: 12) {
+                        Image(systemName: "text.bubble")
+                            .foregroundColor(.mint)
+                            .frame(width: 24)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Reason")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Text(leaveDetail.leave.reason)
+                                .font(.body)
+                                .fontWeight(.medium)
+                        }
                     }
                 }
             }
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(.gray)
+                .font(.system(size: 14, weight: .semibold))
+                .padding(.leading, 8)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
