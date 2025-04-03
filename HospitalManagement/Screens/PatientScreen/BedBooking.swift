@@ -26,7 +26,7 @@ struct BedBookingView: View {
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Select Bed Type")
                                 .font(.headline)
-                                .foregroundColor(.mint)
+                                .foregroundColor(AppConfig.buttonColor)
                             Picker("Bed Type", selection: $selectedBedType) {
                                 Text("General").tag(BedType.General)
                                 Text("ICU").tag(BedType.ICU)
@@ -41,20 +41,20 @@ struct BedBookingView: View {
                             
                             Text("Price")
                                 .font(.headline)
-                                .foregroundColor(.mint)
+                                .foregroundColor(AppConfig.buttonColor)
                             Text("₹\(calculateTotalPrice())")
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color.mint.opacity(0.1))
+                                .background(AppConfig.buttonColor.opacity(0.1))
                                 .cornerRadius(8)
                             
                             Text("Available Beds")
                                 .font(.headline)
-                                .foregroundColor(.mint)
+                                .foregroundColor(AppConfig.buttonColor)
                             Text("\(availableBeds[selectedBedType]?.available ?? 0) beds available")
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color.mint.opacity(0.1))
+                                .background(AppConfig.buttonColor.opacity(0.1))
                                 .cornerRadius(8)
                             
                             VStack(spacing: 16) {
@@ -72,7 +72,7 @@ struct BedBookingView: View {
                                         }
                                 }
                                 .padding()
-                                .background(Color.mint.opacity(0.1))
+                                .background(AppConfig.buttonColor.opacity(0.1))
                                 .cornerRadius(8)
                                 
                                 HStack {
@@ -81,10 +81,10 @@ struct BedBookingView: View {
                                     Spacer()
                                     DatePicker("", selection: $toDate, in: fromDate..., displayedComponents: .date)
                                         .labelsHidden()
-                                        .accentColor(.mint)
+                                        .accentColor(AppConfig.buttonColor)
                                 }
                                 .padding()
-                                .background(Color.mint.opacity(0.1))
+                                .background(AppConfig.buttonColor.opacity(0.1))
                                 .cornerRadius(8)
                             }
                         }
@@ -97,10 +97,10 @@ struct BedBookingView: View {
                         }) {
                             Text("Proceed to Payment")
                                 .fontWeight(.semibold)
-                                .foregroundColor(.white)
+                                .foregroundColor(AppConfig.backgroundColor)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(selectedBed != nil ? Color.mint : Color.gray)
+                                .background(selectedBed != nil ? AppConfig.buttonColor : Color.gray)
                                 .cornerRadius(10)
                                 .shadow(radius: 2)
                         }
@@ -108,14 +108,14 @@ struct BedBookingView: View {
                         .padding()
                     } else {
                         Text("Please log in as a patient to book a bed")
-                            .foregroundColor(.red)
+                            .foregroundColor(AppConfig.redColor)
                             .padding()
                     }
                 }
                 
                 if let error = errorMessage {
                     Text(error)
-                        .foregroundColor(.red)
+                        .foregroundColor(AppConfig.redColor)
                         .padding()
                 }
             }

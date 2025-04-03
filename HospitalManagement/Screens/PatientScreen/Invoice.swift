@@ -68,7 +68,7 @@ struct InvoiceListView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    ScrollView {
+                    ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 0) {
                             ForEach(filteredInvoices.sorted(by: { $0.createdAt > $1.createdAt })) { invoice in
                                 NavigationLink(destination: InvoiceDetailView(invoice: invoice)) {

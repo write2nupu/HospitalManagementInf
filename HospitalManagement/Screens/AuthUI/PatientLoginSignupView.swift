@@ -24,6 +24,16 @@ struct PatientLoginSignupView: View {
     @State private var emailErrorMessage = ""
     @State private var passwordErrorMessage = ""
     
+    // Computed property to check if login form is valid
+    private var isLoginFormValid: Bool {
+        // Only consider form valid when:
+        // 1. Both fields are not empty
+        // 2. Email format is valid
+        // 3. Password meets all requirements
+        return !email.isEmpty && isValidEmail(email) && 
+               !password.isEmpty && isValidPassword(password)
+    }
+    
     var body: some View {
         Group {
             if showDashboard, let patient = currentPatient {
@@ -85,10 +95,10 @@ struct PatientLoginSignupView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.mint)
+                    .background(isLoginFormValid ? Color.mint : Color.gray)
                     .cornerRadius(12)
                     .padding(.horizontal)
-                    .disabled(isLoading)
+                    .disabled(isLoading || !isLoginFormValid)
                     
                     // Signup Button
                     NavigationLink(destination: PatientSignupView()) {
@@ -258,9 +268,11 @@ struct PatientLoginSignupView: View {
                     .keyboardType(keyboardType)
                     .onChange(of: text.wrappedValue) { oldValue, newValue in
                         if icon == "envelope.fill" {
-                            isEmailValid = newValue.isEmpty || isValidEmail(newValue)
-                            if !isEmailValid {
+                            isEmailValid = isValidEmail(newValue)
+                            if !isEmailValid && !newValue.isEmpty {
                                 emailErrorMessage = "Invalid email format"
+                            } else {
+                                emailErrorMessage = ""
                             }
                         }
                     }
@@ -289,17 +301,21 @@ struct PatientLoginSignupView: View {
                     TextField(placeholder, text: text)
                         .autocapitalization(.none)
                         .onChange(of: text.wrappedValue) { oldValue, newValue in
-                            isPasswordValid = newValue.isEmpty || isValidPassword(newValue)
-                            if !isPasswordValid {
+                            isPasswordValid = isValidPassword(newValue)
+                            if !isPasswordValid && !newValue.isEmpty {
                                 passwordErrorMessage = "Password must be at least 8 characters with 1 number, 1 letter, and 1 special character"
+                            } else {
+                                passwordErrorMessage = ""
                             }
                         }
                 } else {
                     SecureField(placeholder, text: text)
                         .onChange(of: text.wrappedValue) { oldValue, newValue in
-                            isPasswordValid = newValue.isEmpty || isValidPassword(newValue)
-                            if !isPasswordValid {
+                            isPasswordValid = isValidPassword(newValue)
+                            if !isPasswordValid && !newValue.isEmpty {
                                 passwordErrorMessage = "Password must be at least 8 characters with 1 number, 1 letter, and 1 special character"
+                            } else {
+                                passwordErrorMessage = ""
                             }
                         }
                 }

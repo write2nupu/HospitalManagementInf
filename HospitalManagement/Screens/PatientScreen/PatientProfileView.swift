@@ -37,7 +37,7 @@ struct ProfileView: View {
                         Image(systemName: "person.crop.circle.fill")
                             .resizable()
                             .frame(width: 100, height: 100)
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                             .clipShape(Circle())
                         
                         Text(patient.email)
