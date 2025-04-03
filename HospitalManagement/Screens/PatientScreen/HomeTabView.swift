@@ -5,6 +5,7 @@ struct HomeTabView: View {
     @Binding var departments: [Department]
     @State private var latestAppointment: Appointment?
     @State private var isLoadingAppointment = true
+    @State private var departmentDoctors: [UUID: [Doctor]] = [:]
     @StateObject private var supabase = SupabaseController()
     
     var body: some View {
@@ -93,7 +94,7 @@ struct HomeTabView: View {
                                 .foregroundColor(AppConfig.fontColor)
                                 .padding(.horizontal)
                             
-                            NavigationLink(destination: AppointmentDetailView(appointment: appointment)) {
+                            NavigationLink(destination: LatestAppointmentView(appointment: appointment)) {
                                 HStack(spacing: 15) {
                                     Image(systemName: appointment.type == .Emergency ? "cross.case.fill" : "calendar.badge.plus")
                                         .font(.system(size: 30))
@@ -242,12 +243,18 @@ struct HomeTabView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 15) {
                             ForEach(departments.prefix(5)) { department in
-                                NavigationLink(destination: DoctorListView(doctors: [])) {
+                                NavigationLink(destination: DoctorListView(doctors: departmentDoctors[department.id] ?? [])) {
                                     VStack(alignment: .leading, spacing: 8) {
                                         Text(department.name)
                                             .font(.headline)
                                             .foregroundColor(.mint)
                                             .lineLimit(1)
+                                        
+                                        if let doctors = departmentDoctors[department.id] {
+                                            Text("\(doctors.count) Doctors")
+                                                .font(.subheadline)
+                                                .foregroundColor(.gray)
+                                        }
                                         
                                         if let description = department.description {
                                             Text(description)
@@ -263,7 +270,6 @@ struct HomeTabView: View {
                                             .fill(Color(.systemBackground))
                                             .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
                                     )
-                                   // .isNavigationBarHidden
                                 }
                             }
                         }
@@ -276,6 +282,7 @@ struct HomeTabView: View {
         .background(AppConfig.backgroundColor)
         .task {
             await fetchLatestAppointment()
+            await fetchDoctorsForDepartments()
         }
     }
     
@@ -306,6 +313,19 @@ struct HomeTabView: View {
         }
         
         isLoadingAppointment = false
+    }
+    
+    private func fetchDoctorsForDepartments() async {
+        for department in departments {
+            do {
+                let doctors = try await supabase.getDoctorsByDepartment(departmentId: department.id)
+                await MainActor.run {
+                    departmentDoctors[department.id] = doctors
+                }
+            } catch {
+                print("Error fetching doctors for department \(department.id): \(error)")
+            }
+        }
     }
     
     private func formattedDate(_ date: Date) -> String {
@@ -343,67 +363,121 @@ struct ServiceCard: View {
     }
 }
 
-// First, add this new view for appointment details
-struct LatestAppointmentDetailView: View {
+// Add this new view for latest appointment details
+struct LatestAppointmentView: View {
     let appointment: Appointment
-    @State private var doctor: Doctor?
-    @StateObject private var supabase = SupabaseController()
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Appointment Info Card
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("Appointment Details")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.mint)
-                    
+        VStack(spacing: 0) {
+            // Header with checkmark
+            VStack(spacing: 15) {
+                Circle()
+                    .fill(Color.mint)
+                    .frame(width: 80, height: 80)
+                    .overlay(
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.system(size: 40))
+                            .foregroundColor(.white)
+                    )
+                    .padding(.top, 40)
+                
+                Text("Appointment Details")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.mint)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.bottom, 30)
+            .background(Color(.systemBackground))
+            
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Appointment Info Card
                     VStack(spacing: 15) {
-                        LatestAppointmentDetailRow(title: "Date", value: formattedDate(appointment.date))
-                        LatestAppointmentDetailRow(title: "Type", value: appointment.type.rawValue)
-                        LatestAppointmentDetailRow(title: "Status", value: appointment.status.rawValue)
-                        if let doctor = doctor {
-                            LatestAppointmentDetailRow(title: "Doctor", value: doctor.full_name)
-                        }
+                        appointmentDetailRow(
+                            icon: "calendar",
+                            title: "Date",
+                            value: formatDate(appointment.date)
+                        )
+                        
+                        Divider()
+                        
+                        appointmentDetailRow(
+                            icon: "clock",
+                            title: "Time",
+                            value: formatTime(appointment.date)
+                        )
+                        
+                        Divider()
+                        
+                        appointmentDetailRow(
+                            icon: "stethoscope",
+                            title: "Type",
+                            value: appointment.type.rawValue
+                        )
+                        
+                        Divider()
+                        
+                        appointmentDetailRow(
+                            icon: "checkmark.circle",
+                            title: "Status",
+                            value: appointment.status.rawValue,
+                            valueColor: statusColor(appointment.status)
+                        )
                     }
                     .padding()
-                    .background(Color(.systemBackground))
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 15)
+                            .fill(Color(.systemBackground))
+                            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+                    )
+                    .padding(.horizontal)
                 }
-                .padding()
+                .padding(.top, 20)
             }
+            .background(Color(.systemGroupedBackground))
         }
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("Appointment Details")
-        .task {
-            // Fetch doctor details when view appears
-            if let fetchedDoctor = try? await supabase.fetchDoctorById(doctorId: appointment.doctorId) {
-                doctor = fetchedDoctor
-            }
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    private func appointmentDetailRow(icon: String, title: String, value: String, valueColor: Color = .primary) -> some View {
+        HStack(spacing: 15) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundColor(.mint)
+                .frame(width: 24)
+            
+            Text(title)
+                .foregroundColor(.gray)
+            
+            Spacer()
+            
+            Text(value)
+                .foregroundColor(valueColor)
+                .fontWeight(.medium)
         }
     }
     
-    private func formattedDate(_ date: Date) -> String {
+    private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .long
+        return formatter.string(from: date)
+    }
+    
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
-}
-
-struct LatestAppointmentDetailRow: View {
-    let title: String
-    let value: String
     
-    var body: some View {
-        HStack {
-            Text(title)
-                .foregroundColor(.gray)
-            Spacer()
-            Text(value)
-                .foregroundColor(.primary)
+    private func statusColor(_ status: AppointmentStatus) -> Color {
+        switch status {
+        case .scheduled:
+            return .mint
+        case .completed:
+            return .blue
+        case .cancelled:
+            return .red
         }
     }
 }

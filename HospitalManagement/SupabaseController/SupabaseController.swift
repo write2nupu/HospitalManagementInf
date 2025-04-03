@@ -466,14 +466,48 @@ class SupabaseController: ObservableObject {
     //    }
     
     // MARK: - Fetch Patient Details
-    func fetchPatientDetails(patientId: UUID) async -> Patient? {
+    func fetchPatientDetails(patientId: UUID) async throws -> Patient? {
         do {
+            // Create a decoder with custom date decoding strategy
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .custom { decoder in
+                let container = try decoder.singleValueContainer()
+                let dateString = try container.decode(String.self)
+                
+                // Try multiple date formats
+                let dateFormatters = [
+                    ISO8601DateFormatter(),
+                    DateFormatter().apply { df in
+                        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+                        df.locale = Locale(identifier: "en_US_POSIX")
+                    },
+                    DateFormatter().apply { df in
+                        df.dateFormat = "yyyy-MM-dd"
+                        df.locale = Locale(identifier: "en_US_POSIX")
+                    }
+                ]
+                
+                for formatter in dateFormatters {
+                    if let date = (formatter as? ISO8601DateFormatter)?.date(from: dateString) ?? 
+                       (formatter as? DateFormatter)?.date(from: dateString) {
+                        return date
+                    }
+                }
+                
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: "Cannot decode date string \(dateString)"
+                )
+            }
+
             let patients: [Patient] = try await client
                 .from("Patient")
                 .select()
                 .eq("id", value: patientId)
                 .execute()
                 .value
+
+            print("Raw patient data received: \(patients)")
             return patients.first
         } catch {
             print("Error fetching patient: \(error)")
@@ -2165,5 +2199,13 @@ public struct LabTestResult: Codable {
         } else {
             testDate = Date()
         }
+    }
+}
+
+// Helper extension for formatter configuration
+extension DateFormatter {
+    func apply(_ config: (DateFormatter) -> Void) -> DateFormatter {
+        config(self)
+        return self
     }
 }

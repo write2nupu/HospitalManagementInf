@@ -210,6 +210,7 @@ struct ProfileRow: View {
 func formattedDate(_ date: Date?) -> String {
     guard let date = date else { return "N/A" }
     let formatter = DateFormatter()
-    formatter.dateStyle = .medium
+    formatter.dateStyle = .long
+    formatter.timeStyle = .none
     return formatter.string(from: date)
 }

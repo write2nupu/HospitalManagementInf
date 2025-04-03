@@ -267,16 +267,16 @@ struct PatientDashboard: View {
 }
 
 // MARK: - Preview
-#Preview {
-    PatientDashboard(patient: Patient(
-        id: UUID(),
-        fullName: "Tarun",
-        gender: "male",
-        dateOfBirth: Date(),
-        contactNo: "1234567898",
-        email: "tarun@gmail.com"
-    ))
-}
+//#Preview {
+//    PatientDashboard(patient: Patient(
+//        id: UUID(),
+//        fullName: "Tarun",
+//        gender: "male",
+//        dateOfBirth: Date(),
+//        contactNo: "1234567898",
+//        email: "tarun@gmail.com"
+//    ))
+//}
 
 // MARK: - TextEditor Placeholder Extension
 extension View {

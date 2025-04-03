@@ -120,16 +120,39 @@ struct Patient: Identifiable, Codable {
         fullname = try container.decode(String.self, forKey: .fullname)
         gender = try container.decode(String.self, forKey: .gender)
         
-        // Handle date decoding from string
-        if let dateString = try? container.decode(String.self, forKey: .dateofbirth) {
-            let formatter = ISO8601DateFormatter()
-            if let date = formatter.date(from: dateString) {
-                dateofbirth = date
-            } else {
-                dateofbirth = Date() // Fallback to current date if parsing fails
+        // Improved date decoding with multiple format attempts
+        let dateString = try container.decode(String.self, forKey: .dateofbirth)
+        
+        // Try multiple date formats
+        let formatters = [
+            DateFormatter().apply { df in
+                df.dateFormat = "yyyy-MM-dd"
+                df.locale = Locale(identifier: "en_US_POSIX")
+            },
+            DateFormatter().apply { df in
+                df.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+                df.locale = Locale(identifier: "en_US_POSIX")
+            },
+            ISO8601DateFormatter()
+        ]
+        
+        var parsedDate: Date?
+        for formatter in formatters {
+            if let date = (formatter as? ISO8601DateFormatter)?.date(from: dateString) ?? 
+               (formatter as? DateFormatter)?.date(from: dateString) {
+                parsedDate = date
+                break
             }
+        }
+        
+        if let date = parsedDate {
+            dateofbirth = date
         } else {
-            dateofbirth = Date() // Fallback to current date if no date string
+            throw DecodingError.dataCorruptedError(
+                forKey: .dateofbirth,
+                in: container,
+                debugDescription: "Unable to parse date string: \(dateString)"
+            )
         }
         
         contactno = try container.decode(String.self, forKey: .contactno)
