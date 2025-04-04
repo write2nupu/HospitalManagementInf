@@ -54,7 +54,7 @@ struct TimeSlot: Identifiable, Hashable {
         let morningEnd = calendar.date(bySettingHour: 13, minute: 0, second: 0, of: startOfDay)!
         
         while currentTime < morningEnd {
-            let slotEnd = calendar.date(byAdding: .minute, value: 20, to: currentTime)!
+            let slotEnd = calendar.date(byAdding: .minute, value: 30, to: currentTime)!
             timeSlots.append(TimeSlot(startTime: currentTime, endTime: slotEnd))
             currentTime = slotEnd
         }
@@ -64,7 +64,7 @@ struct TimeSlot: Identifiable, Hashable {
         let eveningEnd = calendar.date(bySettingHour: 19, minute: 0, second: 0, of: startOfDay)!
         
         while currentTime < eveningEnd {
-            let slotEnd = calendar.date(byAdding: .minute, value: 20, to: currentTime)!
+            let slotEnd = calendar.date(byAdding: .minute, value: 30, to: currentTime)!
             timeSlots.append(TimeSlot(startTime: currentTime, endTime: slotEnd))
             currentTime = slotEnd
         }

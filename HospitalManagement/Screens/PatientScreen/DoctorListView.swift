@@ -467,6 +467,7 @@ struct TimeSlotSectionView: View {
     @State private var selectedTime = Date()
     @State private var bookedTimeRanges: [String] = []
     @State private var isLoading = false
+    @State private var availableTimeSlots: [TimeSlot] = []
     
     // Time slots from 10:00 to 17:00 with 30 min gaps
     let timeSlotStrings = [
@@ -493,12 +494,36 @@ struct TimeSlotSectionView: View {
                     .padding(.bottom, 4)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 
+                // Filter out time slots in the past for the current date
+                let filteredTimeSlots = timeSlotStrings.filter { timeString in
+                    if Calendar.current.isDateInToday(selectedDate) {
+                        // Parse the time string to a date
+                        let timeComponents = timeString.split(separator: ":")
+                        if timeComponents.count == 2,
+                           let hour = Int(timeComponents[0]),
+                           let minute = Int(timeComponents[1]) {
+                            
+                            var dateComponents = Calendar.current.dateComponents([.year, .month, .day], from: selectedDate)
+                            dateComponents.hour = hour
+                            dateComponents.minute = minute
+                            
+                            if let slotTime = Calendar.current.date(from: dateComponents) {
+                                // Only include future time slots
+                                return slotTime > Date()
+                            }
+                        }
+                        return false
+                    }
+                    // Include all time slots for future dates
+                    return true
+                }
+                
                 LazyVGrid(columns: [
                     GridItem(.flexible()),
                     GridItem(.flexible()),
                     GridItem(.flexible())
                 ], spacing: 10) {
-                    ForEach(timeSlotStrings, id: \.self) { timeString in
+                    ForEach(filteredTimeSlots, id: \.self) { timeString in
                         Button(action: {
                             selectTimeFromString(timeString)
                         }) {
@@ -515,6 +540,13 @@ struct TimeSlotSectionView: View {
                     }
                 }
                 .padding(.vertical, 8)
+                
+                if filteredTimeSlots.isEmpty && Calendar.current.isDateInToday(selectedDate) {
+                    Text("No available time slots for today. Please select another date.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .padding(.vertical, 8)
+                }
                 
                 if let slot = selectedTimeSlot {
                     HStack {
@@ -556,6 +588,26 @@ struct TimeSlotSectionView: View {
     }
     
     private func isTimeBooked(_ timeString: String) -> Bool {
+        // Check if the time is in the past
+        if Calendar.current.isDateInToday(selectedDate) {
+            let timeComponents = timeString.split(separator: ":")
+            if timeComponents.count == 2,
+               let hour = Int(timeComponents[0]),
+               let minute = Int(timeComponents[1]) {
+                
+                var dateComponents = Calendar.current.dateComponents([.year, .month, .day], from: selectedDate)
+                dateComponents.hour = hour
+                dateComponents.minute = minute
+                
+                if let slotTime = Calendar.current.date(from: dateComponents) {
+                    if slotTime < Date() {
+                        return true  // Time is in the past, consider it booked
+                    }
+                }
+            }
+        }
+        
+        // Also check if it's in the booked ranges
         for bookedRange in bookedTimeRanges {
             if bookedRange.contains(timeString) {
                 return true
@@ -575,7 +627,24 @@ struct TimeSlotSectionView: View {
             dateComponents.minute = minute
             
             if let slotStart = Calendar.current.date(from: dateComponents) {
-                let slotEnd = Calendar.current.date(byAdding: .minute, value: 20, to: slotStart)!
+                // Check if the selected time is before current time
+                if slotStart < Date() {
+                    timeSlotError = "Cannot select a time slot in the past. Please select a future time."
+                    showTimeSlotWarning = true
+                    return
+                }
+                
+                // Find the time slot from available slots
+                if let existingSlot = availableTimeSlots.first(where: { slot in
+                    let calendar = Calendar.current
+                    return calendar.compare(slot.startTime, to: slotStart, toGranularity: .minute) == .orderedSame
+                }) {
+                    selectedTimeSlot = existingSlot
+                    showTimeSlotWarning = false
+                    return
+                }
+                
+                let slotEnd = Calendar.current.date(byAdding: .minute, value: 30, to: slotStart)!
                 let newSlot = TimeSlot(startTime: slotStart, endTime: slotEnd)
                 
                 // Check availability
@@ -613,14 +682,25 @@ struct TimeSlotSectionView: View {
         Task {
             do {
                 let allSlots = TimeSlot.generateTimeSlots(for: selectedDate)
-                let availableSlots = try await supabaseController.getAvailableTimeSlots(
+                let fetchedAvailableSlots = try await supabaseController.getAvailableTimeSlots(
                     doctorId: doctor.id,
                     date: selectedDate
                 )
                 
+                // Filter out slots that are in the past if selected date is today
+                let currentDate = Date()
+                let filteredAvailableSlots = fetchedAvailableSlots.filter { slot in
+                    // If it's today, filter out past slots
+                    if Calendar.current.isDateInToday(selectedDate) {
+                        return slot.startTime > currentDate
+                    }
+                    // If it's a future date, include all slots
+                    return true
+                }
+                
                 // Find booked slots (all slots minus available slots)
                 let bookedSlots = allSlots.filter { slot in
-                    !availableSlots.contains { availableSlot in
+                    !filteredAvailableSlots.contains { availableSlot in
                         availableSlot.startTime == slot.startTime && availableSlot.endTime == slot.endTime
                     }
                 }
@@ -635,6 +715,7 @@ struct TimeSlotSectionView: View {
                 }
                 
                 await MainActor.run {
+                    self.availableTimeSlots = filteredAvailableSlots
                     bookedTimeRanges = bookedRanges
                     isLoading = false
                 }
