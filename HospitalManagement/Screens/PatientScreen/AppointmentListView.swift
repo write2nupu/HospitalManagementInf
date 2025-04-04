@@ -432,8 +432,6 @@ struct RescheduleView: View {
     @StateObject private var supabaseController = SupabaseController()
     @State private var availableTimeSlots: [TimeSlot] = []
     @State private var isLoading = false
-    @State private var selectedTime = Date()
-    @State private var showTimePicker = false
     @State private var bookedTimeRanges: [String] = []
     
     init(appointment: Appointment, onComplete: @escaping (Date, String) -> Void) {
@@ -483,59 +481,54 @@ struct RescheduleView: View {
                     
                     Section(header: Text("NEW TIME")) {
                         VStack {
-                            Button(action: {
-                                showTimePicker = true
-                                loadBookedTimeSlots()
-                            }) {
-                                HStack {
-                                    Text("Selected Time:")
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                    if let slot = selectedTimeSlot {
-                                        Text(slot.formattedTimeRange)
-                                            .foregroundColor(.mint)
-                                    } else {
-                                        Text("Select a time")
-                                            .foregroundColor(.gray)
-                                    }
-                                }
-                            }
-                            
-                            if showTimePicker {
-                                if isLoading {
-                                    ProgressView("Loading available times...")
-                                        .padding()
-                                } else {
-                                    VStack {
-                                        Text("Choose an available time")
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
-                                            .padding(.bottom, 4)
-                                        
-                                        DatePicker("",
-                                                 selection: $selectedTime,
-                                                 displayedComponents: .hourAndMinute)
-                                            .datePickerStyle(.wheel)
-                                            .labelsHidden()
-                                            .onChange(of: selectedTime) { oldValue, newTime in
-                                                updateSelectedTimeSlot(time: newTime)
-                                            }
-                                        
-                                        Button("Confirm Time") {
-                                            showTimePicker = false
-                                        }
-                                        .foregroundColor(AppConfig.buttonColor)
-                                        .padding(.top)
-                                    }
-                                    .padding(.vertical)
-                                }
-                            }
-                            
-                            if !TimeSlot.isValidTime(selectedTime) {
-                                Text("Please select a time between 9 AM - 1 PM or 2 PM - 7 PM")
+                            if isLoading {
+                                ProgressView("Loading available times...")
+                                    .padding()
+                            } else {
+                                // Time slots grid
+                                Text("Choose an available time")
                                     .font(.caption)
-                                    .foregroundColor(.red)
-                                    .padding(.top, 4)
+                                    .foregroundColor(.gray)
+                                    .padding(.bottom, 4)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                
+                                let timeSlotStrings = availableTimeSlots.map { slot in
+                                    let formatter = DateFormatter()
+                                    formatter.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+                                    formatter.timeStyle = .short
+                                    return formatter.string(from: slot.startTime)
+                                }
+                                
+                                LazyVGrid(columns: [
+                                    GridItem(.flexible()),
+                                    GridItem(.flexible()),
+                                    GridItem(.flexible())
+                                ], spacing: 10) {
+                                    ForEach(timeSlotStrings, id: \.self) { timeString in
+                                        Button(action: {
+                                            selectTimeFromString(timeString)
+                                        }) {
+                                            Text(timeString)
+                                                .padding(.vertical, 8)
+                                                .padding(.horizontal, 12)
+                                                .frame(maxWidth: .infinity)
+                                                .background(isSelectedTimeString(timeString) ? AppConfig.buttonColor : Color.mint.opacity(0.1))
+                                                .foregroundColor(isSelectedTimeString(timeString) ? .black : .primary)
+                                                .cornerRadius(8)
+                                        }
+                                        .disabled(isTimeBooked(timeString))
+                                        .buttonStyle(BorderlessButtonStyle()) // Prevents button behavior from affecting parent views
+                                    }
+                                }
+                                .padding(.vertical, 8)
+                                
+                                if selectedTimeSlot != nil {
+                                    Text("Selected time: \(selectedTimeSlot!.formattedTimeRange)")
+                                        .font(.subheadline)
+                                        .foregroundColor(.mint)
+                                        .padding(.top, 4)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
                             }
                         }
                     }
@@ -617,21 +610,35 @@ struct RescheduleView: View {
                     date: selectedDate
                 )
                 
+                // Filter out slots that are in the past if selected date is today
+                let currentDate = Date()
+                let filteredAvailableSlots = availableSlots.filter { slot in
+                    // If it's today, filter out past slots
+                    if Calendar.current.isDateInToday(selectedDate) {
+                        return slot.startTime > currentDate
+                    }
+                    // If it's a future date, include all slots
+                    return true
+                }
+                
                 // Find booked slots (all slots minus available slots)
                 let bookedSlots = allSlots.filter { slot in
-                    !availableSlots.contains { availableSlot in
+                    !filteredAvailableSlots.contains { availableSlot in
                         availableSlot.startTime == slot.startTime && availableSlot.endTime == slot.endTime
                     }
                 }
                 
                 // Format booked slots for display
                 let formatter = DateFormatter()
+                formatter.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+                formatter.timeStyle = .short
                 
                 let bookedRanges = bookedSlots.map { slot in
-                    "\(formatter.string(from: slot.startTime)) - \(formatter.string(from: slot.endTime))"
+                    formatter.string(from: slot.startTime)
                 }
                 
                 await MainActor.run {
+                    self.availableTimeSlots = filteredAvailableSlots
                     bookedTimeRanges = bookedRanges
                     isLoading = false
                 }
@@ -645,46 +652,71 @@ struct RescheduleView: View {
         }
     }
     
-    private func updateSelectedTimeSlot(time: Date) {
-        if TimeSlot.isValidTime(time) {
-            let calendar = Calendar.current
-            var components = calendar.dateComponents([.year, .month, .day], from: selectedDate)
-            let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
-            
-            components.hour = timeComponents.hour
-            components.minute = timeComponents.minute
-            
-            if let slotStart = calendar.date(from: components) {
-                let slotEnd = calendar.date(byAdding: .minute, value: 20, to: slotStart)!
-                let newSlot = TimeSlot(startTime: slotStart, endTime: slotEnd)
+    private func isTimeBooked(_ timeString: String) -> Bool {
+        // Check if the time is in the past
+        if Calendar.current.isDateInToday(selectedDate) {
+            let timeComponents = timeString.split(separator: ":")
+            if timeComponents.count == 2,
+               let hour = Int(timeComponents[0]),
+               let minute = Int(timeComponents[1]) {
                 
-                Task {
-                    do {
-                        let isAvailable = try await supabaseController.checkTimeSlotAvailability(
-                            doctorId: appointment.doctorId,
-                            timeSlot: newSlot
-                        )
-                        
-                        await MainActor.run {
-                            if isAvailable {
-                                selectedTimeSlot = newSlot
-                                errorMessage = ""
-                            } else {
-                                selectedTimeSlot = nil
-                                errorMessage = "This time slot is already booked. Please select a different time."
-                            }
-                        }
-                    } catch {
-                        await MainActor.run {
-                            errorMessage = "Error checking time slot availability"
-                            showingAlert = true
-                            selectedTimeSlot = nil
-                        }
+                var dateComponents = Calendar.current.dateComponents([.year, .month, .day], from: selectedDate)
+                dateComponents.hour = hour
+                dateComponents.minute = minute
+                
+                if let slotTime = Calendar.current.date(from: dateComponents) {
+                    if slotTime < Date() {
+                        return true  // Time is in the past, consider it booked
                     }
                 }
             }
-        } else {
-            selectedTimeSlot = nil
+        }
+        
+        // Also check if it's in the booked ranges
+        return bookedTimeRanges.contains(timeString)
+    }
+    
+    private func isSelectedTimeString(_ timeString: String) -> Bool {
+        guard let slot = selectedTimeSlot else { return false }
+        
+        let formatter = DateFormatter()
+        formatter.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+        formatter.timeStyle = .short
+        let selectedTimeString = formatter.string(from: slot.startTime)
+        
+        return selectedTimeString == timeString
+    }
+    
+    private func selectTimeFromString(_ timeString: String) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+        dateFormatter.timeStyle = .short
+        
+        let timeComponents = timeString.split(separator: ":")
+        if timeComponents.count == 2,
+           let hour = Int(timeComponents[0]),
+           let minute = Int(timeComponents[1]) {
+            
+            var dateComponents = Calendar.current.dateComponents([.year, .month, .day], from: selectedDate)
+            dateComponents.hour = hour
+            dateComponents.minute = minute
+            
+            if let slotStart = Calendar.current.date(from: dateComponents) {
+                // Check if the selected time is before current time
+                if slotStart < Date() {
+                    errorMessage = "Cannot select a time slot in the past. Please select a future time."
+                    showingAlert = true
+                    return
+                }
+                
+                // Find the time slot that matches this string
+                if let matchingSlot = availableTimeSlots.first(where: { slot in
+                    let slotTimeString = dateFormatter.string(from: slot.startTime)
+                    return slotTimeString == timeString
+                }) {
+                    selectedTimeSlot = matchingSlot
+                }
+            }
         }
     }
 } 

@@ -1661,7 +1661,7 @@ private struct AnyCodingKey: CodingKey {
         return appointments.map { appointment in
             TimeSlot(
                 startTime: appointment.date,
-                endTime: Calendar.current.date(byAdding: .minute, value: 20, to: appointment.date)!
+                endTime: Calendar.current.date(byAdding: .minute, value: 30, to: appointment.date)!
             )
         }
     }
@@ -1697,7 +1697,7 @@ private struct AnyCodingKey: CodingKey {
         // Check if there's any overlap with existing appointments
         for appointment in appointments {
             let appointmentStart = appointment.date
-            let appointmentEnd = calendar.date(byAdding: .minute, value: 20, to: appointmentStart)!
+            let appointmentEnd = calendar.date(byAdding: .minute, value: 30, to: appointmentStart)!
             
             if (timeSlot.startTime >= appointmentStart && timeSlot.startTime < appointmentEnd) ||
                 (timeSlot.endTime > appointmentStart && timeSlot.endTime <= appointmentEnd) ||
@@ -1738,7 +1738,7 @@ private struct AnyCodingKey: CodingKey {
         var bookedTimeSlots: [TimeSlot] = []
         for appointment in appointments {
             let appointmentStart = appointment.date
-            let appointmentEnd = calendar.date(byAdding: .minute, value: 20, to: appointmentStart)!
+            let appointmentEnd = calendar.date(byAdding: .minute, value: 30, to: appointmentStart)!
             bookedTimeSlots.append(TimeSlot(startTime: appointmentStart, endTime: appointmentEnd))
         }
         
