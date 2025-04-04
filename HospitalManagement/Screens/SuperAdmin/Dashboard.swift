@@ -100,18 +100,18 @@ struct StatusBadge: View {
     var body: some View {
         HStack(spacing: 4) {
             Circle()
-                .fill(isActive ? Color.green : Color.red)
+                .fill(isActive ? AppConfig.approvedColor : AppConfig.redColor)
                 .frame(width: 8, height: 8)
             Text(isActive ? "Active" : "Inactive")
                 .font(.caption)
                 .fontWeight(.medium)
-                .foregroundColor(isActive ? .green : .red)
+                .foregroundColor(isActive ? AppConfig.approvedColor : AppConfig.redColor)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(isActive ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
+                .fill(isActive ? AppConfig.approvedColor.opacity(0.1) : AppConfig.redColor.opacity(0.1))
         )
     }
 }

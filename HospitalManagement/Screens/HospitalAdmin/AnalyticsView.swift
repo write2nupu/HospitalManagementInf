@@ -83,11 +83,8 @@ struct AnalyticsView: View {
                     .padding()
                     .frame(maxWidth: .infinity, minHeight: 300)
                 } else {
-                    // Summary Cards in a grid
-                    LazyVGrid(columns: [
-                        GridItem(.flexible(), spacing: 16),
-                        GridItem(.flexible(), spacing: 16),
-                    ], spacing: 16) {
+                    // Summary Cards in a vertical layout
+                    VStack(spacing: 16) {
                         AnalyticCard(
                             title: "Patients",
                             value: totalPatients,
@@ -340,7 +337,7 @@ struct AppointmentStatusData: Identifiable {
     let color: Color
 }
 
-// Analytics Card component - FIXED TEXT ALIGNMENT
+// Analytics Card component
 struct AnalyticCard: View {
     let title: String
     let value: Int
@@ -348,29 +345,28 @@ struct AnalyticCard: View {
     let color: Color
     
     var body: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("\(value)")
-                    .font(.system(size: 21, weight: .bold, design: .rounded))
-                    .foregroundColor(AppConfig.fontColor)
-                
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-            }
-            
-            Spacer()
-            
+        HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 24))
                 .foregroundColor(color)
-                .padding(12)
+                .frame(width: 50, height: 50)
                 .background(color.opacity(0.2))
                 .clipShape(Circle())
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
+                
+                Text("\(value)")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(AppConfig.fontColor)
+            }
+            
+            Spacer()
         }
         .padding()
+        .frame(maxWidth: .infinity)
         .background(AppConfig.cardColor)
         .cornerRadius(16)
         .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)

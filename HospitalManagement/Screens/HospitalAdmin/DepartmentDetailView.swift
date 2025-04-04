@@ -73,10 +73,10 @@ struct DepartmentDetailView: View {
                         HStack(spacing: 8) {
                             Text("Department ID")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppConfig.fontColor.opacity(0.7))
                             Text("#\(department.id.uuidString.prefix(8))")
                                 .font(.subheadline)
-                                .foregroundColor(.mint)
+                                .foregroundColor(AppConfig.buttonColor)
                         }
                         
                         Spacer()
@@ -84,30 +84,30 @@ struct DepartmentDetailView: View {
                         HStack(spacing: 8) {
                             Text("Total Doctors")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppConfig.fontColor.opacity(0.7))
                             Text("\(doctors.count)")
                                 .font(.title3)
                                 .fontWeight(.bold)
-                                .foregroundColor(.mint)
+                                .foregroundColor(AppConfig.buttonColor)
                         }
                     }
                     
                     if let description = department.description {
                         Text(description)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppConfig.fontColor.opacity(0.7))
                     }
                     
                     Text("Consultation Fee: ₹\(String(format: "%.2f", department.fees))")
                         .font(.subheadline)
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                 }
                 .padding(.vertical, 12)
                 .padding(.horizontal)
                 .background(
                     RoundedRectangle(cornerRadius: 15)
-                        .fill(Color(.systemBackground))
-                        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                        .fill(AppConfig.cardColor)
+                        .shadow(color: AppConfig.shadowColor, radius: 5)
                 )
                 .padding(.horizontal)
                 
@@ -120,6 +120,7 @@ struct DepartmentDetailView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
+                .tint(AppConfig.buttonColor)
                 
                 // Doctors List
                 VStack(spacing: 16) {
@@ -127,12 +128,13 @@ struct DepartmentDetailView: View {
                         Text("Department Doctors")
                             .font(.title3)
                             .fontWeight(.semibold)
+                            .foregroundColor(AppConfig.fontColor)
                         Spacer()
                         Button {
                             showAddDoctor = true
                         } label: {
                             Image(systemName: "person.badge.plus")
-                                .foregroundColor(.mint)
+                                .foregroundColor(AppConfig.buttonColor)
                                 .font(.title2)
                         }
                     }
@@ -143,7 +145,7 @@ struct DepartmentDetailView: View {
                             ProgressView()
                             Text("Loading doctors...")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppConfig.fontColor.opacity(0.7))
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 40)
@@ -151,10 +153,10 @@ struct DepartmentDetailView: View {
                         VStack(spacing: 12) {
                             Image(systemName: "exclamationmark.triangle")
                                 .font(.system(size: 40))
-                                .foregroundColor(.red.opacity(0.3))
+                                .foregroundColor(AppConfig.redColor.opacity(0.3))
                             Text(error)
                                 .font(.headline)
-                                .foregroundColor(.primary)
+                                .foregroundColor(AppConfig.fontColor)
                                 .multilineTextAlignment(.center)
                         }
                         .frame(maxWidth: .infinity)
@@ -163,13 +165,13 @@ struct DepartmentDetailView: View {
                         VStack(spacing: 12) {
                             Image(systemName: "person.3.fill")
                                 .font(.system(size: 40))
-                                .foregroundColor(.mint.opacity(0.3))
+                                .foregroundColor(AppConfig.buttonColor.opacity(0.3))
                             Text(emptyStateMessage)
                                 .font(.headline)
-                                .foregroundColor(.primary)
+                                .foregroundColor(AppConfig.fontColor)
                             Text("Add doctors to get started")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppConfig.fontColor.opacity(0.7))
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 40)
@@ -187,6 +189,7 @@ struct DepartmentDetailView: View {
             }
             .padding(.vertical)
         }
+        .background(AppConfig.backgroundColor.ignoresSafeArea())
         .navigationTitle("Department Details")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(
@@ -235,6 +238,7 @@ struct DoctorListCard: View {
             HStack {
                 Text(doctor.full_name)
                     .font(.headline)
+                    .foregroundColor(AppConfig.fontColor)
                 Spacer()
                 StatusBadge(isActive: doctor.is_active)
             }
@@ -242,26 +246,27 @@ struct DoctorListCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Label {
                     Text(doctor.phone_num)
+                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
                 } icon: {
                     Image(systemName: "phone.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(AppConfig.approvedColor)
                 }
                 
                 Label {
                     Text(doctor.email_address)
+                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
                 } icon: {
                     Image(systemName: "envelope.fill")
-                        .foregroundColor(.mint)
+                        .foregroundColor(AppConfig.buttonColor)
                 }
             }
             .font(.subheadline)
-            .foregroundColor(.secondary)
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 15)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor, radius: 5)
         )
     }
 }

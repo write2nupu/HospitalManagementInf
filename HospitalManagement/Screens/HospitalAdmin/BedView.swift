@@ -42,6 +42,7 @@ struct BedView: View {
                             Text("Beds")
                                 .font(.title2)
                                 .fontWeight(.bold)
+                                .foregroundColor(AppConfig.fontColor)
                             
                             Spacer()
                             
@@ -53,7 +54,7 @@ struct BedView: View {
                                 } label: {
                                     Label("Retry", systemImage: "arrow.clockwise")
                                         .font(.subheadline)
-                                        .foregroundColor(.orange)
+                                        .foregroundColor(AppConfig.pendingColor)
                                 }
                             }
                             
@@ -62,7 +63,7 @@ struct BedView: View {
                             } label: {
                                 Label("Add Bed", systemImage: "plus.circle.fill")
                                     .font(.subheadline)
-                                    .foregroundColor(.mint)
+                                    .foregroundColor(AppConfig.buttonColor)
                             }
                         }
                         .padding(.horizontal)
@@ -71,32 +72,32 @@ struct BedView: View {
                         if let error = errorMessage {
                             HStack {
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.orange)
+                                    .foregroundColor(AppConfig.redColor)
                                 Text("Error: \(error)")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
                                 Spacer()
                             }
                             .padding()
-                            .background(Color.orange.opacity(0.1))
+                            .background(AppConfig.redColor.opacity(0.1))
                             .cornerRadius(8)
                             .padding(.horizontal)
                         }
                         
-                        // Beds summary card
-                        HStack(spacing: 20) {
+                        // Beds summary cards
+                        VStack(spacing: 16) {
                             BedStatCard(
                                 title: "Total Beds",
                                 count: allBeds.count,
                                 iconName: "bed.double.fill",
-                                iconColor: .mint
+                                iconColor: AppConfig.buttonColor
                             )
                             
                             BedStatCard(
                                 title: "Available",
                                 count: availableBeds.count,
                                 iconName: "checkmark.circle.fill",
-                                iconColor: .green
+                                iconColor: AppConfig.approvedColor
                             )
                         }
                         .padding(.horizontal)
@@ -107,6 +108,7 @@ struct BedView: View {
                         Text("Categories")
                             .font(.title2)
                             .fontWeight(.bold)
+                            .foregroundColor(AppConfig.fontColor)
                             .padding(.horizontal)
                         
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -117,7 +119,7 @@ struct BedView: View {
                                     total: bedsByType[.General]?.count ?? 0,
                                     available: bedsByType[.General]?.filter { $0.isAvailable ?? false }.count ?? 0,
                                     iconName: "bed.double",
-                                    iconColor: .blue
+                                    iconColor: AppConfig.buttonColor
                                 )
                                 
                                 // ICU Beds Card
@@ -126,7 +128,7 @@ struct BedView: View {
                                     total: bedsByType[.ICU]?.count ?? 0,
                                     available: bedsByType[.ICU]?.filter { $0.isAvailable ?? false }.count ?? 0,
                                     iconName: "waveform.path.ecg",
-                                    iconColor: .red
+                                    iconColor: AppConfig.redColor
                                 )
                                 
                                 // Personal Beds Card
@@ -135,7 +137,7 @@ struct BedView: View {
                                     total: bedsByType[.Personal]?.count ?? 0,
                                     available: bedsByType[.Personal]?.filter { $0.isAvailable ?? false }.count ?? 0,
                                     iconName: "person.fill",
-                                    iconColor: .purple
+                                    iconColor: AppConfig.pendingColor
                                 )
                             }
                             .padding(.horizontal)
@@ -147,67 +149,46 @@ struct BedView: View {
                         Text("Recents")
                             .font(.title2)
                             .fontWeight(.bold)
+                            .foregroundColor(AppConfig.fontColor)
                             .padding(.horizontal)
                         
                         if recentBookings.isEmpty {
                             VStack(spacing: 12) {
                                 Image(systemName: "bed.double")
                                     .font(.system(size: 40))
-                                    .foregroundColor(.mint.opacity(0.3))
+                                    .foregroundColor(AppConfig.buttonColor.opacity(0.5))
                                 Text("No recent bookings")
                                     .font(.headline)
-                                    .foregroundColor(.primary)
+                                    .foregroundColor(AppConfig.fontColor)
                                 Text("Booked beds will appear here")
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
                             }
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 30)
+                            .padding(.vertical, 40)
+                            .background(AppConfig.cardColor)
+                            .cornerRadius(12)
+                            .padding(.horizontal)
                         } else {
                             VStack(spacing: 12) {
-                                // Bookings list
                                 ForEach(recentBookings) { booking in
                                     HStack(spacing: 12) {
-                                        // Patient info
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(booking.patientName)
                                                 .font(.headline)
-                                                .foregroundColor(.primary)
-                                                .lineLimit(1)
-                                            
+                                                .foregroundColor(AppConfig.fontColor)
                                             Text(booking.bedType.rawValue)
                                                 .font(.subheadline)
-                                                .foregroundColor(.secondary)
+                                                .foregroundColor(AppConfig.fontColor.opacity(0.7))
                                         }
-                                        
                                         Spacer()
-                                        
-                                        // Date info
-                                        VStack(alignment: .trailing, spacing: 4) {
-                                            HStack(spacing: 4) {
-                                                Image(systemName: "calendar.badge.plus")
-                                                    .font(.caption)
-                                                    .foregroundColor(.green)
-                                                Text(formatDate(booking.startDate))
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                            }
-                                            
-                                            HStack(spacing: 4) {
-                                                Image(systemName: "calendar.badge.minus")
-                                                    .font(.caption)
-                                                    .foregroundColor(.red)
-                                                Text(formatDate(booking.endDate))
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                            }
-                                        }
+                                        Text(formatDate(booking.startDate))
+                                            .font(.caption)
+                                            .foregroundColor(AppConfig.approvedColor)
                                     }
                                     .padding()
-                                    .background(Color(.systemBackground))
-                                    .cornerRadius(10)
-                                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-                                    .padding(.horizontal)
+                                    .background(AppConfig.cardColor)
+                                    .cornerRadius(12)
                                 }
                             }
                             .padding(.horizontal)
@@ -217,41 +198,15 @@ struct BedView: View {
                 .padding(.vertical)
             }
         }
+        .background(AppConfig.backgroundColor.ignoresSafeArea())
         .navigationTitle("Bed Management")
         .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
-        .background(Color(.systemGray6).ignoresSafeArea())
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showAddBed = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.mint)
-                }
-            }
-        }
         .sheet(isPresented: $showAddBed) {
-            NavigationStack {
-                AddBedView()
-            }
-        }
-        .refreshable {
-            await loadData()
+            AddBedView()
         }
         .task {
             await loadData()
-        }
-        .alert("Data Loading Error", isPresented: $showErrorAlert) {
-            Button("OK", role: .cancel) {}
-            Button("Retry") {
-                Task {
-                    await loadData()
-                }
-            }
-        } message: {
-            Text(errorMessage ?? "Unknown error")
         }
     }
     
@@ -342,24 +297,25 @@ struct BedStatCard: View {
             Image(systemName: iconName)
                 .font(.title2)
                 .foregroundColor(iconColor)
-                .frame(width: 40, height: 40)
+                .frame(width: 50, height: 50)
                 .background(iconColor.opacity(0.1))
                 .clipShape(Circle())
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.subheadline)
+                    .font(.headline)
                     .foregroundColor(AppConfig.fontColor.opacity(0.7))
                 Text("\(count)")
-                    .font(.title2)
-                    .fontWeight(.bold)
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(AppConfig.fontColor)
             }
+            
+            Spacer()
         }
         .padding()
         .frame(maxWidth: .infinity)
         .background(AppConfig.cardColor)
-        .cornerRadius(12)
+        .cornerRadius(16)
         .shadow(color: AppConfig.shadowColor, radius: 5)
     }
 }
@@ -378,7 +334,7 @@ struct BedCategoryCard: View {
                 Image(systemName: iconName)
                     .font(.title2)
                     .foregroundColor(iconColor)
-                    .frame(width: 40, height: 40)
+                    .frame(width: 50, height: 50)
                     .background(iconColor.opacity(0.1))
                     .clipShape(Circle())
                 
@@ -415,7 +371,7 @@ struct BedCategoryCard: View {
         .padding()
         .frame(width: 200)
         .background(AppConfig.cardColor)
-        .cornerRadius(12)
+        .cornerRadius(16)
         .shadow(color: AppConfig.shadowColor, radius: 5)
     }
 }
