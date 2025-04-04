@@ -192,6 +192,35 @@ struct AddDoctorView: View {
         return hospitalUUID
     }
     
+    private func generateInitialPassword() -> String {
+        let numbers = "0123456789"
+        let lowercase = "abcdefghijklmnopqrstuvwxyz"
+        let uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        let specialCharacters = "!@#$%^&*"
+        
+        // Create password in a fixed format:
+        // 2 uppercase + 2 lowercase + 2 numbers + 2 special characters
+        var password = ""
+        
+        // Add 2 uppercase letters
+        password += String(uppercase.randomElement() ?? "A")
+        password += String(uppercase.randomElement() ?? "B")
+        
+        // Add 2 lowercase letters
+        password += String(lowercase.randomElement() ?? "a")
+        password += String(lowercase.randomElement() ?? "b")
+        
+        // Add 2 numbers
+        password += String(numbers.randomElement() ?? "1")
+        password += String(numbers.randomElement() ?? "2")
+        
+        // Add 2 special characters
+        password += String(specialCharacters.randomElement() ?? "@")
+        password += String(specialCharacters.randomElement() ?? "#")
+        
+        return password
+    }
+    
     private func saveDoctor() {
         // Use either initialDepartment or selectedDepartment
         guard let department = initialDepartment ?? selectedDepartment else {
@@ -206,7 +235,7 @@ struct AddDoctorView: View {
             return
         }
         
-        let initialPassword = String((0..<8).map { _ in "9876543210abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".randomElement()! })
+        let initialPassword = generateInitialPassword()
         
         let newDoctor = Doctor(
             id: UUID(),

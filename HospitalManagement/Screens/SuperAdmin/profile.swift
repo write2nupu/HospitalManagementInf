@@ -24,6 +24,7 @@ struct SuperAdminProfileView: View {
             Group {
                 if isLoading {
                     ProgressView("Loading profile...")
+                        .foregroundColor(AppConfig.fontColor)
                 } else if let errorMessage = errorMessage {
                     Text(errorMessage)
                         .foregroundColor(.red)
@@ -32,10 +33,14 @@ struct SuperAdminProfileView: View {
                         Section("Super Admin Information") {
                             if let admin = superAdmin {
                                 ProfileDetailRow(title: "Name", value: admin.full_name)
+                                    .foregroundColor(AppConfig.fontColor)
                                 ProfileDetailRow(title: "Email", value: admin.email)
+                                    .foregroundColor(AppConfig.fontColor)
                                 ProfileDetailRow(title: "Role", value: "Super Administrator")
+                                    .foregroundColor(AppConfig.fontColor)
                             }
                         }
+                        .foregroundStyle(AppConfig.fontColor)
                         
                         Section {
                             Button(action: {
@@ -47,11 +52,16 @@ struct SuperAdminProfileView: View {
                                     .frame(maxWidth: .infinity, alignment: .center)
                             }
                         }
+                        .foregroundStyle(AppConfig.fontColor)
                     }
+                    .background(AppConfig.backgroundColor)
+                    .scrollContentBackground(.hidden)
                 }
             }
             .navigationTitle("Profile")
-            .navigationBarItems(leading: Button("Done") { dismiss() })
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(leading: Button("Done") { dismiss() }
+                .foregroundColor(AppConfig.buttonColor))
             .alert("Logout", isPresented: $showLogoutAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Logout", role: .destructive) {

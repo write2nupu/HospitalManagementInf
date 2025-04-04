@@ -168,7 +168,7 @@ struct LeaveRequestDetailView: View {
                 .padding()
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Leave Request Details")
+            .navigationTitle("Leave Request")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(false)
             .alert("Leave Request Action", isPresented: $showAlert) {

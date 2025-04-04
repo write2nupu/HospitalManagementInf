@@ -31,19 +31,24 @@ struct EditContactSheet: View {
                     TextField("Email", text: $email)
                         .textContentType(.emailAddress)
                         .autocapitalization(.none)
+                        .foregroundColor(AppConfig.fontColor)
                     
                     TextField("Phone", text: $phone)
                         .textContentType(.telephoneNumber)
                         .keyboardType(.phonePad)
+                        .foregroundColor(AppConfig.fontColor)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(AppConfig.backgroundColor)
             .navigationTitle("Edit Profile")
             .navigationBarItems(
-                leading: Button("Cancel") { dismiss() },
+                leading: Button("Cancel") { dismiss() }
+                    .foregroundColor(AppConfig.buttonColor),
                 trailing: Button("Save") {
                     saveChanges()
                 }
-                .foregroundColor(.blue)
+                .foregroundColor(AppConfig.buttonColor)
             )
             .alert("Update Status", isPresented: $showAlert) {
                 Button("OK") {
@@ -51,8 +56,10 @@ struct EditContactSheet: View {
                         dismiss()
                     }
                 }
+                .foregroundColor(AppConfig.buttonColor)
             } message: {
                 Text(alertMessage)
+                    .foregroundColor(AppConfig.fontColor)
             }
         }
     }
@@ -107,43 +114,50 @@ struct ContactInfoSheet: View {
                 Section {
                     HStack {
                         Text("Email")
+                            .foregroundColor(AppConfig.fontColor)
                         Spacer()
                         if isEditing {
                             TextField("", text: $email)
                                 .textContentType(.emailAddress)
                                 .autocapitalization(.none)
                                 .multilineTextAlignment(.trailing)
+                                .foregroundColor(AppConfig.fontColor)
                         } else {
                             Text(profile.email)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppConfig.fontColor.opacity(0.7))
                         }
                     }
                     
                     HStack {
                         Text("Phone")
+                            .foregroundColor(AppConfig.fontColor)
                         Spacer()
                         if isEditing {
                             TextField("", text: $phone)
                                 .textContentType(.telephoneNumber)
                                 .keyboardType(.phonePad)
                                 .multilineTextAlignment(.trailing)
+                                .foregroundColor(AppConfig.fontColor)
                         } else {
                             Text(profile.phone)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppConfig.fontColor.opacity(0.7))
                         }
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(AppConfig.backgroundColor)
             .navigationTitle("Contact Information")
             .navigationBarItems(
-                leading: Button("Cancel") { dismiss() },
+                leading: Button("Cancel") { dismiss() }
+                    .foregroundColor(AppConfig.buttonColor),
                 trailing: Button(isEditing ? "Done" : "Edit") {
                     if isEditing {
                         saveChanges()
                     }
                     isEditing.toggle()
                 }
-                .foregroundColor(.blue)
+                .foregroundColor(AppConfig.buttonColor)
             )
             .alert("Update Status", isPresented: $showAlert) {
                 Button("OK") {
@@ -151,8 +165,10 @@ struct ContactInfoSheet: View {
                         isEditing = false
                     }
                 }
+                .foregroundColor(AppConfig.buttonColor)
             } message: {
                 Text(alertMessage)
+                    .foregroundColor(AppConfig.fontColor)
             }
         }
     }
@@ -205,121 +221,133 @@ struct AdminProfileView: View {
     @AppStorage("userRole") private var userRole: String?
 
     var body: some View {
-        NavigationView {
-            Group {
-                if isLoading {
-                    ProgressView("Loading profile...")
-                } else if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                } else {
-                    Form {
-                        if let admin = admin, let hospital = hospital {
-                            Section("Admin Information") {
-                                ProfileDetailRow(title: "Name", value: admin.full_name)
-                                ProfileDetailRow(title: "Hospital", value: hospital.name)
-                                ProfileDetailRow(title: "Role", value: "Hospital Administrator")
-                            }
-                            
-                            Section("Contact Information") {
-                                ProfileDetailRow(title: "Email", value: admin.email)
-                                Button(action: { showingPhoneEdit = true }) {
-                                    HStack {
-                                        Text("Phone")
-                                            .foregroundColor(.secondary)
-                                        Spacer()
-                                        Text(admin.phone_number)
-                                            .foregroundColor(.primary)
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 14))
-                                            .foregroundColor(.gray)
-                                    }
+        Group {
+            if isLoading {
+                ProgressView("Loading profile...")
+                    .foregroundColor(AppConfig.fontColor)
+            } else if let errorMessage = errorMessage {
+                Text(errorMessage)
+                    .foregroundColor(AppConfig.redColor)
+            } else {
+                Form {
+                    if let admin = admin, let hospital = hospital {
+                        Section("Admin Information") {
+                            ProfileDetailRow(title: "Name", value: admin.full_name)
+                            ProfileDetailRow(title: "Hospital", value: hospital.name)
+                            ProfileDetailRow(title: "Role", value: "Hospital Administrator")
+                        }
+                        
+                        Section("Contact Information") {
+                            ProfileDetailRow(title: "Email", value: admin.email)
+                            Button(action: { showingPhoneEdit = true }) {
+                                HStack {
+                                    Text("Phone")
+                                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
+                                    Spacer()
+                                    Text(admin.phone_number)
+                                        .foregroundColor(AppConfig.fontColor)
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(AppConfig.fontColor.opacity(0.5))
                                 }
                             }
-                            
-                            Section("Hospital Information") {
-                                if isEditing {
-                                    TextField("Address", text: Binding(
-                                        get: { editedHospital?.address ?? hospital.address },
-                                        set: { editedHospital?.address = $0 }
-                                    ))
-                                    TextField("City", text: Binding(
-                                        get: { editedHospital?.city ?? hospital.city },
-                                        set: { editedHospital?.city = $0 }
-                                    ))
-                                    TextField("State", text: Binding(
-                                        get: { editedHospital?.state ?? hospital.state },
-                                        set: { editedHospital?.state = $0 }
-                                    ))
-                                    TextField("Pin Code", text: Binding(
-                                        get: { editedHospital?.pincode ?? hospital.pincode },
-                                        set: { editedHospital?.pincode = $0 }
-                                    ))
-                                    TextField("License Number", text: Binding(
-                                        get: { editedHospital?.license_number ?? hospital.license_number },
-                                        set: { editedHospital?.license_number = $0 }
-                                    ))
-                                    Toggle("Active", isOn: Binding(
-                                        get: { editedHospital?.is_active ?? hospital.is_active },
-                                        set: { editedHospital?.is_active = $0 }
-                                    ))
-                                } else {
-                                    ProfileDetailRow(title: "Address", value: hospital.address)
-                                    ProfileDetailRow(title: "City", value: hospital.city)
-                                    ProfileDetailRow(title: "State", value: hospital.state)
-                                    ProfileDetailRow(title: "Pin Code", value: hospital.pincode)
-                                    ProfileDetailRow(title: "License Number", value: hospital.license_number)
-                                    ProfileDetailRow(title: "Status", value: hospital.is_active ? "Active" : "Inactive")
-                                }
+                        }
+                        
+                        Section("Hospital Information") {
+                            if isEditing {
+                                TextField("Address", text: Binding(
+                                    get: { editedHospital?.address ?? hospital.address },
+                                    set: { editedHospital?.address = $0 }
+                                ))
+                                .foregroundColor(AppConfig.fontColor)
+                                TextField("City", text: Binding(
+                                    get: { editedHospital?.city ?? hospital.city },
+                                    set: { editedHospital?.city = $0 }
+                                ))
+                                .foregroundColor(AppConfig.fontColor)
+                                TextField("State", text: Binding(
+                                    get: { editedHospital?.state ?? hospital.state },
+                                    set: { editedHospital?.state = $0 }
+                                ))
+                                .foregroundColor(AppConfig.fontColor)
+                                TextField("Pin Code", text: Binding(
+                                    get: { editedHospital?.pincode ?? hospital.pincode },
+                                    set: { editedHospital?.pincode = $0 }
+                                ))
+                                .foregroundColor(AppConfig.fontColor)
+                                TextField("License Number", text: Binding(
+                                    get: { editedHospital?.license_number ?? hospital.license_number },
+                                    set: { editedHospital?.license_number = $0 }
+                                ))
+                                .foregroundColor(AppConfig.fontColor)
+                                Toggle("Active", isOn: Binding(
+                                    get: { editedHospital?.is_active ?? hospital.is_active },
+                                    set: { editedHospital?.is_active = $0 }
+                                ))
+                            } else {
+                                ProfileDetailRow(title: "Address", value: hospital.address)
+                                ProfileDetailRow(title: "City", value: hospital.city)
+                                ProfileDetailRow(title: "State", value: hospital.state)
+                                ProfileDetailRow(title: "Pin Code", value: hospital.pincode)
+                                ProfileDetailRow(title: "License Number", value: hospital.license_number)
+                                ProfileDetailRow(title: "Status", value: hospital.is_active ? "Active" : "Inactive")
                             }
-                            
-                            Section {
-                                Button(action: {
-                                    showLogoutAlert = true
-                                }) {
-                                    Text("Logout")
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.red)
-                                        .frame(maxWidth: .infinity, alignment: .center)
-                                }
+                        }
+                        
+                        Section {
+                            Button(action: {
+                                showLogoutAlert = true
+                            }) {
+                                Text("Logout")
+                                    .fontWeight(.bold)
+                                    .foregroundColor(AppConfig.redColor)
+                                    .frame(maxWidth: .infinity, alignment: .center)
                             }
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .background(AppConfig.backgroundColor)
             }
-            .navigationTitle("Profile")
-            .navigationBarItems(
-                leading: Button("Done") { dismiss() },
-                trailing: Button(isEditing ? "Save" : "Edit") {
-                    if isEditing {
-                        saveHospitalChanges()
-                    } else {
-                        startEditing()
-                    }
-                }
-            )
-            .alert("Logout", isPresented: $showLogoutAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Logout", role: .destructive) {
-                    handleLogout()
-                }
-            } message: {
-                Text("Are you sure you want to logout?")
-            }
-            .fullScreenCover(isPresented: .constant(isLoggedOut)) {
-                UserRoleScreen()
-            }
-            .sheet(isPresented: $showingPhoneEdit) {
-                EditPhoneSheet(admin: $admin, supabaseController: supabaseController) {
-                    Task {
-                        await loadProfile()
-                    }
+        }
+        .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarItems(
+            leading: Button("Done") { dismiss() }
+                .foregroundColor(AppConfig.buttonColor),
+            trailing: Button(isEditing ? "Save" : "Edit") {
+                if isEditing {
+                    saveHospitalChanges()
+                } else {
+                    startEditing()
                 }
             }
-            .onAppear {
+            .foregroundColor(AppConfig.buttonColor)
+        )
+        .alert("Logout", isPresented: $showLogoutAlert) {
+            Button("Cancel", role: .cancel) { }
+                .foregroundColor(AppConfig.buttonColor)
+            Button("Logout", role: .destructive) {
+                handleLogout()
+            }
+            .foregroundColor(AppConfig.redColor)
+        } message: {
+            Text("Are you sure you want to logout?")
+                .foregroundColor(AppConfig.fontColor)
+        }
+        .fullScreenCover(isPresented: .constant(isLoggedOut)) {
+            UserRoleScreen()
+        }
+        .sheet(isPresented: $showingPhoneEdit) {
+            EditPhoneSheet(admin: $admin, supabaseController: supabaseController) {
                 Task {
                     await loadProfile()
                 }
+            }
+        }
+        .onAppear {
+            Task {
+                await loadProfile()
             }
         }
     }
@@ -423,26 +451,32 @@ struct EditPhoneSheet: View {
                         TextField("Phone Number", text: $phoneNumber)
                             .keyboardType(.numberPad)
                             .textContentType(.telephoneNumber)
+                            .foregroundColor(AppConfig.fontColor)
                         
                         if !phoneNumber.isEmpty {
                             Image(systemName: isPhoneNumberValid ? "checkmark.circle.fill" : "x.circle.fill")
-                                .foregroundColor(isPhoneNumberValid ? .green : .red)
+                                .foregroundColor(isPhoneNumberValid ? AppConfig.approvedColor : AppConfig.redColor)
                         }
                     }
                 } header: {
                     Text("Edit Phone Number")
+                        .foregroundColor(AppConfig.fontColor)
                 }
                 
                 Section {
                     Button("Save Changes") {
                         saveChanges()
                     }
+                    .foregroundColor(isPhoneNumberValid ? AppConfig.buttonColor : AppConfig.fontColor.opacity(0.5))
                     .disabled(!isPhoneNumberValid)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(AppConfig.backgroundColor)
             .navigationTitle("Edit Phone")
             .navigationBarItems(
                 leading: Button("Cancel") { dismiss() }
+                    .foregroundColor(AppConfig.buttonColor)
             )
             .alert("Update Status", isPresented: $showAlert) {
                 Button("OK") {
@@ -455,8 +489,10 @@ struct EditPhoneSheet: View {
                         dismiss()
                     }
                 }
+                .foregroundColor(AppConfig.buttonColor)
             } message: {
                 Text(alertMessage)
+                    .foregroundColor(AppConfig.fontColor)
             }
             .onAppear {
                 phoneNumber = admin?.phone_number ?? ""
@@ -498,10 +534,10 @@ struct ProfileDetailRow: View {
     var body: some View {
         HStack {
             Text(title)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppConfig.fontColor.opacity(0.7))
             Spacer()
             Text(value)
-                .foregroundColor(.primary)
+                .foregroundColor(AppConfig.fontColor)
         }
     }
 }

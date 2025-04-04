@@ -50,7 +50,7 @@ struct AnalyticsView: View {
                     }) {
                         Image(systemName: "arrow.clockwise")
                             .font(.title2)
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                     }
                 }
                 .padding(.horizontal)
@@ -60,74 +60,73 @@ struct AnalyticsView: View {
                         ProgressView()
                             .padding()
                         Text("Loading analytics data...")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppConfig.fontColor.opacity(0.7))
                     }
                     .frame(maxWidth: .infinity, minHeight: 300)
                 } else if let error = errorMessage {
                     VStack {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.largeTitle)
-                            .foregroundColor(.orange)
+                            .foregroundColor(AppConfig.pendingColor)
                             .padding()
                         
                         Text("Error Loading Data")
                             .font(.headline)
+                            .foregroundColor(AppConfig.fontColor)
                             .padding(.bottom, 4)
                         
                         Text(error)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppConfig.fontColor.opacity(0.7))
                             .multilineTextAlignment(.center)
                     }
                     .padding()
                     .frame(maxWidth: .infinity, minHeight: 300)
                 } else {
-                    // Summary Cards in a grid
-                    LazyVGrid(columns: [
-                        GridItem(.flexible(), spacing: 16),
-                        GridItem(.flexible(), spacing: 16),
-                    ], spacing: 16) {
+                    // Summary Cards in a vertical layout
+                    VStack(spacing: 16) {
                         AnalyticCard(
                             title: "Patients",
                             value: totalPatients,
                             icon: "person.crop.circle.fill",
-                            color: .blue
+                            color: AppConfig.buttonColor
                         )
                         
                         AnalyticCard(
                             title: "Doctors",
                             value: totalDoctors,
                             icon: "stethoscope",
-                            color: .mint
+                            color: AppConfig.approvedColor
                         )
                         
                         AnalyticCard(
                             title: "Departments",
                             value: totalDepartments,
                             icon: "building.2.fill",
-                            color: .indigo
+                            color: AppConfig.buttonColor
                         )
                         
                         AnalyticCard(
                             title: "Appointments",
                             value: totalAppointments,
                             icon: "calendar.badge.clock",
-                            color: .orange
+                            color: AppConfig.pendingColor
                         )
                     }
                     .padding(.horizontal)
                     
-                    // Appointments Distribution Chart - NOW USING BAR CHART
+                    // Appointments Distribution Chart
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Appointment Status")
                             .font(.title2)
                             .fontWeight(.semibold)
+                            .foregroundColor(AppConfig.fontColor)
                             .padding(.leading)
                         
                         ZStack {
                             if totalAppointments == 0 {
                                 Text("No appointment data available")
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
                                     .frame(height: 240)
                             } else {
                                 // Bar Chart for appointment status
@@ -142,7 +141,7 @@ struct AnalyticsView: View {
                                             if item.count > 0 {
                                                 Text("\(Int((Double(item.count) / Double(totalAppointments)) * 100))%")
                                                     .font(.caption)
-                                                    .foregroundColor(.secondary)
+                                                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
                                             }
                                         }
                                     }
@@ -164,7 +163,7 @@ struct AnalyticsView: View {
                                                 
                                                 Text(item.status)
                                                     .font(.caption)
-                                                    .foregroundColor(.secondary)
+                                                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
                                             }
                                         }
                                     }
@@ -174,9 +173,9 @@ struct AnalyticsView: View {
                             }
                         }
                         .padding()
-                        .background(Color(.systemBackground))
+                        .background(AppConfig.cardColor)
                         .cornerRadius(16)
-                        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                        .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)
                         .padding(.horizontal)
                     }
                     
@@ -185,12 +184,13 @@ struct AnalyticsView: View {
                         Text("Monthly Trends")
                             .font(.title2)
                             .fontWeight(.semibold)
+                            .foregroundColor(AppConfig.fontColor)
                             .padding(.leading)
                         
                         ZStack {
                             if monthlyAppointments.isEmpty {
                                 Text("No monthly data available")
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
                                     .frame(height: 240)
                             } else {
                                 Chart {
@@ -199,7 +199,7 @@ struct AnalyticsView: View {
                                             x: .value("Month", item.month),
                                             y: .value("Count", item.count)
                                         )
-                                        .foregroundStyle(Color.mint.gradient)
+                                        .foregroundStyle(AppConfig.buttonColor.gradient)
                                     }
                                 }
                                 .chartYAxis {
@@ -209,16 +209,16 @@ struct AnalyticsView: View {
                             }
                         }
                         .padding()
-                        .background(Color(.systemBackground))
+                        .background(AppConfig.cardColor)
                         .cornerRadius(16)
-                        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                        .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)
                         .padding(.horizontal)
                     }
                 }
             }
             .padding(.vertical)
         }
-        .background(Color(.systemGray6).ignoresSafeArea())
+        .background(AppConfig.backgroundColor.ignoresSafeArea())
         .navigationTitle("Analytics")
         .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
@@ -337,7 +337,7 @@ struct AppointmentStatusData: Identifiable {
     let color: Color
 }
 
-// Analytics Card component - FIXED TEXT ALIGNMENT
+// Analytics Card component
 struct AnalyticCard: View {
     let title: String
     let value: Int
@@ -345,32 +345,31 @@ struct AnalyticCard: View {
     let color: Color
     
     var body: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("\(value)")
-                    .font(.system(size: 21, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-                
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-            }
-            
-            Spacer()
-            
+        HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 24))
                 .foregroundColor(color)
-                .padding(12)
+                .frame(width: 50, height: 50)
                 .background(color.opacity(0.2))
                 .clipShape(Circle())
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(AppConfig.fontColor.opacity(0.7))
+                
+                Text("\(value)")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(AppConfig.fontColor)
+            }
+            
+            Spacer()
         }
         .padding()
-        .background(Color(.systemBackground))
+        .frame(maxWidth: .infinity)
+        .background(AppConfig.cardColor)
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+        .shadow(color: AppConfig.shadowColor, radius: 10, x: 0, y: 5)
     }
 }
 

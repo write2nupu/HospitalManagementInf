@@ -25,8 +25,11 @@ struct AddDepartmentView: View {
             Section("Department Information") {
                 TextField("Department Name", text: $departmentName)
                     .autocapitalization(.words)
+                    .foregroundColor(AppConfig.fontColor)
                 TextField("Description", text: $description)
+                    .foregroundColor(AppConfig.fontColor)
                 TextField("Consultation Fee (₹)", text: $feesString)
+                    .foregroundColor(AppConfig.fontColor)
                     .keyboardType(.decimalPad)
                     .onChange(of: feesString) { oldValue, newValue in
                         // Clean the input to only allow numbers and decimal point
@@ -40,7 +43,10 @@ struct AddDepartmentView: View {
                         }
                     }
             }
+            .foregroundColor(AppConfig.fontColor)
         }
+        .scrollContentBackground(.hidden)
+        .background(AppConfig.backgroundColor)
         .navigationTitle("Add Department")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -48,13 +54,14 @@ struct AddDepartmentView: View {
                 Button("Cancel") {
                     dismiss()
                 }
+                .foregroundColor(AppConfig.buttonColor)
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {
                     saveDepartment()
                 }
                 .disabled(!isFormValid)
-                .foregroundColor(.blue)
+                .foregroundColor(isFormValid ? AppConfig.buttonColor : AppConfig.fontColor.opacity(0.5))
             }
         }
         .alert("Department Status", isPresented: $showAlert) {
@@ -63,8 +70,10 @@ struct AddDepartmentView: View {
                     dismiss()
                 }
             }
+            .foregroundColor(AppConfig.buttonColor)
         } message: {
             Text(alertMessage)
+                .foregroundColor(AppConfig.fontColor)
         }
     }
     

@@ -102,6 +102,8 @@ struct DoctorDetailView: View {
             }
         }
         .disabled(isUpdating)
+        .navigationTitle("Doctor Details")
+        .navigationBarTitleDisplayMode(.inline)
     }
     
     private func toggleDoctorStatus() async {

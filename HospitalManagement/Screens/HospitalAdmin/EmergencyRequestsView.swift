@@ -37,7 +37,7 @@ struct EmergencyRequestsView: View {
                         .listRowSeparator(.hidden)
                 } else if let error = errorMessage {
                     Text(error)
-                        .foregroundColor(.red)
+                        .foregroundColor(AppConfig.redColor)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
@@ -45,13 +45,13 @@ struct EmergencyRequestsView: View {
                     VStack(spacing: 12) {
                         Image(systemName: "cross.case")
                             .font(.system(size: 50))
-                            .foregroundColor(.red)
+                            .foregroundColor(AppConfig.redColor)
                         Text(selectedFilter == 0 ? "No Scheduled Requests" : "No Completed Requests")
                             .font(.headline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppConfig.fontColor)
                         Text(selectedFilter == 0 ? "Scheduled emergency requests will appear here" : "Completed emergency requests will appear here")
                             .font(.subheadline)
-                            .foregroundColor(.secondary.opacity(0.8))
+                            .foregroundColor(AppConfig.fontColor.opacity(0.7))
                             .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -76,9 +76,9 @@ struct EmergencyRequestsView: View {
             }
             .listStyle(.plain)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(AppConfig.backgroundColor)
         .navigationTitle("Emergency Requests")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             Task {
                 await loadEmergencyRequests()
@@ -136,22 +136,23 @@ struct EmergencyRequestDetailView: View {
                     HStack {
                         Image(systemName: "cross.case.fill")
                             .font(.title2)
-                            .foregroundColor(.red)
+                            .foregroundColor(AppConfig.redColor)
                         Text("Emergency Request")
                             .font(.title2)
                             .fontWeight(.bold)
+                            .foregroundColor(AppConfig.fontColor)
                         Spacer()
                         StatusBadge9(status: request.status.rawValue)
                     }
                     
                     Text(request.description)
                         .font(.body)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
                 }
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemBackground))
+                        .fill(AppConfig.cardColor)
                 )
                 
                 // Doctor Assignment Section
@@ -159,17 +160,18 @@ struct EmergencyRequestDetailView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Assign Doctor")
                             .font(.headline)
+                            .foregroundColor(AppConfig.fontColor)
                         
                         if isLoading {
                             ProgressView()
                                 .frame(maxWidth: .infinity)
                         } else if let error = errorMessage {
                             Text(error)
-                                .foregroundColor(.red)
+                                .foregroundColor(AppConfig.redColor)
                                 .font(.subheadline)
                         } else if emergencyDoctors.isEmpty {
                             Text("No emergency doctors available")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppConfig.fontColor.opacity(0.7))
                         } else {
                             Button(action: {
                                 showingDoctorPicker = true
@@ -180,7 +182,7 @@ struct EmergencyRequestDetailView: View {
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.blue)
+                                .background(AppConfig.buttonColor)
                                 .foregroundColor(.white)
                                 .cornerRadius(10)
                             }
@@ -189,13 +191,14 @@ struct EmergencyRequestDetailView: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("Selected Doctor:")
                                         .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
                                     Text(doctor.full_name)
                                         .font(.body)
                                         .fontWeight(.medium)
+                                        .foregroundColor(AppConfig.fontColor)
                                     Text(doctor.qualifications)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
                                     
                                     Button(action: {
                                         Task {
@@ -205,7 +208,7 @@ struct EmergencyRequestDetailView: View {
                                         Text("Confirm Assignment")
                                             .frame(maxWidth: .infinity)
                                             .padding()
-                                            .background(Color.green)
+                                            .background(AppConfig.approvedColor)
                                             .foregroundColor(.white)
                                             .cornerRadius(10)
                                     }
@@ -213,7 +216,7 @@ struct EmergencyRequestDetailView: View {
                                 .padding()
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color(.systemBackground))
+                                        .fill(AppConfig.cardColor)
                                 )
                             }
                         }
@@ -221,14 +224,14 @@ struct EmergencyRequestDetailView: View {
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemBackground))
+                            .fill(AppConfig.cardColor)
                     )
                 }
             }
             .padding()
         }
         .navigationTitle("Emergency Details")
-        .background(Color(.systemGroupedBackground))
+        .background(AppConfig.backgroundColor)
         .onAppear {
             Task {
                 await loadEmergencyDoctors()
@@ -339,67 +342,52 @@ struct EmergencyRequestCard: View {
     let request: EmergencyAppointment
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 16) {
-                // Emergency Info
-                HStack(alignment: .center, spacing: 12) {
-                    // Emergency Icon
-                    ZStack {
-                        Circle()
-                            .fill(Color.red.opacity(0.1))
-                            .frame(width: 50, height: 50)
-                        
-                        Image(systemName: "cross.case.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.red)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Emergency Request")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        Text(request.status.rawValue)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    StatusBadge9(status: request.status.rawValue)
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
+            HStack {
+                Image(systemName: "cross.case.fill")
+                    .font(.title2)
+                    .foregroundColor(AppConfig.redColor)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Emergency Request")
+                        .font(.headline)
+                        .foregroundColor(AppConfig.fontColor)
+                   
                 }
                 
-                Divider()
-                    .padding(.vertical, 4)
+                Spacer()
                 
-                // Request Details
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "text.bubble")
-                            .foregroundColor(.red)
-                            .frame(width: 24)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Description")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Text(request.description)
-                                .font(.body)
-                                .fontWeight(.medium)
-                        }
-                    }
-                }
+                StatusBadge9(status: request.status.rawValue)
             }
             
-            Image(systemName: "chevron.right")
-                .foregroundColor(.gray)
-                .font(.system(size: 14, weight: .semibold))
-                .padding(.leading, 8)
+            // Description
+            Text(request.description)
+                .font(.body)
+                .foregroundColor(AppConfig.fontColor)
+                .lineLimit(2)
+            
+            // Patient Info
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Patient")
+                        .font(.subheadline)
+                        .foregroundColor(AppConfig.fontColor.opacity(0.7))
+                    
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(AppConfig.fontColor.opacity(0.5))
+                    .font(.system(size: 14, weight: .semibold))
+            }
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+            RoundedRectangle(cornerRadius: 12)
+                .fill(AppConfig.cardColor)
+                .shadow(color: AppConfig.shadowColor, radius: 5)
         )
     }
 }
@@ -408,44 +396,27 @@ struct StatusBadge9: View {
     let status: String
     
     var statusColor: Color {
-        switch status {
-        case "Pending":
-            return .orange
-        case "Completed":
-            return .green
-        case "Cancelled":
-            return .red
+        switch status.lowercased() {
+        case "pending":
+            return AppConfig.pendingColor
+        case "completed":
+            return AppConfig.approvedColor
+        case "cancelled":
+            return AppConfig.rejectedColor
         default:
-            return .gray
-        }
-    }
-    
-    var statusIcon: String {
-        switch status {
-        case "Pending":
-            return "exclamationmark.circle.fill"
-        case "Completed":
-            return "checkmark.circle.fill"
-        case "Cancelled":
-            return "xmark.circle.fill"
-        default:
-            return "questionmark.circle.fill"
+            return AppConfig.buttonColor
         }
     }
     
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: statusIcon)
-                .font(.caption)
-            Text(status)
-                .font(.caption)
-                .fontWeight(.medium)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(statusColor)
-        .foregroundColor(.white)
-        .cornerRadius(8)
+        Text(status)
+            .font(.caption)
+            .fontWeight(.medium)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(statusColor.opacity(0.1))
+            .foregroundColor(statusColor)
+            .cornerRadius(8)
     }
 }
 

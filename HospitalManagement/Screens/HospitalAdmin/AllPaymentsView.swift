@@ -83,7 +83,7 @@ struct AllPaymentsView: View {
             }
         }
         .navigationTitle("All Payments")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
