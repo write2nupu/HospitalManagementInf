@@ -475,7 +475,7 @@ struct RescheduleView: View {
                             in: Date()...Calendar.current.date(byAdding: .day, value: 28, to: Date())!,
                             displayedComponents: .date
                         )
-                        .onChange(of: selectedDate) { _ in
+                        .onChange(of: selectedDate) { oldValue, _ in
                             selectedTimeSlot = nil
                             loadBookedTimeSlots()
                         }

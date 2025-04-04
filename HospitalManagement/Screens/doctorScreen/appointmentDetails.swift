@@ -264,7 +264,7 @@ struct AppointmentDetailView: View {
                                    Text("Completed").tag(AppointmentStatus.completed)
                                }
                                .pickerStyle(SegmentedPickerStyle())
-                               .onChange(of: currentStatus) { newStatus in
+                               .onChange(of: currentStatus) { oldValue, newStatus in
                                    updateAppointmentStatus(to: newStatus)
                                }
                            } else {
@@ -330,7 +330,7 @@ struct AppointmentDetailView: View {
                                            .padding(8)
                                            .background(Color(.systemGray6))
                                            .cornerRadius(8)
-                                           .onChange(of: diagnosis) { _ in
+                                           .onChange(of: diagnosis) { oldValue, _ in
                                                // This will trigger validation and update error message
                                                _ = isFormValid
                                            }
@@ -989,7 +989,7 @@ struct AppointmentDetailView: View {
                            
                            TextField("Search medicines...", text: $searchText)
                                .textFieldStyle(PlainTextFieldStyle())
-                               .onChange(of: searchText) { newValue in
+                               .onChange(of: searchText) { oldValue, newValue in
                                    if !newValue.isEmpty && newValue.count >= 2 {
                                        // Use debouncer for search
                                        isSearching = true // Show loading immediately

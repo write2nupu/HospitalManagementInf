@@ -77,7 +77,7 @@ struct DoctorListView: View {
         .task {
             await loadDepartmentDetails()
         }
-        .onChange(of: coordinator.shouldDismissToRoot) { shouldDismiss in
+        .onChange(of: coordinator.shouldDismissToRoot) { oldValue, shouldDismiss in
             if shouldDismiss {
                 dismiss()
             }
@@ -537,7 +537,7 @@ struct TimeSlotSectionView: View {
         .onAppear {
             loadBookedTimeSlots()
         }
-        .onChange(of: selectedDate) { _ in
+        .onChange(of: selectedDate) { oldValue, _ in
             selectedTimeSlot = nil
             bookedTimeRanges = []
             loadBookedTimeSlots()
@@ -715,7 +715,7 @@ struct AppointmentBookingView: View {
                         .datePickerStyle(GraphicalDatePickerStyle())
                         .tint(AppConfig.buttonColor)
                         .environment(\.timeZone, TimeZone(identifier: "Asia/Kolkata")!)
-                        .onChange(of: selectedDate) { _ in
+                        .onChange(of: selectedDate) { oldValue, _ in
                             selectedTimeSlot = nil
                         }
                 }
@@ -766,7 +766,7 @@ struct AppointmentBookingView: View {
                     )
             }
         }
-        .onChange(of: coordinator.shouldDismissToRoot) { shouldDismiss in
+        .onChange(of: coordinator.shouldDismissToRoot) { oldValue, shouldDismiss in
             if shouldDismiss {
                 dismiss()
             }
@@ -777,7 +777,7 @@ struct AppointmentBookingView: View {
         if let departmentId = doctor.department_id {
             do {
                 // Use existing method from SupabaseController
-                if let department = try await supabaseController.fetchDepartmentDetails(departmentId: departmentId) {
+                if let department = await supabaseController.fetchDepartmentDetails(departmentId: departmentId) {
                     departmentDetails = department
                 }
             

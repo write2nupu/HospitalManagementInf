@@ -105,7 +105,7 @@ struct PatientLoginSignupView: View {
                         HStack(spacing: 0) {
                             Text("Don't have an account? ")
                                 .font(.body)
-                                .foregroundColor(.black)
+                                .foregroundColor(.primary)
                             
                             Text("Sign Up")
                                 .font(.headline)

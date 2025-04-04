@@ -312,7 +312,7 @@ struct DoctorDashBoard: View {
                 do {
                     // Fetch department details if needed
                     if let departmentId = profile.department_id {
-                        if let deptDetails = try? await supabase.fetchDepartmentDetails(departmentId: departmentId) {
+                        if let deptDetails = await supabase.fetchDepartmentDetails(departmentId: departmentId) {
                             await MainActor.run {
                                 department = deptDetails
                             }
@@ -344,8 +344,6 @@ struct DoctorDashBoard: View {
                             }
                         }
                     }
-                } catch {
-                    print("Error loading additional details: \(error)")
                 }
             }
             

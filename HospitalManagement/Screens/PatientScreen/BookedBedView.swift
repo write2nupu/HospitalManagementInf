@@ -163,7 +163,7 @@ struct CurrentBedBookingView: View {
         isLoading = true
         do {
             // Load hospital
-            let hospitals = try await supabaseController.fetchHospitals()
+            let hospitals = await supabaseController.fetchHospitals()
             if let firstHospital = hospitals.first {
                 selectedHospital = firstHospital
             }

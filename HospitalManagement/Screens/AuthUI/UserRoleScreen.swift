@@ -21,7 +21,7 @@ struct UserRoleScreen: View {
                 Text("Select Your Role")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
                     .padding(.top, 40)
                 
                 Spacer()

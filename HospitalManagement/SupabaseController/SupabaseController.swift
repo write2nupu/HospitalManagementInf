@@ -2565,7 +2565,7 @@ extension SupabaseController {
         
         print("Processing \(jsonArray.count) lab tests")
         
-        return try jsonArray.compactMap { json -> LabReport? in
+        return jsonArray.compactMap { json -> LabReport? in
             guard let bookingId = UUID(uuidString: json["bookingId"] as? String ?? ""),
                   let patient = json["Patient"] as? [String: Any],
                   let patientName = patient["fullname"] as? String else {
