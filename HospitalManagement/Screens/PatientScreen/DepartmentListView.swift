@@ -50,7 +50,7 @@ struct DepartmentListView: View {
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(.systemGray6))
+                    .fill(AppConfig.searchBar)
             )
             .padding(.horizontal)
             .padding(.top)

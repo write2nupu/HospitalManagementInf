@@ -37,7 +37,7 @@ struct ProfileView: View {
                         Image(systemName: "person.crop.circle.fill")
                             .resizable()
                             .frame(width: 100, height: 100)
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                             .clipShape(Circle())
                         
                         Text(patient.email)
@@ -216,7 +216,7 @@ struct ProfileRow: View {
         HStack {
             Text(title + ":")
                 .font(.system(size: 16)) // Same font
-                .foregroundColor(.black) // Title in black
+                .foregroundColor(.primary) // Title in black
             Spacer()
             Text(value?.isEmpty == false ? value! : "")
                 .font(.system(size: 16)) // Same font

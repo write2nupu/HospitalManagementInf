@@ -31,7 +31,7 @@ struct PaymentView: View {
                         Text("Make Payment")
                             .font(.title2)
                             .fontWeight(.bold)
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                             .padding(.top)
 
                         // Booking Details Section
@@ -64,16 +64,16 @@ struct PaymentView: View {
                             Text("Pay ₹\(formattedFee)")
                         }
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(AppConfig.cardColor)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.mint)
+                        .background(AppConfig.buttonColor)
                         .cornerRadius(10)
                         .shadow(radius: 2)
                     }
                     .padding()
                 }
-                .background(Color.white)
+                .background(AppConfig.backgroundColor)
                 .shadow(radius: 3)
             }
             .navigationBarItems(
@@ -149,7 +149,7 @@ struct PaymentView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Booking Details")
                 .font(.headline)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
 
             detailRow(label: "Doctor", value: doctor.full_name)
             detailRow(label: "Specialization", value: department.name)
@@ -165,11 +165,11 @@ struct PaymentView: View {
                 Text("₹\(formattedFee)")
                     .font(.title3)
                     .fontWeight(.bold)
-                    .foregroundColor(.mint)
+                    .foregroundColor(AppConfig.buttonColor)
             }
         }
         .padding()
-        .background(Color.white)
+        .background(AppConfig.cardColor)
         .cornerRadius(12)
         .shadow(radius: 3)
     }
@@ -179,22 +179,22 @@ struct PaymentView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Select Payment Method")
                 .font(.headline)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
 
             VStack {
                 ForEach(paymentMethods, id: \.type) { method in
                     HStack {
                         Image(systemName: method.icon)
-                            .foregroundColor(.mint)
+                            .foregroundColor(AppConfig.buttonColor)
                         Text(method.name)
                         Spacer()
                         if selectedPaymentMethod == method.type {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
+                                .foregroundColor(AppConfig.approvedColor)
                         }
                     }
                     .padding()
-                    .background(Color.white)
+                    .background(AppConfig.cardColor)
                     .cornerRadius(8)
                     .shadow(radius: 2)
                     .onTapGesture {
@@ -210,7 +210,7 @@ struct PaymentView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Enter Payment Details")
                 .font(.headline)
-                .foregroundColor(.mint)
+                .foregroundColor(AppConfig.buttonColor)
 
             if selectedPaymentMethod == .card {
                 VStack(spacing: 12) {
@@ -229,7 +229,7 @@ struct PaymentView: View {
             }
         }
         .padding()
-        .background(Color.white)
+        .background(AppConfig.cardColor)
         .cornerRadius(12)
         .shadow(radius: 3)
     }

@@ -165,7 +165,7 @@ struct RecordCategoryCard<D: View>: View {
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemBackground))
+                    .fill(AppConfig.cardColor)
                     .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
             )
             .padding(.vertical, 5)

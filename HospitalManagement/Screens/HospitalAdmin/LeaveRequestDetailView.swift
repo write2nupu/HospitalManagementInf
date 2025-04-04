@@ -224,12 +224,21 @@ struct LeaveRequestDetailView: View {
                 let newStatus: LeaveStatus = action == .approve ? .approved : .rejected
                 try await supabaseController.updateLeaveStatus(leaveId: leave.id, status: newStatus)
                 
+                // If leave is approved, cancel all affected appointments
+                if action == .approve {
+                    try await supabaseController.cancelAppointmentsDuringLeave(
+                        doctorId: leave.doctorId,
+                        startDate: leave.startDate,
+                        endDate: leave.endDate
+                    )
+                }
+                
                 var updatedLeave = leave
                 updatedLeave.status = newStatus
                 onStatusUpdate(updatedLeave)
                 
                 successMessage = action == .approve ?
-                    "Leave request has been approved successfully." :
+                    "Leave request has been approved successfully. \(affectedAppointments) appointments have been cancelled." :
                     "Leave request has been rejected successfully."
                 
                 showSuccessAlert = true
