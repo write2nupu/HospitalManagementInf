@@ -36,65 +36,89 @@ struct LabReportsView: View {
         // Apply test type filters if any are selected
         if !selectedFilters.isEmpty {
             filtered = filtered.filter { test in
-                // Check if any of the selected filters match the test name
-                selectedFilters.contains { filter in
-                    test.testName.contains(filter.rawValue)
+                // Split the test names and check if any match the selected filters
+                let testNames = test.testName.split(separator: ",").map { String($0.trimmingCharacters(in: .whitespaces)) }
+                return selectedFilters.contains { filter in
+                    testNames.contains(filter.rawValue)
                 }
             }
         }
         
         // Then apply search text
         if !searchText.isEmpty {
-            let lowercasedSearch = searchText.lowercased()
+            let searchTerms = searchText.lowercased().split(separator: " ")
+            
             filtered = filtered.filter { test in
-                let dateString = test.testDate.formatted(.dateTime.day().month().year())
+                let testName = test.testName.lowercased()
+                let doctorName = test.doctorName?.lowercased() ?? ""
+                let status = test.status.lowercased()
+                let dateString = formatSearchDate(test.testDate)
                 
-                return test.testName.lowercased().contains(lowercasedSearch) ||
-                       (test.doctorName?.lowercased().contains(lowercasedSearch) ?? false) ||
-                       test.status.lowercased().contains(lowercasedSearch) ||
-                       dateString.lowercased().contains(lowercasedSearch)
+                return searchTerms.allSatisfy { term in
+                    testName.contains(term) ||
+                    doctorName.contains(term) ||
+                    status.contains(term) ||
+                    dateString.contains(term)
+                }
             }
         }
         
-        return filtered
+        // Sort by date, most recent first
+        return filtered.sorted { $0.testDate > $1.testDate }
     }
     
     var body: some View {
-        Group {
-            if isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let error = errorMessage {
-                ContentUnavailableView(
-                    "Error Loading Lab Tests",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(error)
-                )
-            } else if labTests.isEmpty {
-                ContentUnavailableView(
-                    "No Lab Tests",
-                    systemImage: "cross.case.fill",
-                    description: Text("You don't have any lab tests yet")
-                )
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(filteredTests, id: \.id) { test in
-                            LabTestCard(
-                                id: test.id,
-                                testName: test.testName,
-                                testDate: test.testDate,
-                                status: test.status,
-                                doctorName: test.doctorName,
-                                diagnosis: test.diagnosis
-                            )
-                            .onTapGesture {
-                                selectedTest = test
-                                showingDetail = true
+        VStack(spacing: 0) {
+            // Search bar at the top
+            searchBar
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+                .background(Color(.systemBackground))
+            
+            Group {
+                if isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let error = errorMessage {
+                    ContentUnavailableView(
+                        "Error Loading Lab Tests",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(error)
+                    )
+                } else if filteredTests.isEmpty {
+                    if !searchText.isEmpty {
+                        ContentUnavailableView(
+                            "No Matching Tests",
+                            systemImage: "magnifyingglass",
+                            description: Text("Try adjusting your search terms")
+                        )
+                    } else {
+                        ContentUnavailableView(
+                            "No Lab Tests",
+                            systemImage: "cross.case.fill",
+                            description: Text("You don't have any lab tests yet")
+                        )
+                    }
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(filteredTests, id: \.id) { test in
+                                LabTestCard(
+                                    id: test.id,
+                                    testName: test.testName,
+                                    testDate: test.testDate,
+                                    status: test.status,
+                                    doctorName: test.doctorName,
+                                    diagnosis: test.diagnosis
+                                )
+                                .onTapGesture {
+                                    selectedTest = test
+                                    showingDetail = true
+                                }
                             }
                         }
+                        .padding()
                     }
-                    .padding()
                 }
             }
         }
@@ -145,9 +169,10 @@ struct LabReportsView: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.gray)
-                TextField("Search lab tests...", text: $searchText)
+                TextField("Search tests, doctors, status...", text: $searchText)
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
+                    .submitLabel(.search)
                 
                 if !searchText.isEmpty {
                     Button(action: {
@@ -158,63 +183,49 @@ struct LabReportsView: View {
                     }
                 }
             }
-            .padding(8)
+            .padding(10)
             .background(Color(.systemGray6))
             .cornerRadius(10)
             
-            // Filter Button
-            Button(action: {
-                showingFilterSheet = true
-            }) {
-                HStack(spacing: 4) {
-                    Image(systemName: "line.3.horizontal.decrease.circle.fill")
-                        .foregroundColor(selectedFilters.isEmpty ? .blue : .white)
-                    if !selectedFilters.isEmpty {
-                        Text("\(selectedFilters.count)")
-                            .font(.caption)
-                            .padding(4)
-                            .background(Color.white)
-                            .clipShape(Circle())
-                            .foregroundColor(.blue)
-                    }
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 8)
-                .background(selectedFilters.isEmpty ? Color.clear : Color.blue)
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.blue, lineWidth: selectedFilters.isEmpty ? 1 : 0)
-                )
-            }
+            filterButton
         }
+        .padding(.horizontal)
     }
     
     var filterSheet: some View {
         NavigationView {
-            List(selection: $selectedFilters) {
+            List {
                 ForEach(LabTest.LabTestName.allCases, id: \.self) { testType in
-                    HStack {
-                        Text(testType.rawValue)
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        if selectedFilters.contains(testType) {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                    Button(action: {
                         if selectedFilters.contains(testType) {
                             selectedFilters.remove(testType)
                         } else {
                             selectedFilters.insert(testType)
                         }
+                    }) {
+                        HStack(spacing: 12) {
+                            // Icon for the test type
+                            Image(systemName: testType.icon)
+                                .foregroundColor(.mint)
+                                .frame(width: 24)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(testType.rawValue)
+                                    .foregroundColor(.primary)
+                            }
+                            
+                            Spacer()
+                            
+                            // Checkmark for selected items
+                            if selectedFilters.contains(testType) {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.mint)
+                            }
+                        }
                     }
                 }
             }
+            .listStyle(InsetGroupedListStyle())
             .navigationTitle("Filter by Test Type")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -231,6 +242,42 @@ struct LabReportsView: View {
                 }
             }
         }
+        .presentationDetents([.medium, .large])
+    }
+    
+    // Update the filter button to show selected test count
+    private var filterButton: some View {
+        Button(action: {
+            showingFilterSheet = true
+        }) {
+            HStack(spacing: 4) {
+                Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                    .foregroundColor(selectedFilters.isEmpty ? .mint : .white)
+                if !selectedFilters.isEmpty {
+                    Text("\(selectedFilters.count)")
+                        .font(.caption)
+                        .padding(4)
+                        .background(Color.white)
+                        .clipShape(Circle())
+                        .foregroundColor(.mint)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 8)
+            .background(selectedFilters.isEmpty ? Color.clear : Color.mint)
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.mint, lineWidth: selectedFilters.isEmpty ? 1 : 0)
+            )
+        }
+    }
+    
+    // Helper function to format date for searching
+    private func formatSearchDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMM yyyy"
+        return formatter.string(from: date).lowercased()
     }
 }
 
