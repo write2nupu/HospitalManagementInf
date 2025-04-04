@@ -1301,17 +1301,26 @@ private struct AnyCodingKey: CodingKey {
         let bedData = beds.map { bed -> [String: AnyJSON] in
             return [
                 "id": .string(bed.id.uuidString),
-                "hospitalId": .string(hospitalId.uuidString),  // Always use the provided hospitalId
+                "hospitalId": .string(hospitalId.uuidString),
                 "price": .double(Double(bed.price)),
                 "type": .string(bed.type.rawValue),
-                "isAvailable": .bool(true)  // New beds should be available by default
+                "isAvailable": .bool(bed.isAvailable ?? true)
             ]
         }
         
-        try await client
-            .from("Bed")
-            .insert(bedData)
-            .execute()
+        do {
+            try await client
+                .from("Bed")
+                .insert(bedData)
+                .execute()
+            print("✅ Successfully added \(beds.count) beds")
+        } catch let error as PostgrestError {
+            print("❌ Postgrest error adding beds: \(error)")
+            throw error
+        } catch {
+            print("❌ Unknown error adding beds: \(error)")
+            throw error
+        }
     }
     
     func updateBedAvailability(bedId: UUID, isAvailable: Bool) async throws {

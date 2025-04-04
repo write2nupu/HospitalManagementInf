@@ -203,9 +203,16 @@ struct BedView: View {
         .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showAddBed) {
+            Task {
+                await loadData()
+            }
+        } content: {
             AddBedView()
         }
         .task {
+            await loadData()
+        }
+        .refreshable {
             await loadData()
         }
     }

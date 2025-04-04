@@ -66,9 +66,10 @@ struct AddBedView: View {
                 }
                 
                 // Availability Section
-//                Section(header: Text("Status")) {
-//                    Toggle("Available for Booking", isOn: $isAvailable)
-//                }
+                Section(header: Text("Status")) {
+                    Toggle("Available for Booking", isOn: $isAvailable)
+                        .tint(AppConfig.buttonColor)
+                }
             }
             .navigationTitle("Add Bed")
             .navigationBarTitleDisplayMode(.inline)
@@ -92,9 +93,11 @@ struct AddBedView: View {
             }
             .overlay {
                 if isLoading {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
                     ProgressView("Adding beds...")
                         .padding()
-                        .background(Color(.systemBackground))
+                        .background(AppConfig.cardColor)
                         .cornerRadius(8)
                         .shadow(radius: 10)
                 }
@@ -120,11 +123,16 @@ struct AddBedView: View {
         .task {
             // Fetch the hospital ID when view appears
             do {
-                if let (hospital, _) = try await supabaseController.fetchHospitalAndAdmin() {
-                    currentHospitalId = hospital.id
+                guard let hospitalIdString = UserDefaults.standard.string(forKey: "hospitalId"),
+                      let hospitalId = UUID(uuidString: hospitalIdString) else {
+                    alertMessage = "Could not determine hospital ID"
+                    isSuccess = false
+                    showAlert = true
+                    return
                 }
+                currentHospitalId = hospitalId
             } catch {
-                alertMessage = "Failed to fetch hospital information"
+                alertMessage = "Failed to fetch hospital information: \(error.localizedDescription)"
                 isSuccess = false
                 showAlert = true
             }
@@ -162,7 +170,7 @@ struct AddBedView: View {
             for _ in 1...numberOfBeds {
                 let newBed = Bed(
                     id: UUID(),
-                    hospitalId: hospitalId, // Set the hospital ID
+                    hospitalId: hospitalId,
                     price: priceValue,
                     type: selectedType,
                     isAvailable: isAvailable
