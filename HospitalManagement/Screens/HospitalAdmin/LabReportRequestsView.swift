@@ -237,32 +237,42 @@ struct AdminLabTestValueView: View {
     let testId: UUID
     let testType: String
     
-    @State private var testValue: String = ""
-    @State private var testComponents: String = ""
+    @State private var testValues: [String: String] = [:]
     @State private var isSubmitting = false
     @State private var errorMessage: String?
     @State private var showSuccessAlert = false
+    
+    private var individualTests: [String] {
+        testType.split(separator: ",")
+            .map { String($0.trimmingCharacters(in: .whitespaces)) }
+    }
     
     var body: some View {
         NavigationView {
             Form {
                 Section(header: Text("Test Details")) {
-                    Text("Test Type: \(testType)")
-                        .foregroundColor(.secondary)
-                }
-                
-                Section(header: Text("Test Results")) {
-                    TextField("Test Value", text: $testValue)
-                        .keyboardType(.decimalPad)
-                    
-                    TextField("Test Components (comma separated)", text: $testComponents)
-                        .textInputAutocapitalization(.never)
+                    ForEach(individualTests, id: \.self) { test in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(test)
+                                .font(.headline)
+                                .foregroundColor(AppConfig.fontColor)
+                            
+                            TextField("Enter value", text: Binding(
+                                get: { testValues[test] ?? "" },
+                                set: { testValues[test] = $0 }
+                            ))
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .foregroundColor(AppConfig.fontColor)
+                        }
+                        .padding(.vertical, 4)
+                    }
                 }
                 
                 if let error = errorMessage {
                     Section {
                         Text(error)
-                            .foregroundColor(.red)
+                            .foregroundColor(AppConfig.redColor)
                     }
                 }
                 
@@ -273,9 +283,10 @@ struct AdminLabTestValueView: View {
                                 .progressViewStyle(CircularProgressViewStyle())
                         } else {
                             Text("Submit Results")
+                                .foregroundColor(AppConfig.buttonColor)
                         }
                     }
-                    .disabled(isSubmitting || testValue.isEmpty)
+                    .disabled(isSubmitting || testValues.isEmpty || testValues.values.contains(""))
                 }
             }
             .navigationTitle("Add Test Results")
@@ -285,6 +296,7 @@ struct AdminLabTestValueView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(AppConfig.buttonColor)
                 }
             }
             .alert("Success", isPresented: $showSuccessAlert) {
@@ -298,25 +310,24 @@ struct AdminLabTestValueView: View {
     }
     
     private func submitResults() {
-        guard let value = Double(testValue) else {
-            errorMessage = "Please enter a valid numeric value"
-            return
-        }
-        
         isSubmitting = true
         errorMessage = nil
         
-        let components = testComponents
-            .split(separator: ",")
-            .map { String($0.trimmingCharacters(in: .whitespaces)) }
-            .filter { !$0.isEmpty }
+        // Convert test values to components array
+        let components = individualTests.map { test in
+            "\(test): \(testValues[test] ?? "N/A")"
+        }
+        
+        // Calculate average value for backward compatibility
+        let values = testValues.values.compactMap { Double($0) }
+        let averageValue = values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count)
         
         Task {
             do {
                 try await supabaseController.updateLabTestValue(
                     testId: testId,
-                    testValue: value,
-                    testComponents: components.isEmpty ? nil : components
+                    testValue: averageValue,
+                    testComponents: components
                 )
                 showSuccessAlert = true
             } catch {

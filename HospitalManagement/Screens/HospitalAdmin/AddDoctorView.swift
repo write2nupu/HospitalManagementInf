@@ -198,22 +198,27 @@ struct AddDoctorView: View {
         let uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         let specialCharacters = "!@#$%^&*"
         
-        // Ensure at least one of each required character type
-        var password = [
-            String(numbers.randomElement()!),
-            String(lowercase.randomElement()!),
-            String(uppercase.randomElement()!),
-            String(specialCharacters.randomElement()!)
-        ]
+        // Create password in a fixed format:
+        // 2 uppercase + 2 lowercase + 2 numbers + 2 special characters
+        var password = ""
         
-        // Fill the remaining 4 characters with random characters from all types
-        let allCharacters = numbers + lowercase + uppercase + specialCharacters
-        for _ in 0..<4 {
-            password.append(String(allCharacters.randomElement()!))
-        }
+        // Add 2 uppercase letters
+        password += String(uppercase.randomElement() ?? "A")
+        password += String(uppercase.randomElement() ?? "B")
         
-        // Shuffle the password to make it more random
-        return String(password.shuffled())
+        // Add 2 lowercase letters
+        password += String(lowercase.randomElement() ?? "a")
+        password += String(lowercase.randomElement() ?? "b")
+        
+        // Add 2 numbers
+        password += String(numbers.randomElement() ?? "1")
+        password += String(numbers.randomElement() ?? "2")
+        
+        // Add 2 special characters
+        password += String(specialCharacters.randomElement() ?? "@")
+        password += String(specialCharacters.randomElement() ?? "#")
+        
+        return password
     }
     
     private func saveDoctor() {
